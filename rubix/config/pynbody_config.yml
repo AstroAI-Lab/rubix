@@ -10,7 +10,9 @@ fields:
     density: "rho"
     temperature: "temp"
     metals: "metals"
-    metallicity: "metals"
+    #OxMassFrac: "OxMassFrac"
+    #HI: "HI"
+    metallicity: metals
     coords: "pos"
     velocity: "vel"
     mass: "mass"
@@ -29,7 +31,9 @@ units:
   gas:
     density: "Msun/kpc^3"
     temperature: "K"
-    metals: ""
+    metals: "dimensionless"
+    #OxMassFrac: "dimensionless"
+    #HI: "dimensionless"
     metallicity: "Zsun"
     coords: "kpc"
     velocity: "km/s"
