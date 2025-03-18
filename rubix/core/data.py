@@ -1,21 +1,19 @@
+import logging
 import os
-from typing import Callable, Union, Optional
 from dataclasses import dataclass
 from functools import partial
+from typing import Callable, Optional, Union
 
 import jax
 import jax.numpy as jnp
 import numpy as np
+from beartype import beartype as typechecker
+from jaxtyping import jaxtyped
 
 from rubix.galaxy import IllustrisAPI, get_input_handler
 from rubix.galaxy.alignment import center_particles
 from rubix.logger import get_logger
 from rubix.utils import load_galaxy_data, read_yaml
-
-import logging
-from jaxtyping import jaxtyped
-from beartype import beartype as typechecker
-
 
 # class Particles:
 #    def __init__(self, particle_data: object):
@@ -554,7 +552,7 @@ def prepare_input(config: Union[dict, str]) -> RubixData:
 
             # Center the particles
             logger.info(f"Centering {partType} particles")
-            rubixdata = center_particles(rubixdata, partType)
+            rubixdata = center_particles(rubixdata, key=partType)
 
             if (
                 "data" in config

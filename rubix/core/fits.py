@@ -92,7 +92,7 @@ def store_fits(config, data, filepath):
 
     output_filename = (
         f"{filepath}{config['simulation']['name']}_id{galaxy_id}_snap{snapshot}_"
-        f"{parttype}_subset{config['data']['subset']['use_subset']}.fits"
+        f'{config["telescope"]["name"]}_{config["pipeline"]["name"]}.fits'
     )
 
     os.makedirs(os.path.dirname(output_filename), exist_ok=True)
