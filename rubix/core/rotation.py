@@ -117,7 +117,7 @@ def get_galaxy_rotation(config: dict):
 
         return rubixdata"
         """
-
+        logger.info("Rotating galaxy for simulation: " + config["simulation"]["name"])
         # Rotate gas
         if "gas" in config["data"]["args"]["particle_type"]:
             logger.info("Rotating gas")
@@ -132,6 +132,7 @@ def get_galaxy_rotation(config: dict):
                 alpha=alpha,
                 beta=beta,
                 gamma=gamma,
+                key=config["simulation"]["name"],
             )
 
             setattr(rubixdata.gas, "coords", new_coords_gas)
@@ -147,6 +148,7 @@ def get_galaxy_rotation(config: dict):
                 alpha=alpha,
                 beta=beta,
                 gamma=gamma,
+                key=config["simulation"]["name"],
             )
 
             setattr(rubixdata.stars, "coords", new_coords_stars)
@@ -166,6 +168,7 @@ def get_galaxy_rotation(config: dict):
                 alpha=alpha,
                 beta=beta,
                 gamma=gamma,
+                key=config["simulation"]["name"],
             )
 
             setattr(rubixdata.stars, "coords", new_coords_stars)

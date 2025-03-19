@@ -239,6 +239,7 @@ def rotate_galaxy(
     alpha: float,
     beta: float,
     gamma: float,
+    key: str,
 ) -> Tuple[Float[Array, "* 3"], Float[Array, "* 3"]]:
     """
     Orientate the galaxy by applying a rotation matrix to the positions of the particles.
@@ -255,12 +256,15 @@ def rotate_galaxy(
     Returns:
         The rotated positions and velocities as a jnp.ndarray.
     """
-
-    I = moment_of_inertia_tensor(positions_stars, masses_stars, halfmass_radius)
-    R = rotation_matrix_from_inertia_tensor(I)
-    pos_rot = apply_init_rotation(positions, R)
-    vel_rot = apply_init_rotation(velocities, R)
-    pos_final = apply_rotation(pos_rot, alpha, beta, gamma)
-    vel_final = apply_rotation(vel_rot, alpha, beta, gamma)
+    if key == "ILlustrisTNG":
+        I = moment_of_inertia_tensor(positions_stars, masses_stars, halfmass_radius)
+        R = rotation_matrix_from_inertia_tensor(I)
+        pos_rot = apply_init_rotation(positions, R)
+        vel_rot = apply_init_rotation(velocities, R)
+        pos_final = apply_rotation(pos_rot, alpha, beta, gamma)
+        vel_final = apply_rotation(vel_rot, alpha, beta, gamma)
+    else:
+        pos_final = apply_rotation(positions, alpha, beta, gamma)
+        vel_final = apply_rotation(velocities, alpha, beta, gamma)
 
     return pos_final, vel_final
