@@ -41,7 +41,12 @@ def store_fits(config, data, filepath):
     hdr["SIMPLE"] = "T /conforms to FITS standard"
     hdr["PIPELINE"] = config["pipeline"]["name"]
     hdr["DIST_z"] = config["galaxy"]["dist_z"]
-    hdr["ROTATION"] = config["galaxy"]["rotation"]["type"]
+    if config["galaxy"]["rotation"] == ["type"]:
+        hdr["ROTATION"] = config["galaxy"]["rotation"]["type"]
+    else:
+        hdr["ROT_a"] = config["galaxy"]["rotation"]["alpha"]
+        hdr["ROT_b"] = config["galaxy"]["rotation"]["beta"]
+        hdr["ROT_c"] = config["galaxy"]["rotation"]["gamma"]
     hdr["SIM"] = config["simulation"]["name"]
 
     # For Illustris and NIHAO

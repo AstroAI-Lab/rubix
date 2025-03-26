@@ -1,0 +1,312 @@
+Processing galaxy_id: g1.08e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g1.08e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:00<00:15,  1.05cell/s]Executing:  29%|██▉       | 5/17 [01:02<02:38, 13.23s/cell]Executing:  41%|████      | 7/17 [01:11<01:38,  9.85s/cell]Executing:  53%|█████▎    | 9/17 [01:30<01:18,  9.78s/cell]Executing:  65%|██████▍   | 11/17 [01:31<00:40,  6.72s/cell]Executing:  71%|███████   | 12/17 [01:31<00:27,  5.45s/cell]Executing:  76%|███████▋  | 13/17 [01:31<00:17,  4.31s/cell]Executing:  82%|████████▏ | 14/17 [01:32<00:10,  3.38s/cell]Executing:  88%|████████▊ | 15/17 [01:32<00:05,  2.64s/cell]Executing:  94%|█████████▍| 16/17 [01:32<00:01,  2.00s/cell]Executing: 100%|██████████| 17/17 [01:33<00:00,  1.58s/cell]Executing: 100%|██████████| 17/17 [01:36<00:00,  5.67s/cell]
+Processing galaxy_id: g1.37e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g1.37e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:01<00:16,  1.02s/cell]Executing:  24%|██▎       | 4/17 [00:01<00:03,  4.24cell/s]Executing:  24%|██▎       | 4/17 [00:20<00:03,  4.24cell/s]Executing:  29%|██▉       | 5/17 [01:39<05:31, 27.64s/cell]Executing:  41%|████      | 7/17 [01:47<02:50, 17.08s/cell]Executing:  53%|█████▎    | 9/17 [02:04<01:49, 13.71s/cell]Executing:  65%|██████▍   | 11/17 [02:04<00:53,  8.94s/cell]Executing:  71%|███████   | 12/17 [02:04<00:35,  7.15s/cell]Executing:  76%|███████▋  | 13/17 [02:05<00:22,  5.58s/cell]Executing:  82%|████████▏ | 14/17 [02:05<00:12,  4.31s/cell]Executing:  88%|████████▊ | 15/17 [02:05<00:06,  3.30s/cell]Executing: 100%|██████████| 17/17 [02:06<00:00,  2.00s/cell]Executing: 100%|██████████| 17/17 [02:09<00:00,  7.61s/cell]
+Processing galaxy_id: g1.52e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g1.52e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:01<00:16,  1.05s/cell]Executing:  29%|██▉       | 5/17 [01:16<03:15, 16.28s/cell]Executing:  41%|████      | 7/17 [01:27<02:01, 12.19s/cell]Executing:  53%|█████▎    | 9/17 [01:52<01:37, 12.25s/cell]Executing:  65%|██████▍   | 11/17 [01:53<00:50,  8.34s/cell]Executing:  71%|███████   | 12/17 [01:53<00:33,  6.76s/cell]Executing:  76%|███████▋  | 13/17 [01:53<00:21,  5.35s/cell]Executing:  82%|████████▏ | 14/17 [01:54<00:12,  4.17s/cell]Executing:  88%|████████▊ | 15/17 [01:54<00:06,  3.28s/cell]Executing:  94%|█████████▍| 16/17 [01:55<00:02,  2.45s/cell]Executing: 100%|██████████| 17/17 [01:55<00:00,  1.89s/cell]Executing: 100%|██████████| 17/17 [01:58<00:00,  6.98s/cell]
+Processing galaxy_id: g1.59e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g1.59e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:01<00:19,  1.24s/cell]Executing:  29%|██▉       | 5/17 [01:12<03:03, 15.29s/cell]Executing:  41%|████      | 7/17 [01:19<01:49, 10.91s/cell]Executing:  53%|█████▎    | 9/17 [01:39<01:24, 10.59s/cell]Executing:  65%|██████▍   | 11/17 [01:40<00:43,  7.18s/cell]Executing:  71%|███████   | 12/17 [01:40<00:29,  5.82s/cell]Executing:  76%|███████▋  | 13/17 [01:40<00:18,  4.60s/cell]Executing:  82%|████████▏ | 14/17 [01:41<00:10,  3.60s/cell]Executing:  88%|████████▊ | 15/17 [01:41<00:05,  2.80s/cell]Executing: 100%|██████████| 17/17 [01:41<00:00,  1.71s/cell]Executing: 100%|██████████| 17/17 [01:44<00:00,  6.18s/cell]
+Processing galaxy_id: g2.41e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g2.41e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:00<00:15,  1.01cell/s]Executing:  29%|██▉       | 5/17 [05:22<13:41, 68.45s/cell]Executing:  35%|███▌      | 6/17 [05:22<09:37, 52.52s/cell]Executing:  41%|████      | 7/17 [05:59<08:07, 48.72s/cell]Executing:  53%|█████▎    | 9/17 [07:26<06:12, 46.52s/cell]Executing:  59%|█████▉    | 10/17 [07:27<04:13, 36.14s/cell]Executing:  65%|██████▍   | 11/17 [07:38<02:59, 29.96s/cell]Executing:  71%|███████   | 12/17 [07:39<01:52, 22.40s/cell]Executing:  76%|███████▋  | 13/17 [07:40<01:06, 16.55s/cell]Executing:  82%|████████▏ | 14/17 [07:42<00:37, 12.57s/cell]Executing:  88%|████████▊ | 15/17 [07:44<00:18,  9.43s/cell]Executing: 100%|██████████| 17/17 [07:46<00:00,  5.63s/cell]Executing: 100%|██████████| 17/17 [07:56<00:00, 28.02s/cell]
+Processing galaxy_id: g2.42e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g2.42e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:01<00:18,  1.16s/cell]Executing:  29%|██▉       | 5/17 [06:45<17:14, 86.23s/cell]Executing:  35%|███▌      | 6/17 [06:46<12:08, 66.23s/cell]Executing:  41%|████      | 7/17 [07:21<09:44, 58.47s/cell]Executing:  53%|█████▎    | 9/17 [08:41<06:46, 50.86s/cell]Executing:  59%|█████▉    | 10/17 [08:42<04:35, 39.34s/cell]Executing:  65%|██████▍   | 11/17 [08:56<03:18, 33.17s/cell]Executing:  71%|███████   | 12/17 [08:57<02:03, 24.73s/cell]Executing:  76%|███████▋  | 13/17 [08:58<01:13, 18.25s/cell]Executing:  82%|████████▏ | 14/17 [09:02<00:43, 14.47s/cell]Executing:  88%|████████▊ | 15/17 [09:03<00:21, 10.51s/cell]Executing: 100%|██████████| 17/17 [09:06<00:00,  6.36s/cell]Executing: 100%|██████████| 17/17 [09:13<00:00, 32.58s/cell]
+Processing galaxy_id: g2.57e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g2.57e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:01<00:18,  1.17s/cell]Executing:  29%|██▉       | 5/17 [06:03<15:26, 77.22s/cell]Executing:  41%|████      | 7/17 [06:24<08:39, 51.98s/cell]Executing:  53%|█████▎    | 9/17 [06:48<05:04, 38.04s/cell]Executing:  65%|██████▍   | 11/17 [06:49<02:33, 25.51s/cell]Executing:  71%|███████   | 12/17 [06:49<01:43, 20.63s/cell]Executing:  76%|███████▋  | 13/17 [06:49<01:04, 16.21s/cell]Executing:  82%|████████▏ | 14/17 [06:50<00:37, 12.49s/cell]Executing:  88%|████████▊ | 15/17 [06:50<00:18,  9.45s/cell]Executing: 100%|██████████| 17/17 [06:51<00:00,  5.62s/cell]Executing: 100%|██████████| 17/17 [06:59<00:00, 24.68s/cell]
+Processing galaxy_id: g3.06e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g3.06e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:01<00:16,  1.00s/cell]Executing:  29%|██▉       | 5/17 [04:20<11:03, 55.26s/cell]Executing:  41%|████      | 7/17 [04:34<06:10, 37.02s/cell]Executing:  53%|█████▎    | 9/17 [04:55<03:42, 27.80s/cell]Executing:  65%|██████▍   | 11/17 [04:56<01:51, 18.65s/cell]Executing:  71%|███████   | 12/17 [04:56<01:15, 15.08s/cell]Executing:  76%|███████▋  | 13/17 [04:56<00:47, 11.86s/cell]Executing:  82%|████████▏ | 14/17 [04:56<00:27,  9.15s/cell]Executing:  88%|████████▊ | 15/17 [04:57<00:13,  6.95s/cell]Executing: 100%|██████████| 17/17 [04:57<00:00,  4.16s/cell]Executing: 100%|██████████| 17/17 [05:03<00:00, 17.85s/cell]
+Processing galaxy_id: g3.49e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g3.49e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:01<00:27,  1.72s/cell]Executing:  29%|██▉       | 5/17 [02:59<07:37, 38.15s/cell]Executing:  41%|████      | 7/17 [03:08<04:13, 25.32s/cell]Executing:  53%|█████▎    | 9/17 [03:39<02:56, 22.00s/cell]Executing:  65%|██████▍   | 11/17 [03:44<01:32, 15.34s/cell]Executing:  71%|███████   | 12/17 [03:44<01:02, 12.41s/cell]Executing:  76%|███████▋  | 13/17 [03:44<00:39,  9.77s/cell]Executing:  82%|████████▏ | 14/17 [03:44<00:22,  7.59s/cell]Executing:  88%|████████▊ | 15/17 [03:45<00:11,  5.81s/cell]Executing: 100%|██████████| 17/17 [03:45<00:00,  3.46s/cell]Executing: 100%|██████████| 17/17 [03:49<00:00, 13.51s/cell]
+Processing galaxy_id: g3.61e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g3.61e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:02<00:34,  2.15s/cell]Processing galaxy_id: g3.61e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g3.61e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:00<00:11,  1.39cell/s]Executing:  29%|██▉       | 5/17 [05:25<13:50, 69.24s/cell]Wait for final termination of kernel timed out - continuing...
+Executing:  29%|██▉       | 5/17 [05:36<13:27, 67.26s/cell]
+
+Aborted!
+Processing galaxy_id: g4.90e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g4.90e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:00<00:15,  1.01cell/s]Executing:  29%|██▉       | 5/17 [03:07<07:57, 39.75s/cell]Executing:  41%|████      | 7/17 [03:19<04:30, 27.10s/cell]Executing:  53%|█████▎    | 9/17 [03:38<02:47, 20.95s/cell]Executing:  65%|██████▍   | 11/17 [03:40<01:25, 14.25s/cell]Executing:  71%|███████   | 12/17 [03:40<00:57, 11.53s/cell]Executing:  76%|███████▋  | 13/17 [03:40<00:36,  9.09s/cell]Executing:  82%|████████▏ | 14/17 [03:41<00:21,  7.03s/cell]Executing:  88%|████████▊ | 15/17 [03:41<00:10,  5.39s/cell]Executing:  94%|█████████▍| 16/17 [03:41<00:03,  3.99s/cell]Executing: 100%|██████████| 17/17 [03:43<00:00,  3.21s/cell]Executing: 100%|██████████| 17/17 [03:46<00:00, 13.35s/cell]
+Processing galaxy_id: g5.02e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g5.02e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:00<00:12,  1.25cell/s]Executing:  29%|██▉       | 5/17 [16:54<43:10, 215.84s/cell]Executing:  35%|███▌      | 6/17 [16:55<30:22, 165.71s/cell]Executing:  41%|████      | 7/17 [17:36<22:24, 134.44s/cell]Executing:  53%|█████▎    | 9/17 [19:21<13:23, 100.40s/cell]Executing:  59%|█████▉    | 10/17 [19:21<09:01, 77.41s/cell]Executing:  65%|██████▍   | 11/17 [19:54<06:38, 66.47s/cell]Executing:  71%|███████   | 12/17 [19:55<04:07, 49.48s/cell]Executing:  76%|███████▋  | 13/17 [19:57<02:26, 36.59s/cell]Executing:  82%|████████▏ | 14/17 [20:14<01:32, 30.89s/cell]Executing:  88%|████████▊ | 15/17 [20:15<00:44, 22.49s/cell]Executing: 100%|██████████| 17/17 [20:59<00:00, 22.30s/cell]Executing: 100%|██████████| 17/17 [21:09<00:00, 74.70s/cell]
+Processing galaxy_id: g5.31e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g5.31e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:00<00:11,  1.37cell/s]Kernel died while waiting for execute reply.
+Executing:  29%|██▉       | 5/17 [2:18:25<5:53:22, 1766.90s/cell]Executing:  29%|██▉       | 5/17 [2:18:28<5:32:20, 1661.71s/cell]
+Traceback (most recent call last):
+  File "/home/annalena/.conda/envs/rubix/lib/python3.13/site-packages/papermill/cli.py", line 235, in papermill
+    execute_notebook(
+    ~~~~~~~~~~~~~~~~^
+        input_path=input_path,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    ...<15 lines>...
+        execution_timeout=execution_timeout,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/annalena/.conda/envs/rubix/lib/python3.13/site-packages/papermill/execute.py", line 116, in execute_notebook
+    nb = papermill_engines.execute_notebook_with_engine(
+        engine_name,
+    ...<9 lines>...
+        **engine_kwargs,
+    )
+  File "/home/annalena/.conda/envs/rubix/lib/python3.13/site-packages/papermill/engines.py", line 48, in execute_notebook_with_engine
+    return self.get_engine(engine_name).execute_notebook(nb, kernel_name, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/annalena/.conda/envs/rubix/lib/python3.13/site-packages/papermill/engines.py", line 370, in execute_notebook
+    cls.execute_managed_notebook(nb_man, kernel_name, log_output=log_output, **kwargs)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/annalena/.conda/envs/rubix/lib/python3.13/site-packages/papermill/engines.py", line 442, in execute_managed_notebook
+    return PapermillNotebookClient(nb_man, **final_kwargs).execute()
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/annalena/.conda/envs/rubix/lib/python3.13/site-packages/papermill/clientwrap.py", line 45, in execute
+    self.papermill_execute_cells()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/annalena/.conda/envs/rubix/lib/python3.13/site-packages/papermill/clientwrap.py", line 72, in papermill_execute_cells
+    self.execute_cell(cell, index)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/home/annalena/.conda/envs/rubix/lib/python3.13/site-packages/jupyter_core/utils/__init__.py", line 165, in wrapped
+    return loop.run_until_complete(inner)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/home/annalena/.conda/envs/rubix/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/home/annalena/.conda/envs/rubix/lib/python3.13/site-packages/nbclient/client.py", line 1009, in async_execute_cell
+    raise DeadKernelError("Kernel died") from None
+nbclient.exceptions.DeadKernelError: Kernel died
+Executing:  29%|██▉       | 5/17 [03:48<09:42, 48.53s/cell]Executing:  29%|██▉       | 5/17 [03:48<09:09, 45.78s/cell]
+
+Aborted!
+Processing galaxy_id: g5.38e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g5.38e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing:   0%|          | 0/17 [00:00<?, ?cell/s]
+
+Aborted!
+[IPKernelApp] WARNING | Parent appears to have exited, shutting down.
+Processing galaxy_id: g3.61e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g3.61e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:00<00:15,  1.04cell/s]Executing:  29%|██▉       | 5/17 [12:08<30:59, 154.94s/cell]Executing:  41%|████      | 7/17 [12:47<17:17, 103.79s/cell]Executing:  53%|█████▎    | 9/17 [13:08<09:27, 70.95s/cell] Executing:  65%|██████▍   | 11/17 [13:08<04:44, 47.39s/cell]Executing:  71%|███████   | 12/17 [13:08<03:11, 38.29s/cell]Executing:  76%|███████▋  | 13/17 [13:09<02:00, 30.07s/cell]Executing:  82%|████████▏ | 14/17 [13:09<01:09, 23.07s/cell]Executing:  88%|████████▊ | 15/17 [13:09<00:34, 17.37s/cell]Executing: 100%|██████████| 17/17 [13:10<00:00, 10.22s/cell]Wait for final termination of kernel timed out - continuing...
+Executing: 100%|██████████| 17/17 [13:21<00:00, 47.15s/cell]
+Processing galaxy_id: g5.31e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g5.31e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:00<00:11,  1.37cell/s]Executing:  29%|██▉       | 5/17 [02:45<07:02, 35.18s/cell]Executing:  41%|████      | 7/17 [02:58<04:04, 24.40s/cell]Executing:  53%|█████▎    | 9/17 [03:18<02:34, 19.25s/cell]Executing:  65%|██████▍   | 11/17 [03:19<01:17, 12.94s/cell]Executing:  71%|███████   | 12/17 [03:19<00:52, 10.47s/cell]Executing:  76%|███████▋  | 13/17 [03:19<00:32,  8.25s/cell]Executing:  82%|████████▏ | 14/17 [03:19<00:19,  6.39s/cell]Executing:  88%|████████▊ | 15/17 [03:20<00:09,  4.93s/cell]Executing: 100%|██████████| 17/17 [03:20<00:00,  2.96s/cell]Executing: 100%|██████████| 17/17 [03:26<00:00, 12.13s/cell]
+Processing galaxy_id: g5.38e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g5.38e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:00<00:11,  1.38cell/s]Executing:  29%|██▉       | 5/17 [03:25<08:45, 43.76s/cell]Executing:  41%|████      | 7/17 [03:38<04:55, 29.57s/cell]Executing:  53%|█████▎    | 9/17 [03:57<02:59, 22.48s/cell]Executing:  65%|██████▍   | 11/17 [03:57<01:30, 15.09s/cell]Executing:  71%|███████   | 12/17 [03:57<01:01, 12.21s/cell]Executing:  76%|███████▋  | 13/17 [03:58<00:38,  9.61s/cell]Executing:  82%|████████▏ | 14/17 [03:58<00:22,  7.42s/cell]Executing:  88%|████████▊ | 15/17 [03:58<00:11,  5.66s/cell]Executing: 100%|██████████| 17/17 [03:59<00:00,  3.40s/cell]Executing: 100%|██████████| 17/17 [04:05<00:00, 14.43s/cell]
+Processing galaxy_id: g5.46e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g5.46e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:00<00:11,  1.38cell/s]Executing:  29%|██▉       | 5/17 [02:48<07:10, 35.90s/cell]Executing:  41%|████      | 7/17 [03:00<04:04, 24.49s/cell]Executing:  53%|█████▎    | 9/17 [03:18<02:32, 19.06s/cell]Executing:  65%|██████▍   | 11/17 [03:19<01:16, 12.82s/cell]Executing:  71%|███████   | 12/17 [03:19<00:51, 10.38s/cell]Executing:  76%|███████▋  | 13/17 [03:19<00:32,  8.19s/cell]Executing:  82%|████████▏ | 14/17 [03:19<00:19,  6.33s/cell]Executing:  88%|████████▊ | 15/17 [03:20<00:09,  4.85s/cell]Executing: 100%|██████████| 17/17 [03:20<00:00,  2.94s/cell]Executing: 100%|██████████| 17/17 [03:24<00:00, 12.04s/cell]
+Processing galaxy_id: g5.55e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g5.55e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:00<00:11,  1.39cell/s]Executing:  29%|██▉       | 5/17 [08:46<22:23, 111.98s/cell]Executing:  41%|████      | 7/17 [09:13<12:28, 74.83s/cell] Executing:  53%|█████▎    | 9/17 [09:33<06:55, 51.98s/cell]Executing:  65%|██████▍   | 11/17 [09:33<03:28, 34.75s/cell]Executing:  71%|███████   | 12/17 [09:34<02:20, 28.09s/cell]Executing:  76%|███████▋  | 13/17 [09:34<01:28, 22.07s/cell]Executing:  82%|████████▏ | 14/17 [09:34<00:50, 16.96s/cell]Executing:  88%|████████▊ | 15/17 [09:35<00:25, 12.83s/cell]Executing: 100%|██████████| 17/17 [09:35<00:00,  7.56s/cell]Executing: 100%|██████████| 17/17 [09:46<00:00, 34.49s/cell]
+Processing galaxy_id: g6.96e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g6.96e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:00<00:13,  1.17cell/s]Executing:  12%|█▏        | 2/17 [00:01<00:06,  2.23cell/s]Executing:  29%|██▉       | 5/17 [03:07<08:54, 44.52s/cell]Executing:  41%|████      | 7/17 [03:16<04:44, 28.41s/cell]Executing:  53%|█████▎    | 9/17 [03:35<02:51, 21.49s/cell]Executing:  65%|██████▍   | 11/17 [03:36<01:25, 14.23s/cell]Executing:  71%|███████   | 12/17 [03:36<00:57, 11.46s/cell]Executing:  76%|███████▋  | 13/17 [03:36<00:35,  8.99s/cell]Executing:  82%|████████▏ | 14/17 [03:37<00:20,  6.92s/cell]Executing:  88%|████████▊ | 15/17 [03:37<00:10,  5.28s/cell]Executing: 100%|██████████| 17/17 [03:37<00:00,  3.13s/cell]Executing: 100%|██████████| 17/17 [03:42<00:00, 13.06s/cell]
+Processing galaxy_id: g7.55e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g7.55e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:00<00:12,  1.30cell/s]Executing:  18%|█▊        | 3/17 [00:00<00:03,  3.97cell/s]Executing:  29%|██▉       | 5/17 [02:41<08:15, 41.28s/cell]Executing:  41%|████      | 7/17 [02:51<04:19, 25.92s/cell]Executing:  53%|█████▎    | 9/17 [03:08<02:34, 19.36s/cell]Executing:  65%|██████▍   | 11/17 [03:08<01:16, 12.71s/cell]Executing:  71%|███████   | 12/17 [03:08<00:50, 10.19s/cell]Executing:  76%|███████▋  | 13/17 [03:09<00:31,  7.97s/cell]Executing:  82%|████████▏ | 14/17 [03:09<00:18,  6.13s/cell]Executing:  88%|████████▊ | 15/17 [03:09<00:09,  4.66s/cell]Executing: 100%|██████████| 17/17 [03:10<00:00,  2.76s/cell]Executing: 100%|██████████| 17/17 [03:14<00:00, 11.43s/cell]
+Processing galaxy_id: g7.66e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g7.66e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:00<00:11,  1.37cell/s]Executing:  29%|██▉       | 5/17 [04:24<11:15, 56.28s/cell]Executing:  41%|████      | 7/17 [04:38<06:16, 37.63s/cell]Executing:  53%|█████▎    | 9/17 [04:55<03:38, 27.37s/cell]Executing:  65%|██████▍   | 11/17 [04:56<01:50, 18.37s/cell]Executing:  71%|███████   | 12/17 [04:56<01:14, 14.86s/cell]Executing:  76%|███████▋  | 13/17 [04:56<00:46, 11.69s/cell]Executing:  82%|████████▏ | 14/17 [04:57<00:27,  9.06s/cell]Executing:  88%|████████▊ | 15/17 [04:57<00:13,  6.90s/cell]Executing: 100%|██████████| 17/17 [04:57<00:00,  4.09s/cell]Executing: 100%|██████████| 17/17 [05:02<00:00, 17.78s/cell]
+Processing galaxy_id: g8.13e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g8.13e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:00<00:15,  1.05cell/s]Executing:  29%|██▉       | 5/17 [04:56<12:37, 63.11s/cell]Executing:  41%|████      | 7/17 [05:12<07:02, 42.22s/cell]Executing:  53%|█████▎    | 9/17 [05:28<04:02, 30.26s/cell]Executing:  65%|██████▍   | 11/17 [05:29<02:01, 20.30s/cell]Executing:  71%|███████   | 12/17 [05:29<01:22, 16.41s/cell]Executing:  76%|███████▋  | 13/17 [05:29<00:51, 12.91s/cell]Executing:  82%|████████▏ | 14/17 [05:30<00:29,  9.94s/cell]Executing:  88%|████████▊ | 15/17 [05:30<00:15,  7.53s/cell]Executing: 100%|██████████| 17/17 [05:31<00:00,  4.46s/cell]Executing: 100%|██████████| 17/17 [05:35<00:00, 19.74s/cell]
+Processing galaxy_id: g8.26e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g8.26e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:00<00:11,  1.37cell/s]Executing:  29%|██▉       | 5/17 [03:28<08:52, 44.37s/cell]Executing:  41%|████      | 7/17 [03:41<04:59, 29.98s/cell]Executing:  53%|█████▎    | 9/17 [04:00<03:02, 22.81s/cell]Executing:  65%|██████▍   | 11/17 [04:01<01:31, 15.32s/cell]Executing:  71%|███████   | 12/17 [04:01<01:01, 12.40s/cell]Executing:  76%|███████▋  | 13/17 [04:01<00:39,  9.76s/cell]Executing:  82%|████████▏ | 14/17 [04:01<00:22,  7.54s/cell]Executing:  88%|████████▊ | 15/17 [04:02<00:11,  5.73s/cell]Executing: 100%|██████████| 17/17 [04:02<00:00,  3.42s/cell]Executing: 100%|██████████| 17/17 [04:07<00:00, 14.54s/cell]
+Processing galaxy_id: g1.12e12
+Running Papermill for pipeline: calc_ifu with galaxy_id: g1.12e12 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:00<00:12,  1.31cell/s]Executing:  29%|██▉       | 5/17 [05:56<15:09, 75.76s/cell]Executing:  41%|████      | 7/17 [06:15<08:28, 50.80s/cell]Executing:  53%|█████▎    | 9/17 [06:34<04:50, 36.29s/cell]Executing:  65%|██████▍   | 11/17 [06:35<02:25, 24.29s/cell]Executing:  71%|███████   | 12/17 [06:35<01:38, 19.64s/cell]Executing:  76%|███████▋  | 13/17 [06:35<01:01, 15.44s/cell]Executing:  82%|████████▏ | 14/17 [06:35<00:35, 11.88s/cell]Executing:  88%|████████▊ | 15/17 [06:36<00:17,  8.98s/cell]Executing: 100%|██████████| 17/17 [06:36<00:00,  5.29s/cell]Executing: 100%|██████████| 17/17 [06:42<00:00, 23.67s/cell]
+Processing galaxy_id: g1.77e12
+Running Papermill for pipeline: calc_ifu with galaxy_id: g1.77e12 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:00<00:14,  1.12cell/s]Executing:  12%|█▏        | 2/17 [00:01<00:06,  2.31cell/s]Executing:  29%|██▉       | 5/17 [08:51<25:19, 126.67s/cell]Executing:  41%|████      | 7/17 [09:35<14:03, 84.36s/cell] Executing:  53%|█████▎    | 9/17 [09:57<07:39, 57.39s/cell]Executing:  65%|██████▍   | 11/17 [09:58<03:46, 37.81s/cell]Executing:  71%|███████   | 12/17 [09:58<02:31, 30.39s/cell]Executing:  76%|███████▋  | 13/17 [09:58<01:35, 23.75s/cell]Executing:  82%|████████▏ | 14/17 [09:59<00:54, 18.17s/cell]Executing:  88%|████████▊ | 15/17 [09:59<00:27, 13.76s/cell]Executing: 100%|██████████| 17/17 [10:00<00:00,  8.10s/cell]Executing: 100%|██████████| 17/17 [10:10<00:00, 35.89s/cell]
+Processing galaxy_id: g1.92e12
+Running Papermill for pipeline: calc_ifu with galaxy_id: g1.92e12 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:00<00:11,  1.35cell/s]Executing:  29%|██▉       | 5/17 [11:06<28:21, 141.83s/cell]Executing:  41%|████      | 7/17 [11:54<16:12, 97.22s/cell] Executing:  53%|█████▎    | 9/17 [12:18<08:59, 67.38s/cell]Executing:  65%|██████▍   | 11/17 [12:19<04:30, 45.08s/cell]Executing:  71%|███████   | 12/17 [12:20<03:02, 36.43s/cell]Executing:  76%|███████▋  | 13/17 [12:20<01:54, 28.62s/cell]Executing:  82%|████████▏ | 14/17 [12:20<01:05, 21.99s/cell]Executing:  88%|████████▊ | 15/17 [12:21<00:33, 16.57s/cell]Executing: 100%|██████████| 17/17 [12:21<00:00,  9.78s/cell]Executing: 100%|██████████| 17/17 [12:31<00:00, 44.20s/cell]
+Processing galaxy_id: g2.79e12
+Running Papermill for pipeline: calc_ifu with galaxy_id: g2.79e12 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:01<00:17,  1.08s/cell]Executing:  29%|██▉       | 5/17 [17:22<44:20, 221.67s/cell]Executing:  35%|███▌      | 6/17 [17:22<31:10, 170.03s/cell]Executing:  41%|████      | 7/17 [18:38<24:25, 146.52s/cell]Executing:  53%|█████▎    | 9/17 [20:31<14:31, 108.99s/cell]Executing:  59%|█████▉    | 10/17 [20:31<09:48, 84.10s/cell]Executing:  65%|██████▍   | 11/17 [20:50<06:48, 68.05s/cell]Executing:  71%|███████   | 12/17 [20:51<04:13, 50.63s/cell]Executing:  76%|███████▋  | 13/17 [20:52<02:28, 37.20s/cell]Executing:  82%|████████▏ | 14/17 [21:03<01:29, 29.69s/cell]Executing:  88%|████████▊ | 15/17 [21:04<00:43, 21.73s/cell]Executing: 100%|██████████| 17/17 [21:41<00:00, 20.21s/cell]Wait for final termination of kernel timed out - continuing...
+Executing: 100%|██████████| 17/17 [21:54<00:00, 77.31s/cell]
