@@ -44,8 +44,9 @@ class RubixPipeline:
     --------
     >>> from rubix.core.pipeline import RubixPipeline
     >>> config = "path/to/config.yml"
-    >>> pipeline = RubixPipeline(config)
-    >>> output = pipeline.run()
+    >>> pipe = RubixPipeline(config)
+    >>> inputdata = pipe.prepare_data()
+    >>> output = pipe.run(inputdata)
     >>> ssp_model = pipeline.ssp
     >>> telescope = pipeline.telescope
     """
@@ -56,10 +57,9 @@ class RubixPipeline:
         self.logger = get_logger(self.user_config["logger"])
         self.ssp = get_ssp(self.user_config)
         self.telescope = get_telescope(self.user_config)
-        self.data = self._prepare_data()
         self.func = None
 
-    def _prepare_data(self):
+    def prepare_data(self):
         """
         Prepares and loads the data for the pipeline.
 
@@ -135,9 +135,14 @@ class RubixPipeline:
         return functions
 
     # TODO: currently returns dict, but later should return only the IFU cube
-    def run(self):
+    def run(self, inputdata):
         """
-        Runs the data processing pipeline.
+        Runs the data processing pipeline on the complete input data.
+
+        Parameters
+        ----------
+        inputdata : object
+            Data prepared from the `prepare_data` method.
 
         Returns
         -------
@@ -161,7 +166,7 @@ class RubixPipeline:
 
         # Running the pipeline
         self.logger.info("Running the pipeline on the input data...")
-        output = self.func(self.data)
+        output = self.func(inputdata)
 
         block_until_ready(output)
         time_end = time.time()
@@ -169,30 +174,30 @@ class RubixPipeline:
             "Pipeline run completed in %.2f seconds.", time_end - time_start
         )
 
-        output.galaxy.redshift_unit = self.data.galaxy.redshift_unit
-        output.galaxy.center_unit = self.data.galaxy.center_unit
-        output.galaxy.halfmassrad_stars_unit = self.data.galaxy.halfmassrad_stars_unit
+        output.galaxy.redshift_unit = inputdata.galaxy.redshift_unit
+        output.galaxy.center_unit = inputdata.galaxy.center_unit
+        output.galaxy.halfmassrad_stars_unit = inputdata.galaxy.halfmassrad_stars_unit
 
         if output.stars.coords != None:
-            output.stars.coords_unit = self.data.stars.coords_unit
-            output.stars.velocity_unit = self.data.stars.velocity_unit
-            output.stars.mass_unit = self.data.stars.mass_unit
+            output.stars.coords_unit = inputdata.stars.coords_unit
+            output.stars.velocity_unit = inputdata.stars.velocity_unit
+            output.stars.mass_unit = inputdata.stars.mass_unit
             # output.stars.metallictiy_unit = self.data.stars.metallictiy_unit
-            output.stars.age_unit = self.data.stars.age_unit
+            output.stars.age_unit = inputdata.stars.age_unit
             output.stars.spatial_bin_edges_unit = "kpc"
             # output.stars.wavelength_unit = rubix_config["ssp"]["units"]["wavelength"]
             # output.stars.spectra_unit = rubix_config["ssp"]["units"]["flux"]
             # output.stars.datacube_unit = rubix_config["ssp"]["units"]["flux"]
 
         if output.gas.coords != None:
-            output.gas.coords_unit = self.data.gas.coords_unit
-            output.gas.velocity_unit = self.data.gas.velocity_unit
-            output.gas.mass_unit = self.data.gas.mass_unit
-            output.gas.density_unit = self.data.gas.density_unit
-            output.gas.internal_energy_unit = self.data.gas.internal_energy_unit
+            output.gas.coords_unit = inputdata.gas.coords_unit
+            output.gas.velocity_unit = inputdata.gas.velocity_unit
+            output.gas.mass_unit = inputdata.gas.mass_unit
+            output.gas.density_unit = inputdata.gas.density_unit
+            output.gas.internal_energy_unit = inputdata.gas.internal_energy_unit
             # output.gas.metallicity_unit = self.data.gas.metallicity_unit
-            output.gas.sfr_unit = self.data.gas.sfr_unit
-            output.gas.electron_abundance_unit = self.data.gas.electron_abundance_unit
+            output.gas.sfr_unit = inputdata.gas.sfr_unit
+            output.gas.electron_abundance_unit = inputdata.gas.electron_abundance_unit
             output.gas.spatial_bin_edges_unit = "kpc"
             # output.gas.wavelength_unit = rubix_config["ssp"]["units"]["wavelength"]
             # output.gas.spectra_unit = rubix_config["ssp"]["units"]["flux"]
@@ -200,9 +205,82 @@ class RubixPipeline:
 
         return output
 
-    # TODO: implement gradient calculation
-    def gradient(self):
+    def gradient(self, rubixdata, targetdata):
         """
-        This function will calculate the gradient of the pipeline, but is yet not implemented.
+        This function will calculate the gradient of the pipeline.
         """
-        raise NotImplementedError("Gradient calculation is not implemented yet")
+        return jax.grad(self.loss, argnums=0)(rubixdata, targetdata)
+
+
+def loss(self, rubixdata, targetdata):
+    """
+    Calculate the mean squared error loss.
+
+    Args:
+        data (array-like): The predicted data.
+        target (array-like): The target data.
+
+    Returns:
+        The mean squared error loss.
+    """
+    output = self.run(rubixdata)
+    loss_value = jnp.sum((output.stars.datacube - targetdata.stars.datacube) ** 2)
+    return loss_value
+
+
+def loss_only_wrt_age(self, age, rubixdata, target):
+    """
+    A "wrapped" loss function that:
+    1) Creates a modified rubixdata with the new 'age'
+    2) Runs the pipeline
+    3) Returns MSE
+    """
+    # 1) Replace the age
+    rubixdata.stars.age = age
+
+    # 2) Run the pipeline
+    output = self.run(rubixdata)
+
+    # 4) Compute loss
+    loss = jnp.sum((output.stars.datacube - target.stars.datacube) ** 2)
+
+    return loss
+
+
+def loss_only_wrt_metallicity(self, metallicity, rubixdata, target):
+    """
+    A "wrapped" loss function that:
+    1) Creates a modified rubixdata with the new 'metallicity'
+    2) Runs the pipeline
+    3) Returns MSE
+    """
+    # 1) Replace the metallicity
+    rubixdata.stars.metallicity = metallicity
+
+    # 2) Run the pipeline
+    output = self.run(rubixdata)
+
+    # 3) Compute loss
+    loss = jnp.sum((output.stars.datacube - target.stars.datacube) ** 2)
+
+    return loss
+
+
+def loss_only_wrt_age_metallicity(self, age, metallicity, rubixdata, target):
+    """
+    A "wrapped" loss function that:
+    1) Creates a modified rubixdata with the new 'age' and 'metallicity'
+    2) Runs the pipeline
+    3) Returns MSE
+    """
+    # 1) Replace age qand metallicity
+    rubixdata.stars.age = age
+    rubixdata.stars.metallicity = metallicity
+
+    # 2) Run the pipeline
+    output = self.run(rubixdata)
+
+    # 3) Compute loss
+    loss = jnp.sum((output.stars.datacube - target.stars.datacube) ** 2)
+
+    return loss
