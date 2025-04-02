@@ -1,4 +1,5 @@
 import time
+from copy import deepcopy
 from typing import Union
 
 import jax
@@ -177,7 +178,7 @@ class RubixPipeline:
         output.galaxy.redshift_unit = inputdata.galaxy.redshift_unit
         output.galaxy.center_unit = inputdata.galaxy.center_unit
         output.galaxy.halfmassrad_stars_unit = inputdata.galaxy.halfmassrad_stars_unit
-
+        """
         if output.stars.coords != None:
             output.stars.coords_unit = inputdata.stars.coords_unit
             output.stars.velocity_unit = inputdata.stars.velocity_unit
@@ -202,6 +203,12 @@ class RubixPipeline:
             # output.gas.wavelength_unit = rubix_config["ssp"]["units"]["wavelength"]
             # output.gas.spectra_unit = rubix_config["ssp"]["units"]["flux"]
             # output.gas.datacube_unit = rubix_config["ssp"]["units"]["flux"]
+        """
+        output.stars.mass = jnp.squeeze(output.stars.mass, axis=0)
+        output.stars.age = jnp.squeeze(output.stars.age, axis=0)
+        output.stars.metallicity = jnp.squeeze(output.stars.metallicity, axis=0)
+        output.stars.velocity = jnp.squeeze(output.stars.velocity, axis=0)
+        output.stars.coords = jnp.squeeze(output.stars.coords, axis=0)
 
         return output
 
@@ -226,57 +233,63 @@ class RubixPipeline:
         loss_value = jnp.sum((output.stars.datacube - targetdata.stars.datacube) ** 2)
         return loss_value
 
-    def loss_only_wrt_age(self, age, rubixdata, target):
+    def loss_only_wrt_age(self, age, base_data, target):
         """
         A "wrapped" loss function that:
         1) Creates a modified rubixdata with the new 'age'
         2) Runs the pipeline
         3) Returns MSE
         """
-        # 1) Replace the age
-        rubixdata.stars.age = age
+        # 1) Copy your data (so we don't mutate the original)
+        data_modified = deepcopy(base_data)
+        # 2) Replace the age
+        data_modified.stars.age = age
 
-        # 2) Run the pipeline
-        output = self.run(rubixdata)
+        # 3) Run the pipeline
+        output = self.run(data_modified)
 
         # 4) Compute loss
         loss = jnp.sum((output.stars.datacube - target.stars.datacube) ** 2)
 
         return loss
 
-    def loss_only_wrt_metallicity(self, metallicity, rubixdata, target):
+    def loss_only_wrt_metallicity(self, metallicity, base_data, target):
         """
         A "wrapped" loss function that:
         1) Creates a modified rubixdata with the new 'metallicity'
         2) Runs the pipeline
         3) Returns MSE
         """
-        # 1) Replace the metallicity
-        rubixdata.stars.metallicity = metallicity
+        # 1) Copy your data (so we don't mutate the original)
+        data_modified = deepcopy(base_data)
+        # 2) Replace the age
+        data_modified.stars.metallicity = metallicity
 
-        # 2) Run the pipeline
-        output = self.run(rubixdata)
+        # 3) Run the pipeline
+        output = self.run(data_modified)
 
-        # 3) Compute loss
+        # 4) Compute loss
         loss = jnp.sum((output.stars.datacube - target.stars.datacube) ** 2)
 
         return loss
 
-    def loss_only_wrt_age_metallicity(self, age, metallicity, rubixdata, target):
+    def loss_only_wrt_age_metallicity(self, age, metallicity, base_data, target):
         """
         A "wrapped" loss function that:
         1) Creates a modified rubixdata with the new 'age' and 'metallicity'
         2) Runs the pipeline
         3) Returns MSE
         """
-        # 1) Replace age qand metallicity
-        rubixdata.stars.age = age
-        rubixdata.stars.metallicity = metallicity
+        # 1) Copy your data (so we don't mutate the original)
+        data_modified = deepcopy(base_data)
+        # 2) Replace the age
+        data_modified.stars.age = age
+        data_modified.stars.metallicity = metallicity
 
-        # 2) Run the pipeline
-        output = self.run(rubixdata)
+        # 3) Run the pipeline
+        output = self.run(data_modified)
 
-        # 3) Compute loss
+        # 4) Compute loss
         loss = jnp.sum((output.stars.datacube - target.stars.datacube) ** 2)
 
         return loss
