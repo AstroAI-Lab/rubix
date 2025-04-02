@@ -41,7 +41,10 @@ def store_fits(config, data, filepath):
     hdr["SIMPLE"] = "T /conforms to FITS standard"
     hdr["PIPELINE"] = config["pipeline"]["name"]
     hdr["DIST_z"] = config["galaxy"]["dist_z"]
-    if config["galaxy"]["rotation"] == ["type"]:
+    if (
+        config["galaxy"]["rotation"]["type"] == "face-on"
+        or config["galaxy"]["rotation"]["type"] == "edge-on"
+    ):
         hdr["ROTATION"] = config["galaxy"]["rotation"]["type"]
     else:
         hdr["ROT_a"] = config["galaxy"]["rotation"]["alpha"]
