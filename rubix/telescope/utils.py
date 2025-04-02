@@ -1,15 +1,19 @@
+from typing import List, Tuple, Union
+
 import jax.numpy as jnp
 import numpy as np
-from rubix.cosmology.base import BaseCosmology
-from typing import Tuple, List
-from jaxtyping import Float, Array, Bool, Int, jaxtyped
 from beartype import beartype as typechecker
-from typing import Union
+from jaxtyping import Array, Bool, Float, Int, jaxtyped
+
+from rubix.cosmology.base import BaseCosmology
 
 
 @jaxtyped(typechecker=typechecker)
 def calculate_spatial_bin_edges(
-    fov: float, spatial_bins: np.int64, dist_z: float, cosmology: BaseCosmology
+    fov: float,
+    spatial_bins: np.int64,
+    dist_z: Union[float, jnp.float64, Float[Array, "..."]],
+    cosmology: BaseCosmology,
 ) -> Tuple[
     Union[Int[Array, "..."], Float[Array, "..."]],
     Union[float, int, Int[Array, "..."], Float[Array, "..."]],
