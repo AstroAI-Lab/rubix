@@ -60,61 +60,26 @@ def get_calculate_spectra(config: dict) -> Callable:
     lookup_interpolation = get_lookup_interpolation(config)
 
     @jaxtyped(typechecker=typechecker)
-    def calculate_spectra(rubixdata: RubixData) -> RubixData:
+    def calculate_spectra(rubixdata: object) -> object:
         logger.info("Calculating IFU cube...")
         logger.debug(
             f"Input shapes: Metallicity: {len(rubixdata.stars.metallicity)}, Age: {len(rubixdata.stars.age)}"
         )
+
         # Ensure metallicity and age are arrays and reshape them to be at least 1-dimensional
-        # age_data = jax.device_get(rubixdata.stars.age)
-        age_data = rubixdata.stars.age
-        # metallicity_data = jax.device_get(rubixdata.stars.metallicity)
-        metallicity_data = rubixdata.stars.metallicity
+        age_data = jax.device_get(rubixdata.stars.age)
+        metallicity_data = jax.device_get(rubixdata.stars.metallicity)
         # Ensure they are not scalars or empty; convert to 1D arrays if necessary
         age = jnp.atleast_1d(age_data)
         metallicity = jnp.atleast_1d(metallicity_data)
 
-        """
-        spectra1 = lookup_interpolation(
+        spectra = lookup_interpolation_pmap(
             # rubixdata.stars.metallicity, rubixdata.stars.age
-            metallicity[0][:250000],
-            age[0][:250000],
+            metallicity,
+            age,
         )  # * inputs["mass"]
-        spectra2 = lookup_interpolation(
-            # rubixdata.stars.metallicity, rubixdata.stars.age
-            metallicity[0][250000:500000],
-            age[0][250000:500000],
-        )
-        spectra3 = lookup_interpolation(
-            # rubixdata.stars.metallicity, rubixdata.stars.age
-            metallicity[0][500000:750000],
-            age[0][500000:750000],
-        )
-        spectra = jnp.concatenate([spectra1, spectra2, spectra3], axis=0)
-        """
-        # Define the chunk size (number of particles per chunk)
-        chunk_size = 100000
-        total_length = metallicity[0].shape[
-            0
-        ]  # assuming metallicity[0] is your 1D array of particles
-
-        # List to hold the spectra chunks
-        spectra_chunks = []
-
-        # Loop over the data in chunks
-        for start in range(0, total_length, chunk_size):
-            end = min(start + chunk_size, total_length)
-            current_chunk = lookup_interpolation(
-                metallicity[0][start:end],
-                age[0][start:end],
-            )
-            spectra_chunks.append(current_chunk)
-
-        # Concatenate all the chunks along axis 0
-        spectra = jnp.concatenate(spectra_chunks, axis=0)
         logger.debug(f"Calculation Finished! Spectra shape: {spectra.shape}")
         spectra_jax = jnp.array(spectra)
-        spectra_jax = jnp.expand_dims(spectra_jax, axis=0)
         rubixdata.stars.spectra = spectra_jax
         # setattr(rubixdata.gas, "spectra", spectra)
         # jax.debug.print("Calculate Spectra: Spectra {}", spectra)
@@ -354,7 +319,7 @@ def get_calculate_datacube(config: dict) -> Callable:
     @jaxtyped(typechecker=typechecker)
     def calculate_datacube(rubixdata: RubixData) -> RubixData:
         logger.info("Calculating Data Cube...")
-        # logger.debug(f"pixel assignment: {rubixdata.stars.pixel_assignment.shape}")
+        logger.debug(f"pixel assignment: {rubixdata.stars.pixel_assignment.shape}")
         ifu_cubes = calculate_cube_pmap(
             spectra=rubixdata.stars.spectra,
             spaxel_index=rubixdata.stars.pixel_assignment,

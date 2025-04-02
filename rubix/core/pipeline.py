@@ -211,76 +211,72 @@ class RubixPipeline:
         """
         return jax.grad(self.loss, argnums=0)(rubixdata, targetdata)
 
+    def loss(self, rubixdata, targetdata):
+        """
+        Calculate the mean squared error loss.
 
-def loss(self, rubixdata, targetdata):
-    """
-    Calculate the mean squared error loss.
+        Args:
+            data (array-like): The predicted data.
+            target (array-like): The target data.
 
-    Args:
-        data (array-like): The predicted data.
-        target (array-like): The target data.
+        Returns:
+            The mean squared error loss.
+        """
+        output = self.run(rubixdata)
+        loss_value = jnp.sum((output.stars.datacube - targetdata.stars.datacube) ** 2)
+        return loss_value
 
-    Returns:
-        The mean squared error loss.
-    """
-    output = self.run(rubixdata)
-    loss_value = jnp.sum((output.stars.datacube - targetdata.stars.datacube) ** 2)
-    return loss_value
+    def loss_only_wrt_age(self, age, rubixdata, target):
+        """
+        A "wrapped" loss function that:
+        1) Creates a modified rubixdata with the new 'age'
+        2) Runs the pipeline
+        3) Returns MSE
+        """
+        # 1) Replace the age
+        rubixdata.stars.age = age
 
+        # 2) Run the pipeline
+        output = self.run(rubixdata)
 
-def loss_only_wrt_age(self, age, rubixdata, target):
-    """
-    A "wrapped" loss function that:
-    1) Creates a modified rubixdata with the new 'age'
-    2) Runs the pipeline
-    3) Returns MSE
-    """
-    # 1) Replace the age
-    rubixdata.stars.age = age
+        # 4) Compute loss
+        loss = jnp.sum((output.stars.datacube - target.stars.datacube) ** 2)
 
-    # 2) Run the pipeline
-    output = self.run(rubixdata)
+        return loss
 
-    # 4) Compute loss
-    loss = jnp.sum((output.stars.datacube - target.stars.datacube) ** 2)
+    def loss_only_wrt_metallicity(self, metallicity, rubixdata, target):
+        """
+        A "wrapped" loss function that:
+        1) Creates a modified rubixdata with the new 'metallicity'
+        2) Runs the pipeline
+        3) Returns MSE
+        """
+        # 1) Replace the metallicity
+        rubixdata.stars.metallicity = metallicity
 
-    return loss
+        # 2) Run the pipeline
+        output = self.run(rubixdata)
 
+        # 3) Compute loss
+        loss = jnp.sum((output.stars.datacube - target.stars.datacube) ** 2)
 
-def loss_only_wrt_metallicity(self, metallicity, rubixdata, target):
-    """
-    A "wrapped" loss function that:
-    1) Creates a modified rubixdata with the new 'metallicity'
-    2) Runs the pipeline
-    3) Returns MSE
-    """
-    # 1) Replace the metallicity
-    rubixdata.stars.metallicity = metallicity
+        return loss
 
-    # 2) Run the pipeline
-    output = self.run(rubixdata)
+    def loss_only_wrt_age_metallicity(self, age, metallicity, rubixdata, target):
+        """
+        A "wrapped" loss function that:
+        1) Creates a modified rubixdata with the new 'age' and 'metallicity'
+        2) Runs the pipeline
+        3) Returns MSE
+        """
+        # 1) Replace age qand metallicity
+        rubixdata.stars.age = age
+        rubixdata.stars.metallicity = metallicity
 
-    # 3) Compute loss
-    loss = jnp.sum((output.stars.datacube - target.stars.datacube) ** 2)
+        # 2) Run the pipeline
+        output = self.run(rubixdata)
 
-    return loss
+        # 3) Compute loss
+        loss = jnp.sum((output.stars.datacube - target.stars.datacube) ** 2)
 
-
-def loss_only_wrt_age_metallicity(self, age, metallicity, rubixdata, target):
-    """
-    A "wrapped" loss function that:
-    1) Creates a modified rubixdata with the new 'age' and 'metallicity'
-    2) Runs the pipeline
-    3) Returns MSE
-    """
-    # 1) Replace age qand metallicity
-    rubixdata.stars.age = age
-    rubixdata.stars.metallicity = metallicity
-
-    # 2) Run the pipeline
-    output = self.run(rubixdata)
-
-    # 3) Compute loss
-    loss = jnp.sum((output.stars.datacube - target.stars.datacube) ** 2)
-
-    return loss
+        return loss
