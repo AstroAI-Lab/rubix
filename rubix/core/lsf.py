@@ -1,10 +1,13 @@
-from rubix.telescope.lsf.lsf import apply_lsf
-from .telescope import get_telescope
 from typing import Callable
-from rubix.logger import get_logger
-from .data import RubixData
-from jaxtyping import jaxtyped
+
 from beartype import beartype as typechecker
+from jaxtyping import jaxtyped
+
+from rubix.logger import get_logger
+from rubix.telescope.lsf.lsf import apply_lsf
+
+from .data import RubixData
+from .telescope import get_telescope
 
 
 @jaxtyped(typechecker=typechecker)

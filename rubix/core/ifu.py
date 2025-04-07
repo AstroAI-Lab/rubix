@@ -267,7 +267,7 @@ def get_doppler_shift_and_resampling(config: dict) -> Callable:
 
     @jaxtyped(typechecker=typechecker)
     def process_particle(
-        particle: Union[StarsData, GasData]
+        particle: Union[StarsData, GasData],
     ) -> Union[Float[Array, "..."], None]:
         if particle.spectra is not None:
             # Doppler shift based on the velocity of the particle

@@ -1,7 +1,10 @@
-import pytest
 from unittest.mock import MagicMock, patch
+
 import numpy as np
+import pytest
+
 from rubix.galaxy.input_handler.pynbody import PynbodyHandler
+
 
 @pytest.fixture
 def mock_config():
@@ -37,12 +40,19 @@ def mock_config():
         "galaxy": {"dist_z": 0.1},
     }
 
+
 @pytest.fixture
 def mock_simulation():
     """Mocked simulation object that mimics a pynbody SimSnap (stars, gas, dm)."""
     mock_sim = MagicMock()
 
-    mock_sim.stars.loadable_keys.return_value = ["pos", "mass", "vel", "metallicity", "age"]
+    mock_sim.stars.loadable_keys.return_value = [
+        "pos",
+        "mass",
+        "vel",
+        "metallicity",
+        "age",
+    ]
     mock_sim.gas.loadable_keys.return_value = ["density", "temperature"]
     mock_sim.dm.loadable_keys.return_value = ["mass"]
 
@@ -59,9 +69,7 @@ def mock_simulation():
         "temperature": np.array([100.0, 200.0, 300.0]),
     }
 
-    dm_arrays = {
-        "mass": np.array([10.0, 20.0, 30.0])
-    }
+    dm_arrays = {"mass": np.array([10.0, 20.0, 30.0])}
 
     def star_getitem(key):
         return star_arrays[key]
@@ -86,6 +94,7 @@ def mock_simulation():
 
     return mock_sim
 
+
 @pytest.fixture
 def handler_with_mock_data(mock_simulation, mock_config):
     with patch("pynbody.load", return_value=mock_simulation):
@@ -99,14 +108,17 @@ def handler_with_mock_data(mock_simulation, mock_config):
             )
             return handler
 
+
 def test_pynbody_handler_initialization(handler_with_mock_data):
     """Test initialization of PynbodyHandler."""
     assert handler_with_mock_data is not None
+
 
 def test_load_data(handler_with_mock_data):
     """Test if data is loaded correctly."""
     data = handler_with_mock_data.get_particle_data()
     assert "stars" in data
+
 
 def test_get_galaxy_data(handler_with_mock_data):
     """Test retrieval of galaxy data."""
@@ -122,6 +134,7 @@ def test_get_galaxy_data(handler_with_mock_data):
     assert galaxy_data["center"] == expected_center
     assert "halfmassrad_stars" in galaxy_data
 
+
 def test_get_units(handler_with_mock_data):
     """Test if units are correctly returned."""
     units = handler_with_mock_data.get_units()
@@ -129,12 +142,14 @@ def test_get_units(handler_with_mock_data):
     assert "gas" in units
     assert "dm" in units
 
+
 def test_gas_data_load(handler_with_mock_data):
     """Test loading of gas data."""
     data = handler_with_mock_data.get_particle_data()
     assert "gas" in data
     assert "density" in data["gas"]
     assert "temperature" in data["gas"]
+
 
 def test_stars_data_load(handler_with_mock_data):
     """Test loading of stars data."""

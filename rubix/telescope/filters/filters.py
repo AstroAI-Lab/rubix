@@ -1,13 +1,15 @@
+import os
+from typing import List, Optional, Union
+
 import equinox as eqx
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
-from jaxtyping import Array, Float
-from typing import List, Union, Optional
-from rubix.paths import FILTERS_PATH
-from rubix.logger import get_logger
 from astropy.table import Table
 from astroquery.svo_fps import SvoFps
-import os
+from jaxtyping import Array, Float
+
+from rubix.logger import get_logger
+from rubix.paths import FILTERS_PATH
 
 _logger = get_logger()
 
@@ -337,15 +339,13 @@ def _load_filter_list_for_instrument(
         for ID in filter_table["filterID"]:
             if ID.startswith(filter_prefix):
                 # filter_data = filter_table.loc[ID]
-                #tmp_ID = ID.split("/")[-1]
+                # tmp_ID = ID.split("/")[-1]
                 # check if the filter file is present on disk
                 # if not, download it from the SVO Filter Profile Service
                 # and save it to the specified path
                 # this is needed if from the previous run the specific filters were not saved to disk or only the instrument table was saved.
                 if not os.path.exists(f"{filter_dir}/{ID}.csv"):
-                    _logger.info(
-                        f"Filter file {ID}.csv not found in {filter_dir}."
-                    )
+                    _logger.info(f"Filter file {ID}.csv not found in {filter_dir}.")
                     _logger.info(
                         f"Start downloading telescope filter files for {filter_prefix}."
                     )
@@ -476,7 +476,9 @@ def print_filter_list_info(facility: str, instrument: Optional[str] = None):
     print(filter_list.info)
 
 
-def print_filter_property(facility: str, filter_name: str, instrument: Optional[str] = None):
+def print_filter_property(
+    facility: str, filter_name: str, instrument: Optional[str] = None
+):
     """
     Print the properties of a filter available for a given facility, instrument and filter name.
     If you want to see the list of all facilities and instruments, follow the link below:
