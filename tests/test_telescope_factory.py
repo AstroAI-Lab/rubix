@@ -12,7 +12,9 @@ from rubix.telescope.apertures import (
     SQUARE_APERTURE,
 )
 from rubix.telescope.base import BaseTelescope
-from rubix.telescope.factory import TelescopeFactory
+from rubix.telescope.factory import (
+    TelescopeFactory,
+)
 
 jax.config.update("jax_platform_name", "cpu")
 
