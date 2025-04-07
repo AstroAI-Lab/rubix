@@ -1,5 +1,6 @@
 """Use python-fsps to retrieve a block of Simple Stellar Population (SSP) data
-adapted from https://github.com/ArgonneCPAC/dsps/blob/main/dsps/data_loaders/retrieve_fsps_data.py"""
+adapted from https://github.com/ArgonneCPAC/dsps/blob/main/dsps/data_loaders/retrieve_fsps_data.py
+"""
 
 import importlib
 import os
