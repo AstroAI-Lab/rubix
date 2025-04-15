@@ -2,11 +2,10 @@
 
 """
 
-import numpy as np
-from jaxtyping import Array, Float
 import jax.numpy as jnp
-from jaxtyping import Array, Float, jaxtyped
+import numpy as np
 from beartype import beartype as typechecker
+from jaxtyping import Array, Float, jaxtyped
 
 __all__ = ["HEXAGONAL_APERTURE", "SQUARE_APERTURE", "CIRCULAR_APERTURE"]
 

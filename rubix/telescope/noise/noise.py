@@ -1,6 +1,5 @@
 import jax.numpy as jnp
 from jax import random as jrandom
-
 from jaxtyping import Array, Float
 
 SUPPORTED_NOISE_DISTRIBUTIONS = ["normal", "uniform"]

@@ -2,16 +2,16 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from rubix.spectra.ifu import resample_spectrum
-from rubix.core.data import reshape_array, RubixData, Galaxy, StarsData, GasData
-from rubix.core.ssp import get_ssp
+from rubix.core.data import Galaxy, GasData, RubixData, StarsData, reshape_array
 from rubix.core.ifu import (
     get_calculate_spectra,
-    get_scale_spectrum_by_mass,
-    get_resample_spectrum_vmap,
-    get_resample_spectrum_pmap,
     get_doppler_shift_and_resampling,
+    get_resample_spectrum_pmap,
+    get_resample_spectrum_vmap,
+    get_scale_spectrum_by_mass,
 )
+from rubix.core.ssp import get_ssp
+from rubix.spectra.ifu import resample_spectrum
 
 RTOL = 1e-4
 ATOL = 1e-6

@@ -1,9 +1,12 @@
-from .base import BaseHandler  # type: ignore
 import os
+
 import h5py
 import numpy as np
-from rubix.utils import convert_values_to_physical, SFTtoAge
+
 from rubix import config
+from rubix.utils import SFTtoAge, convert_values_to_physical
+
+from .base import BaseHandler  # type: ignore
 
 
 class IllustrisHandler(BaseHandler):

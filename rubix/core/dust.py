@@ -1,20 +1,22 @@
-from rubix.logger import get_logger
-from .data import RubixData
-from rubix.spectra.dust.dust_extinction import apply_spaxel_extinction
-from .telescope import get_telescope
-from rubix.telescope.utils import calculate_spatial_bin_edges
-from rubix.core.cosmology import get_cosmology
-
 from typing import Callable
-from jaxtyping import jaxtyped
+
 from beartype import beartype as typechecker
+from jaxtyping import jaxtyped
+
+from rubix.core.cosmology import get_cosmology
+from rubix.logger import get_logger
+from rubix.spectra.dust.dust_extinction import apply_spaxel_extinction
+from rubix.telescope.utils import calculate_spatial_bin_edges
+
+from .data import RubixData
+from .telescope import get_telescope
 
 
 @jaxtyped(typechecker=typechecker)
 def get_extinction(config: dict) -> Callable:
     """
     Get the function to apply the dust extinction to the spaxel data.
-    
+
     Parameters
     ----------
     config : dict
@@ -26,7 +28,7 @@ def get_extinction(config: dict) -> Callable:
         The function to apply the dust extinction to the spaxel data.
     """
     logger = get_logger(config.get("logger", None))
-    
+
     # check if dust key exists in config file to ensure we really want to apply dust extinction
     if "dust" not in config["ssp"]:
         raise ValueError("Dust configuration not found in config file.")
@@ -54,9 +56,10 @@ def get_extinction(config: dict) -> Callable:
         """Apply the dust extinction to the spaxel data."""
         logger.info("Applying dust extinction to the spaxel data...")
 
-        rubixdata.stars.spectra = apply_spaxel_extinction(config, rubixdata, wavelength, n_spaxels, spaxel_area)
+        rubixdata.stars.spectra = apply_spaxel_extinction(
+            config, rubixdata, wavelength, n_spaxels, spaxel_area
+        )
 
         return rubixdata
-    
-    return calculate_extinction
 
+    return calculate_extinction

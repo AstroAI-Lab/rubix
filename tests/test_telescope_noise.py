@@ -1,6 +1,7 @@
-import pytest
 import jax.numpy as jnp
 import jax.random as jrandom
+import pytest
+
 from rubix.telescope.noise.noise import calculate_noise_cube, sample_noise
 
 
