@@ -225,9 +225,10 @@ class RubixPipeline:
             if hasattr(inputdata, key):
                 sharded_input[key] = shard_subdata(getattr(inputdata, key))
         # Preserve other parts (e.g. galaxy and units) as-is.
-        for key in vars(inputdata):
-            if key not in sharded_input:
-                sharded_input[key] = getattr(inputdata, key)
+        #sharded_input["galaxy"] = inputdata.galaxy
+        #for key in vars(inputdata):
+        #    if key not in sharded_input:
+        #        sharded_input[key] = getattr(inputdata, key)
         sharded_input = SimpleNamespace(**sharded_input)
         # -----------------------------------------
 
@@ -272,9 +273,9 @@ class RubixPipeline:
         # Use jax.shard_map to parallelize across shards.
         sharded_pipeline_fn = shard_map.shard_map(
             pipeline_shard_fn,
+            mesh,
             in_shardings,
             out_shardings,
-            mesh,
         )
 
         with mesh:
