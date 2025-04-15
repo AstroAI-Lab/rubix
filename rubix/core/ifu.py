@@ -93,7 +93,7 @@ def get_calculate_spectra(config: dict) -> Callable:
         spectra = jnp.concatenate([spectra1, spectra2, spectra3], axis=0)
         """
         # Define the chunk size (number of particles per chunk)
-        chunk_size = 100000
+        chunk_size = 250000
         total_length = metallicity[0].shape[
             0
         ]  # assuming metallicity[0] is your 1D array of particles
