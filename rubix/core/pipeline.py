@@ -89,7 +89,7 @@ class RubixPipeline:
         filter_particles = get_filter_particles(self.user_config)
         spaxel_assignment = get_spaxel_assignment(self.user_config)
         calculate_spectra = get_calculate_spectra(self.user_config)
-        reshape_data = get_reshape_data(self.user_config)
+        #reshape_data = get_reshape_data(self.user_config)
         scale_spectrum_by_mass = get_scale_spectrum_by_mass(self.user_config)
         doppler_shift_and_resampling = get_doppler_shift_and_resampling(
             self.user_config
@@ -105,7 +105,7 @@ class RubixPipeline:
             filter_particles,
             spaxel_assignment,
             calculate_spectra,
-            reshape_data,
+            #reshape_data,
             scale_spectrum_by_mass,
             doppler_shift_and_resampling,
             apply_extinction,

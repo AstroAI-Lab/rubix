@@ -94,7 +94,7 @@ def get_calculate_spectra(config: dict) -> Callable:
         """
         # Define the chunk size (number of particles per chunk)
         chunk_size = 250000
-        total_length = metallicity[0].shape[
+        total_length = metallicity.shape[
             0
         ]  # assuming metallicity[0] is your 1D array of particles
 
@@ -105,8 +105,8 @@ def get_calculate_spectra(config: dict) -> Callable:
         for start in range(0, total_length, chunk_size):
             end = min(start + chunk_size, total_length)
             current_chunk = lookup_interpolation(
-                metallicity[0][start:end],
-                age[0][start:end],
+                metallicity[start:end],
+                age[start:end],
             )
             spectra_chunks.append(current_chunk)
 
@@ -114,7 +114,7 @@ def get_calculate_spectra(config: dict) -> Callable:
         spectra = jnp.concatenate(spectra_chunks, axis=0)
         logger.debug(f"Calculation Finished! Spectra shape: {spectra.shape}")
         spectra_jax = jnp.array(spectra)
-        spectra_jax = jnp.expand_dims(spectra_jax, axis=0)
+        #spectra_jax = jnp.expand_dims(spectra_jax, axis=0)
         rubixdata.stars.spectra = spectra_jax
         # setattr(rubixdata.gas, "spectra", spectra)
         # jax.debug.print("Calculate Spectra: Spectra {}", spectra)
@@ -184,19 +184,19 @@ def get_resample_spectrum_vmap(target_wavelength) -> Callable:
 
 
 # Parallelize the vectorized function across devices
-@jaxtyped(typechecker=typechecker)
-def get_resample_spectrum_pmap(target_wavelength) -> Callable:
-    """
-    Pmap the function that resamples the spectra of the stars to the telescope wavelength grid.
+#@jaxtyped(typechecker=typechecker)
+#def get_resample_spectrum_pmap(target_wavelength) -> Callable:
+#    """
+#    Pmap the function that resamples the spectra of the stars to the telescope wavelength grid.
 
-    Args:
-        target_wavelength (jax.Array): The telescope wavelength grid
+#    Args:
+#        target_wavelength (jax.Array): The telescope wavelength grid
 
-    Returns:
-        The function that resamples the spectra to the telescope wavelength grid.
-    """
-    vmapped_resample_spectrum = get_resample_spectrum_vmap(target_wavelength)
-    return jax.pmap(vmapped_resample_spectrum)
+#    Returns:
+#        The function that resamples the spectra to the telescope wavelength grid.
+#    """
+#    vmapped_resample_spectrum = get_resample_spectrum_vmap(target_wavelength)
+#    return jax.pmap(vmapped_resample_spectrum)
 
 
 @jaxtyped(typechecker=typechecker)
@@ -214,12 +214,20 @@ def get_velocities_doppler_shift_vmap(
         The function that doppler shifts the wavelength based on the velocity of the stars.
     """
 
-    def func(velocity):
+    #def func(velocity):
+    #    return velocity_doppler_shift(
+    #        wavelength=ssp_wave, velocity=velocity, direction=velocity_direction
+    #    )
+
+    #return jax.vmap(func, in_axes=0)
+    def doppler_fn(velocities):
         return velocity_doppler_shift(
-            wavelength=ssp_wave, velocity=velocity, direction=velocity_direction
+            wavelength=ssp_wave,
+            velocity=velocities,
+            direction=velocity_direction,
         )
 
-    return jax.vmap(func, in_axes=0)
+    return doppler_fn
 
 
 @jaxtyped(typechecker=typechecker)
@@ -277,8 +285,12 @@ def get_doppler_shift_and_resampling(config: dict) -> Callable:
             logger.debug(f"Telescope Wave Seq: {telescope_wavelength.shape}")
 
             # Function to resample the spectrum to the telescope wavelength grid
-            resample_spectrum_pmap = get_resample_spectrum_pmap(telescope_wavelength)
-            spectrum_resampled = resample_spectrum_pmap(
+            #resample_spectrum_pmap = get_resample_spectrum_pmap(telescope_wavelength)
+            #spectrum_resampled = resample_spectrum_pmap(
+            #    particle.spectra, doppler_shifted_ssp_wave
+            #)
+            resample_fn = get_resample_spectrum_vmap(telescope_wavelength)
+            spectrum_resampled = resample_fn(
                 particle.spectra, doppler_shifted_ssp_wave
             )
             return spectrum_resampled
@@ -320,17 +332,22 @@ def get_calculate_datacube(config: dict) -> Callable:
     num_spaxels = int(telescope.sbin)
 
     # Bind the num_spaxels to the function
-    calculate_cube_fn = jax.tree_util.Partial(calculate_cube, num_spaxels=num_spaxels)
-    calculate_cube_pmap = jax.pmap(calculate_cube_fn)
+    #calculate_cube_fn = jax.tree_util.Partial(calculate_cube, num_spaxels=num_spaxels)
+    #calculate_cube_pmap = jax.pmap(calculate_cube_fn)
 
     @jaxtyped(typechecker=typechecker)
     def calculate_datacube(rubixdata: RubixData) -> RubixData:
         logger.info("Calculating Data Cube...")
-        ifu_cubes = calculate_cube_pmap(
-            spectra=rubixdata.stars.spectra,
-            spaxel_index=rubixdata.stars.pixel_assignment,
+        #ifu_cubes = calculate_cube_fn(
+        #    spectra=rubixdata.stars.spectra,
+        #    spaxel_index=rubixdata.stars.pixel_assignment,
+        #)
+        datacube = calculate_cube(
+            rubixdata.stars.spectra,
+            rubixdata.stars.pixel_assignment,
+            num_spaxels
         )
-        datacube = jnp.sum(ifu_cubes, axis=0)
+        #datacube = jnp.sum(ifu_cubes, axis=0)
         logger.debug(f"Datacube Shape: {datacube.shape}")
         # logger.debug(f"This is the datacube: {datacube}")
         datacube_jax = jnp.array(datacube)

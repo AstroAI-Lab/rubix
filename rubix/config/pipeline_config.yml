@@ -16,15 +16,9 @@ calc_ifu:
       args: []
       kwargs: {}
 
-    reshape_data:
-      name: reshape_data
-      depends_on: spaxel_assignment
-      args: []
-      kwargs: {}
-
     calculate_spectra:
       name: calculate_spectra
-      depends_on: reshape_data
+      depends_on: spaxel_assignment
       args: []
       kwargs: {}
 
