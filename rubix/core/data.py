@@ -81,18 +81,18 @@ class Galaxy:
     center: Optional[jnp.ndarray] = None
     halfmassrad_stars: Optional[jnp.ndarray] = None
 
-    #def __repr__(self):
-    #    representationString = ["Galaxy:"]
-    #    for k, v in self.__dict__.items():
-    #        if not k.endswith("_unit"):
-    #            if v is not None:
-    #                attrString = f"{k}: shape = {v.shape}, dtype = {v.dtype}"
-    #                if hasattr(self, k + "_unit") and getattr(self, k + "_unit") != "":
-    #                    attrString += f", unit = {getattr(self, k + '_unit')}"
-    #                representationString.append(attrString)
-    #            else:
-    #                representationString.append(f"{k}: None")
-    #    return "\n\t".join(representationString)
+    def __repr__(self):
+        representationString = ["Galaxy:"]
+        for k, v in self.__dict__.items():
+            if not k.endswith("_unit"):
+                if v is not None:
+                    attrString = f"{k}: shape = {v.shape}, dtype = {v.dtype}"
+                    if hasattr(self, k + "_unit") and getattr(self, k + "_unit") != "":
+                        attrString += f", unit = {getattr(self, k + '_unit')}"
+                    representationString.append(attrString)
+                else:
+                    representationString.append(f"{k}: None")
+        return "\n\t".join(representationString)
 
     def tree_flatten(self):
         """
@@ -154,18 +154,18 @@ class StarsData:
     spectra: Optional[jnp.ndarray] = None
     datacube: Optional[jnp.ndarray] = None
 
-    #def __repr__(self):
-    #    representationString = ["StarsData:"]
-    #    for k, v in self.__dict__.items():
-    #        if not k.endswith("_unit"):
-    #            if v is not None:
-    #                attrString = f"{k}: shape = {v.shape}, dtype = {v.dtype}"
-    #                if hasattr(self, k + "_unit") and getattr(self, k + "_unit") != "":
-    #                    attrString += f", unit = {getattr(self, k + '_unit')}"
-    #                representationString.append(attrString)
-    #            else:
-    #                representationString.append(f"{k}: None")
-    #    return "\n\t".join(representationString)
+    def __repr__(self):
+        representationString = ["StarsData:"]
+        for k, v in self.__dict__.items():
+            if not k.endswith("_unit"):
+                if v is not None:
+                    attrString = f"{k}: shape = {v.shape}, dtype = {v.dtype}"
+                    if hasattr(self, k + "_unit") and getattr(self, k + "_unit") != "":
+                        attrString += f", unit = {getattr(self, k + '_unit')}"
+                    representationString.append(attrString)
+                else:
+                    representationString.append(f"{k}: None")
+        return "\n\t".join(representationString)
 
     def tree_flatten(self):
         """
@@ -244,18 +244,18 @@ class GasData:
     spectra: Optional[jnp.ndarray] = None
     datacube: Optional[jnp.ndarray] = None
 
-    #def __repr__(self):
-    #    representationString = ["GasData:"]
-    #    for k, v in self.__dict__.items():
-    #        if not k.endswith("_unit"):
-    #            if v is not None:
-    #                attrString = f"{k}: shape = {v.shape}, dtype = {v.dtype}"
-    #                if hasattr(self, k + "_unit") and getattr(self, k + "_unit") != "":
-    #                    attrString += f", unit = {getattr(self, k + '_unit')}"
-    #                representationString.append(attrString)
-    #            else:
-    #                representationString.append(f"{k}: None")
-    #    return "\n\t".join(representationString)
+    def __repr__(self):
+        representationString = ["GasData:"]
+        for k, v in self.__dict__.items():
+            if not k.endswith("_unit"):
+                if v is not None:
+                    attrString = f"{k}: shape = {v.shape}, dtype = {v.dtype}"
+                    if hasattr(self, k + "_unit") and getattr(self, k + "_unit") != "":
+                        attrString += f", unit = {getattr(self, k + '_unit')}"
+                    representationString.append(attrString)
+                else:
+                    representationString.append(f"{k}: None")
+        return "\n\t".join(representationString)
 
     def tree_flatten(self):
         """
@@ -317,11 +317,11 @@ class RubixData:
     stars: Optional[StarsData] = None
     gas: Optional[GasData] = None
 
-    #def __repr__(self):
-    #    representationString = ["RubixData:"]
-    #    for k, v in self.__dict__.items():
-    #        representationString.append("\n\t".join(f"{k}: {v}".split("\n")))
-    #    return "\n\t".join(representationString)
+    def __repr__(self):
+        representationString = ["RubixData:"]
+        for k, v in self.__dict__.items():
+            representationString.append("\n\t".join(f"{k}: {v}".split("\n")))
+        return "\n\t".join(representationString)
 
     # def __post_init__(self):
     #    if self.stars is not None:

@@ -196,7 +196,7 @@ class RubixPipeline:
         jax.numpy.ndarray
             The final datacube combined from all shards.
         """
-        #time_start = time.time()
+        time_start = time.time()
         # Assemble and compile the pipeline as before.
         functions = self._get_pipeline_functions()
         self._pipeline = pipeline.LinearTransformerPipeline(
@@ -264,12 +264,25 @@ class RubixPipeline:
         rubix_spec.stars  = stars_spec
         rubix_spec.gas    = gas_spec
 
+        n = inputdata.stars.coords.shape[0]
+        pad = (3 - (n % 3)) % 3
+
+        if pad:
+            # pad along the first axis
+            inputdata.stars.coords = jnp.pad(inputdata.stars.coords, ((0,pad),(0,0)))
+            inputdata.stars.velocity = jnp.pad(inputdata.stars.velocity, ((0,pad),(0,0)))
+            inputdata.stars.mass = jnp.pad(inputdata.stars.mass, ((0,pad)))
+            inputdata.stars.age = jnp.pad(inputdata.stars.age, ((0,pad)))
+            inputdata.stars.metallicity = jnp.pad(inputdata.stars.metallicity, ((0,pad)))
+
+
         
         @partial(jax.jit,
         #how inputs ARE sharded when the function is called
         in_shardings  = (rubix_spec,),
         out_shardings = replicate_3d,
         )
+
         def shard_pipeline(sharded_rubixdata):
             out_local = self.func(sharded_rubixdata)
             # locally computed partial cube
@@ -282,6 +295,11 @@ class RubixPipeline:
             partial_cubes = shard_pipeline(inputdata)
         # now in host‐land you can simply
         #full_cube = jnp.sum(partial_cubes, axis=0)
+
+        time_end = time.time()
+        self.logger.info(
+            "Pipeline run completed in %.2f seconds.", time_end - time_start
+        )
 
         return partial_cubes
         
