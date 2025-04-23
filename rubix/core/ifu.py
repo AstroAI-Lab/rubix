@@ -74,44 +74,31 @@ def get_calculate_spectra(config: dict) -> Callable:
         age = jnp.atleast_1d(age_data)
         metallicity = jnp.atleast_1d(metallicity_data)
 
-        """
-        spectra1 = lookup_interpolation(
-            # rubixdata.stars.metallicity, rubixdata.stars.age
-            metallicity[0][:250000],
-            age[0][:250000],
-        )  # * inputs["mass"]
-        spectra2 = lookup_interpolation(
-            # rubixdata.stars.metallicity, rubixdata.stars.age
-            metallicity[0][250000:500000],
-            age[0][250000:500000],
-        )
-        spectra3 = lookup_interpolation(
-            # rubixdata.stars.metallicity, rubixdata.stars.age
-            metallicity[0][500000:750000],
-            age[0][500000:750000],
-        )
-        spectra = jnp.concatenate([spectra1, spectra2, spectra3], axis=0)
-        """
         # Define the chunk size (number of particles per chunk)
-        chunk_size = 250000
-        total_length = metallicity.shape[
-            0
-        ]  # assuming metallicity[0] is your 1D array of particles
+        #chunk_size = 250000
+        #total_length = metallicity.shape[
+        #    0
+        #]  # assuming metallicity[0] is your 1D array of particles
 
         # List to hold the spectra chunks
-        spectra_chunks = []
+        #spectra_chunks = []
 
         # Loop over the data in chunks
-        for start in range(0, total_length, chunk_size):
-            end = min(start + chunk_size, total_length)
-            current_chunk = lookup_interpolation(
-                metallicity[start:end],
-                age[start:end],
-            )
-            spectra_chunks.append(current_chunk)
+        #for start in range(0, total_length, chunk_size):
+        #    end = min(start + chunk_size, total_length)
+        #    current_chunk = lookup_interpolation(
+        #        metallicity[start:end],
+        #        age[start:end],
+        #    )
+        #    spectra_chunks.append(current_chunk)
 
         # Concatenate all the chunks along axis 0
-        spectra = jnp.concatenate(spectra_chunks, axis=0)
+        #spectra = jnp.concatenate(spectra_chunks, axis=0)
+        # Single, batched lookup over all stars:
+        spectra = lookup_interpolation(
+            metallicity,
+            age,
+        )
         logger.debug(f"Calculation Finished! Spectra shape: {spectra.shape}")
         spectra_jax = jnp.array(spectra)
         #spectra_jax = jnp.expand_dims(spectra_jax, axis=0)
