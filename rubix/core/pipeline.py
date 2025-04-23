@@ -4,14 +4,20 @@ from typing import Union
 
 import jax
 import jax.numpy as jnp
+from jax.tree_util import tree_flatten, tree_unflatten
+import dataclasses
 
 # For shard_map and device mesh.
 import numpy as np
 from beartype import beartype as typechecker
 from jax import block_until_ready
 from jax.experimental import shard_map
+from jax.sharding import NamedSharding
 from jax.sharding import Mesh, PartitionSpec as P
 from jaxtyping import jaxtyped
+from functools import partial
+from jax import lax
+from jax.experimental.pjit import pjit
 
 from rubix.logger import get_logger
 from rubix.pipeline import linear_pipeline as pipeline
@@ -31,6 +37,7 @@ from .psf import get_convolve_psf
 from .rotation import get_galaxy_rotation
 from .ssp import get_ssp
 from .telescope import get_filter_particles, get_spaxel_assignment, get_telescope
+from .data import RubixData, Galaxy, StarsData, GasData
 
 
 class RubixPipeline:
@@ -171,7 +178,7 @@ class RubixPipeline:
 
         return output
 
-    def run_sharded(self, inputdata, shard_size=100000):
+    def run_sharded(self, inputdata):
         """
         Runs the pipeline on sharded input data in parallel using jax.shard_map.
         It splits the particle arrays (e.g. under stars and gas) into shards, runs
@@ -189,7 +196,7 @@ class RubixPipeline:
         jax.numpy.ndarray
             The final datacube combined from all shards.
         """
-        time_start = time.time()
+        #time_start = time.time()
         # Assemble and compile the pipeline as before.
         functions = self._get_pipeline_functions()
         self._pipeline = pipeline.LinearTransformerPipeline(
@@ -200,94 +207,105 @@ class RubixPipeline:
         self.logger.info("Compiling the expressions...")
         self.func = self._pipeline.compile_expression()
 
-        # --- Helper: Shard the particle data ---
-        def shard_subdata(subdata):
-            # subdata is expected to be a SimpleNamespace with attributes that are arrays.
-            new_subdata = {}
-            for attr, value in vars(subdata).items():
-                if hasattr(value, "shape"):
-                    n_particles = value.shape[0]
-                    n_shards = n_particles // shard_size
-                    # Truncate if needed.
-                    new_value = value[: n_shards * shard_size]
-                    # Reshape so that the first dimension indexes shards.
-                    new_subdata[attr] = new_value.reshape(
-                        (n_shards, shard_size) + value.shape[1:]
-                    )
-                else:
-                    new_subdata[attr] = value
-            return SimpleNamespace(**new_subdata)
+        devices = jax.devices()
+        num_devices = len(devices)
+        self.logger.info("Number of devices: %d", num_devices)
 
-        # Create a new sharded input object.
-        sharded_input = {}
-        # Assume that 'stars' and 'gas' contain particle data.
-        for key in ["stars", "gas"]:
-            if hasattr(inputdata, key):
-                sharded_input[key] = shard_subdata(getattr(inputdata, key))
-        # Preserve other parts (e.g. galaxy and units) as-is.
-        #sharded_input["galaxy"] = inputdata.galaxy
-        #for key in vars(inputdata):
-        #    if key not in sharded_input:
-        #        sharded_input[key] = getattr(inputdata, key)
-        sharded_input = SimpleNamespace(**sharded_input)
-        # -----------------------------------------
+        mesh = Mesh(devices, ("data",))
 
-        # Determine the number of shards from one batched array (e.g. stars.coords).
-        n_shards = sharded_input.stars.coords.shape[0]
-        devices = np.array(jax.devices())
-        if n_shards != devices.shape[0]:
-            raise ValueError(
-                f"Number of shards ({n_shards}) must equal number of devices ({devices.shape[0]})."
-            )
-        mesh = Mesh(devices, ("x",))
+        # — sharding specs by rank —
+        replicate_0d   = NamedSharding(mesh, P())               # for scalars
+        replicate_1d   = NamedSharding(mesh, P(None))           # for 1-D arrays
+        shard_2d       = NamedSharding(mesh, P("data", None))   # for (N, D)
+        replicate_3d   = NamedSharding(mesh, P(None, None, None)) # for full cube
 
-        # Define a function that will process one shard.
-        def pipeline_shard_fn(shard_input):
-            # Here, shard_input is a dict (or nested namespace) for one shard.
-            output = self.func(shard_input)
-            # Assume output has a 'datacube' attribute.
-            return output.datacube
+        # — 1) allocate empty instances —
+        galaxy_spec = object.__new__(Galaxy)
+        stars_spec  = object.__new__(StarsData)
+        gas_spec    = object.__new__(GasData)
+        rubix_spec  = object.__new__(RubixData)
 
-        # Convert the sharded input namespace to a dict.
-        def to_dict(ns):
-            if isinstance(ns, SimpleNamespace):
-                return {k: to_dict(v) for k, v in vars(ns).items()}
-            else:
-                return ns
+        # — 2) assign NamedSharding to each field —
+        # galaxy
+        galaxy_spec.redshift          = replicate_0d
+        galaxy_spec.center            = replicate_1d
+        galaxy_spec.halfmassrad_stars = replicate_0d
 
-        sharded_input_dict = to_dict(sharded_input)
+        # stars
+        stars_spec.coords             = shard_2d
+        stars_spec.velocity           = shard_2d
+        stars_spec.mass               = replicate_1d
+        stars_spec.age                = replicate_1d
+        stars_spec.metallicity        = replicate_1d
+        stars_spec.pixel_assignment   = replicate_1d
+        stars_spec.spatial_bin_edges  = NamedSharding(mesh, P(None, None))
+        stars_spec.mask               = replicate_1d
+        stars_spec.spectra            = shard_2d
+        stars_spec.datacube           = replicate_3d
 
-        # Create partitioning specifications for all array leaves.
-        def create_sharding_spec(val):
-            if hasattr(val, "shape") and isinstance(val, jnp.ndarray):
-                return P("x")
-            elif isinstance(val, dict):
-                return {k: create_sharding_spec(v) for k, v in val.items()}
-            else:
-                return None
+        # gas  (same idea)
+        gas_spec.coords               = shard_2d
+        gas_spec.velocity             = shard_2d
+        gas_spec.mass                 = replicate_1d
+        gas_spec.density              = replicate_1d
+        gas_spec.internal_energy      = replicate_1d
+        gas_spec.metallicity          = replicate_1d
+        gas_spec.metals               = replicate_1d
+        gas_spec.sfr                  = replicate_1d
+        gas_spec.electron_abundance   = replicate_1d
+        gas_spec.pixel_assignment     = replicate_1d
+        gas_spec.spatial_bin_edges    = NamedSharding(mesh, P(None, None))
+        gas_spec.mask                 = replicate_1d
+        gas_spec.spectra              = shard_2d
+        gas_spec.datacube             = replicate_3d
 
-        in_shardings = jax.tree_util.tree_map(create_sharding_spec, sharded_input_dict)
-        # Assume output datacube is sharded along 'x'.
-        out_shardings = P("x")
+        # — link them up —
+        rubix_spec.galaxy = galaxy_spec
+        rubix_spec.stars  = stars_spec
+        rubix_spec.gas    = gas_spec
 
-        # Use jax.shard_map to parallelize across shards.
-        sharded_pipeline_fn = shard_map.shard_map(
-            pipeline_shard_fn,
-            mesh,
-            in_shardings,
-            out_shardings,
+        
+        @partial(jax.jit,
+        #how inputs ARE sharded when the function is called
+        in_shardings  = (rubix_spec,),
+        out_shardings = replicate_3d,
         )
+        def shard_pipeline(sharded_rubixdata):
+            out_local = self.func(sharded_rubixdata)
+            # locally computed partial cube
+            local_cube = out_local.stars.datacube  
+            # reduce across devices
+            return local_cube
 
         with mesh:
-            sharded_datacubes = sharded_pipeline_fn(sharded_input_dict)
+            # `shard_pipeline` returns a GDA with shape (num_devices, 25,25,5994)
+            partial_cubes = shard_pipeline(inputdata)
+        # now in host‐land you can simply
+        #full_cube = jnp.sum(partial_cubes, axis=0)
 
-        # Combine the datacubes (here, by summing over the shard axis).
-        final_datacube = jnp.sum(sharded_datacubes, axis=0)
-        time_end = time.time()
-        self.logger.info(
-            "Sharded pipeline run completed in %.2f seconds.", time_end - time_start
+        return partial_cubes
+        
+        """
+        def _shard_pipeline(sharded_rubixdata):
+            out_local  = self.func(sharded_rubixdata)
+            local_cube = out_local.stars.datacube
+            # this requires that you actually be in a mesh context with an axis_name="data"
+            full_cube  = lax.psum(local_cube, axis_name="data")
+            return full_cube
+
+        # compile it
+        shard_pipeline = pjit(
+            _shard_pipeline,                   # <— the function
+            in_shardings  = (rubix_spec,),
+            out_shardings = (replicate_3d,),
         )
+
+        # then inside your mesh:
+        with mesh:
+            final_datacube = shard_pipeline(inputdata)
+        
         return final_datacube
+        """
 
     def gradient(self):
         """
