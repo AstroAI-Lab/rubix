@@ -265,6 +265,9 @@ class RubixPipeline:
         rubix_spec.stars  = stars_spec
         rubix_spec.gas    = gas_spec
 
+        #if the particle number is not modulo the device number, we have to padd a few empty particles
+        # to make it work
+        # this is a bit of a hack, but it works
         n = inputdata.stars.coords.shape[0]
         pad = (num_devices - (n % num_devices)) % num_devices
 
@@ -277,6 +280,7 @@ class RubixPipeline:
             inputdata.stars.metallicity = jnp.pad(inputdata.stars.metallicity, ((0,pad)))
 
 
+        # create the sharded data
         def _shard_pipeline(sharded_rubixdata):
             out_local  = self.func(sharded_rubixdata)
             local_cube = out_local.stars.datacube   # shape (25,25,5994)
