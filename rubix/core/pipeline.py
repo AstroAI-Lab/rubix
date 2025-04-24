@@ -217,6 +217,7 @@ class RubixPipeline:
         replicate_0d   = NamedSharding(mesh, P())               # for scalars
         replicate_1d   = NamedSharding(mesh, P(None))           # for 1-D arrays
         shard_2d       = NamedSharding(mesh, P("data", None))   # for (N, D)
+        shard_1d       = NamedSharding(mesh, P("data"))               # for (N,)
         replicate_3d   = NamedSharding(mesh, P(None, None, None)) # for full cube
 
         # — 1) allocate empty instances —
@@ -234,28 +235,28 @@ class RubixPipeline:
         # stars
         stars_spec.coords             = shard_2d
         stars_spec.velocity           = shard_2d
-        stars_spec.mass               = replicate_1d
-        stars_spec.age                = replicate_1d
-        stars_spec.metallicity        = replicate_1d
-        stars_spec.pixel_assignment   = replicate_1d
+        stars_spec.mass               = shard_1d
+        stars_spec.age                = shard_1d
+        stars_spec.metallicity        = shard_1d
+        stars_spec.pixel_assignment   = shard_1d
         stars_spec.spatial_bin_edges  = NamedSharding(mesh, P(None, None))
-        stars_spec.mask               = replicate_1d
+        stars_spec.mask               = shard_1d
         stars_spec.spectra            = shard_2d
         stars_spec.datacube           = replicate_3d
 
         # gas  (same idea)
         gas_spec.coords               = shard_2d
         gas_spec.velocity             = shard_2d
-        gas_spec.mass                 = replicate_1d
-        gas_spec.density              = replicate_1d
-        gas_spec.internal_energy      = replicate_1d
-        gas_spec.metallicity          = replicate_1d
-        gas_spec.metals               = replicate_1d
-        gas_spec.sfr                  = replicate_1d
-        gas_spec.electron_abundance   = replicate_1d
-        gas_spec.pixel_assignment     = replicate_1d
+        gas_spec.mass                 = shard_1d
+        gas_spec.density              = shard_1d
+        gas_spec.internal_energy      = shard_1d
+        gas_spec.metallicity          = shard_1d
+        gas_spec.metals               = shard_1d
+        gas_spec.sfr                  = shard_1d
+        gas_spec.electron_abundance   = shard_1d
+        gas_spec.pixel_assignment     = shard_1d
         gas_spec.spatial_bin_edges    = NamedSharding(mesh, P(None, None))
-        gas_spec.mask                 = replicate_1d
+        gas_spec.mask                 = shard_1d
         gas_spec.spectra              = shard_2d
         gas_spec.datacube             = replicate_3d
 
@@ -265,7 +266,7 @@ class RubixPipeline:
         rubix_spec.gas    = gas_spec
 
         n = inputdata.stars.coords.shape[0]
-        pad = (3 - (n % 3)) % 3
+        pad = (num_devices - (n % num_devices)) % num_devices
 
         if pad:
             # pad along the first axis
@@ -276,7 +277,28 @@ class RubixPipeline:
             inputdata.stars.metallicity = jnp.pad(inputdata.stars.metallicity, ((0,pad)))
 
 
-        
+        def _shard_pipeline(sharded_rubixdata):
+            out_local  = self.func(sharded_rubixdata)
+            local_cube = out_local.stars.datacube   # shape (25,25,5994)
+            # in‐XLA all‐reduce across the "data" axis:
+            #full_cube  = lax.psum(local_cube, axis_name="data")
+            return local_cube                       # replicated on each device
+
+        shard_pipeline = pjit(
+            _shard_pipeline,                     # the function to compile
+            in_shardings         = (rubix_spec,),
+            out_shardings        = replicate_3d,
+        )
+
+        with mesh:
+            partial_cubes = shard_pipeline(inputdata)
+            partial_cubes = jax.block_until_ready(partial_cubes)
+
+        #final_cube = jnp.sum(partial_cubes, axis=0)
+
+        return partial_cubes
+
+        """
         @partial(jax.jit,
         #how inputs ARE sharded when the function is called
         in_shardings  = (rubix_spec,),
@@ -302,6 +324,7 @@ class RubixPipeline:
         )
 
         return partial_cubes
+        """
         
         """
         def _shard_pipeline(sharded_rubixdata):
