@@ -297,8 +297,8 @@ class RubixPipeline:
         )
 
         with mesh:
-            full_cube = shard_pipeline(inputdata)
-            #full_cube = lax.psum(partial_cubes, axis_name="data")
+            partial_cubes = shard_pipeline(inputdata)
+            full_cube = lax.psum(partial_cubes, axis_name="data")
             #partial_cubes = jax.block_until_ready(partial_cubes)
             full_cube = jax.block_until_ready(full_cube)
 
@@ -433,6 +433,7 @@ class RubixPipeline:
             inputdata.stars.metallicity = jnp.pad(inputdata.stars.metallicity, pad_width_1d)
             inputdata.stars.pixel_assignment = jnp.pad(inputdata.stars.pixel_assignment, pad_width_1d)
 
+        
         # Helper to slice RubixData along axis 0
         def slice_data(rubixdata, start):
             def slicer(x):
