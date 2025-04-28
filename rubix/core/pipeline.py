@@ -5,13 +5,14 @@ from typing import Union
 import jax
 import jax.numpy as jnp
 from jax.tree_util import tree_flatten, tree_unflatten
+from jax.tree_util import tree_map
 import dataclasses
 
 # For shard_map and device mesh.
 import numpy as np
 from beartype import beartype as typechecker
 from jax import block_until_ready
-from jax.experimental import shard_map
+from jax.experimental.shard_map import shard_map
 from types import SimpleNamespace
 from jax.sharding import NamedSharding
 from jax.sharding import Mesh, PartitionSpec as P
@@ -212,7 +213,7 @@ class RubixPipeline:
         num_devices = len(devices)
         self.logger.info("Number of devices: %d", num_devices)
 
-        mesh = Mesh(devices, ("data",))
+        mesh = Mesh(devices, axis_names = ("data",))
 
         # — sharding specs by rank —
         replicate_0d   = NamedSharding(mesh, P())               # for scalars
@@ -266,6 +267,12 @@ class RubixPipeline:
         rubix_spec.stars  = stars_spec
         rubix_spec.gas    = gas_spec
 
+        # 1) Make a pytree of PartitionSpec
+        partition_spec_tree = tree_map(
+            lambda s: s.spec if isinstance(s, NamedSharding) else None,
+            rubix_spec
+        )
+
         #if the particle number is not modulo the device number, we have to padd a few empty particles
         # to make it work
         # this is a bit of a hack, but it works
@@ -280,27 +287,35 @@ class RubixPipeline:
             inputdata.stars.age = jnp.pad(inputdata.stars.age, ((0,pad)))
             inputdata.stars.metallicity = jnp.pad(inputdata.stars.metallicity, ((0,pad)))
 
-
+        inputdata = jax.device_put(inputdata, rubix_spec)
+        
         # create the sharded data
         def _shard_pipeline(sharded_rubixdata):
             out_local  = self.func(sharded_rubixdata)
             local_cube = out_local.stars.datacube   # shape (25,25,5994)
             # in‐XLA all‐reduce across the "data" axis:
             #full_cube  = lax.psum(local_cube, axis_name="data")
-            #summed_cube = lax.psum(local_cube, axis_name="data")
-            return local_cube                    # replicated on each device
+            summed_cube = lax.psum(local_cube, axis_name="data")
+            return summed_cube                  # replicated on each device
 
-        shard_pipeline = pjit(
+        sharded_pipeline = shard_map(
             _shard_pipeline,                     # the function to compile
-            in_shardings         = (rubix_spec,),
-            out_shardings        = replicate_3d,
+            mesh=mesh,                     # the mesh to use
+            in_specs = (partition_spec_tree,),
+            out_specs = replicate_3d.spec,
+            check_rep = False,
         )
 
-        with mesh:
-            partial_cubes = shard_pipeline(inputdata)
-            full_cube = lax.psum(partial_cubes, axis_name="data")
+        #with mesh:
+        #    inputdata = jax.device_put(inputdata, rubix_spec)
+            #partial_cubes = shard_pipeline(inputdata)
+            #full_cube = lax.psum(partial_cubes, axis_name="data")
             #partial_cubes = jax.block_until_ready(partial_cubes)
-            full_cube = jax.block_until_ready(full_cube)
+            #full_cube = jax.block_until_ready(full_cube)
+
+        #full_cube = partial_cubes.sum(axis=0)
+
+        sharded_result = sharded_pipeline(inputdata)
 
         time_end = time.time()
         self.logger.info(
@@ -308,7 +323,7 @@ class RubixPipeline:
         )
         #final_cube = jnp.sum(partial_cubes, axis=0)
 
-        return full_cube 
+        return sharded_result 
 
 
     def run_sharded_chunked(self, inputdata):
