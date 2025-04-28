@@ -294,7 +294,6 @@ class RubixPipeline:
             out_local  = self.func(sharded_rubixdata)
             local_cube = out_local.stars.datacube   # shape (25,25,5994)
             # in‐XLA all‐reduce across the "data" axis:
-            #full_cube  = lax.psum(local_cube, axis_name="data")
             summed_cube = lax.psum(local_cube, axis_name="data")
             return summed_cube                  # replicated on each device
 
@@ -413,11 +412,27 @@ class RubixPipeline:
         rubix_spec.stars  = stars_spec
         rubix_spec.gas    = gas_spec
 
+        # 1) Make a pytree of PartitionSpec
+        partition_spec_tree = tree_map(
+            lambda s: s.spec if isinstance(s, NamedSharding) else None,
+            rubix_spec
+        )
+
         #if the particle number is not modulo the device number, we have to padd a few empty particles
         # to make it work
         # this is a bit of a hack, but it works
+        telescope = get_telescope(self.user_config)
+        num_spaxels = int(telescope.sbin)
+        n_wave = int(telescope.wave_seq.shape[0])
+        n_stars = int(inputdata.stars.coords.shape[0])
+        chunk_size = 1000 * num_devices
+        n_chunks = (n_stars + chunk_size - 1) // chunk_size
+        total_len = n_chunks * chunk_size
+
+        pad_amt = total_len - n_stars
+
         n = inputdata.stars.coords.shape[0]
-        pad = (num_devices - (n % num_devices)) % num_devices
+        pad = (num_devices - (n % num_devices)) % num_devices + pad_amt
 
         if pad:
             # pad along the first axis
@@ -427,13 +442,13 @@ class RubixPipeline:
             inputdata.stars.age = jnp.pad(inputdata.stars.age, ((0,pad)))
             inputdata.stars.metallicity = jnp.pad(inputdata.stars.metallicity, ((0,pad)))
 
-
+        """
         # Precompute all static sizes on the host
         telescope = get_telescope(self.user_config)
         num_spaxels = int(telescope.sbin)
         n_wave = int(telescope.wave_seq.shape[0])
         n_stars = int(inputdata.stars.coords.shape[0])
-        chunk_size = 1000 #* num_devices
+        chunk_size = 1000 * num_devices
         n_chunks = (n_stars + chunk_size - 1) // chunk_size
         total_len = n_chunks * chunk_size
 
@@ -446,8 +461,7 @@ class RubixPipeline:
             inputdata.stars.mass = jnp.pad(inputdata.stars.mass, pad_width_1d)
             inputdata.stars.age = jnp.pad(inputdata.stars.age, pad_width_1d)
             inputdata.stars.metallicity = jnp.pad(inputdata.stars.metallicity, pad_width_1d)
-            inputdata.stars.pixel_assignment = jnp.pad(inputdata.stars.pixel_assignment, pad_width_1d)
-
+        """
         
         # Helper to slice RubixData along axis 0
         def slice_data(rubixdata, start):
@@ -458,30 +472,33 @@ class RubixPipeline:
                     return x
             return jax.tree_util.tree_map(slicer, rubixdata)
 
-        # Sharded pipeline function
+        inputdata = jax.device_put(inputdata, rubix_spec)
+        
+        # create the sharded data
         def _shard_pipeline(sharded_rubixdata):
-            out_local = self.func(sharded_rubixdata)
-            local_cube = out_local.stars.datacube  # shape (25,25,5994)
-            return local_cube  # replicated on each device
+            out_local  = self.func(sharded_rubixdata)
+            local_cube = out_local.stars.datacube   # shape (25,25,5994)
+            # in‐XLA all‐reduce across the "data" axis:
+            summed_cube = lax.psum(local_cube, axis_name="data")
+            return summed_cube                  # replicated on each device
 
-        # Compile the sharded pipeline
-        shard_pipeline = pjit(
-            _shard_pipeline,  # the function to compile
-            in_shardings=(rubix_spec,),
-            out_shardings=replicate_3d,
+        sharded_pipeline = shard_map(
+            _shard_pipeline,                     # the function to compile
+            mesh=mesh,                     # the mesh to use
+            in_specs = (partition_spec_tree,),
+            out_specs = replicate_3d.spec,
+            check_rep = False,
         )
 
-        # Process the inputdata in 4 chunks and sum the partial cubes
-        with mesh:
-            full_cube = jnp.zeros((num_spaxels, num_spaxels, n_wave), jnp.float32)
-            for i in range(n_chunks):  # Process 4 chunks
-                #print(f"Processing chunk {i + 1}/{n_chunks}...")
-                start = i * (n_stars // n_chunks)
-                chunk_data = slice_data(inputdata, start)
-                partial_cube = shard_pipeline(chunk_data)
-                full_cube += partial_cube
+        full_cube = jnp.zeros((num_spaxels, num_spaxels, n_wave), jnp.float32)
+        for i in range(n_chunks):  # Process 4 chunks
+            #print(f"Processing chunk {i + 1}/{n_chunks}...")
+            start = i * (n_stars // n_chunks)
+            chunk_data = slice_data(inputdata, start)
+            partial_cube = sharded_pipeline(chunk_data)
+            full_cube += partial_cube
 
-            full_cube = jax.block_until_ready(full_cube)
+        full_cube = jax.block_until_ready(full_cube)
 
         time_end = time.time()
         self.logger.info("Pipeline run completed in %.2f seconds.", time_end - time_start)
