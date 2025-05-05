@@ -10,7 +10,8 @@ generate a distribution of positions and velocities.
 import jax
 import jax.numpy as jnp
 from jax import random, vmap
-from .potentials import kappa, nu
+from .potentials import kappa, nu, v_c
+from jax import grad
 
 def actions_to_phase_space(Jr, Jz, Lz, params, key):
     """
@@ -39,8 +40,12 @@ def actions_to_phase_space(Jr, Jz, Lz, params, key):
     nu_val = nu(Rc_val)
 
     #Amplitudes for oscillations in the radial and vertical directions
-    A_R = jnp.sqrt(2.0 * Jr / kap)
-    A_z = jnp.sqrt(2.0 * Jz / nu_val)
+    A_R = jnp.sqrt(2.0 * Jr / jnp.maximum(kap, epsilon))
+    A_z = jnp.sqrt(2.0 * Jz / jnp.maximum(nu_val, epsilon))
+
+    #Dynamical frequencies
+    Omega = v_c(Rc_val) / Rc_val
+    dO_dR = grad(lambda r: v_c(r) / r)(Rc_val)
     
     #Sample random angles uniformly in [0, 2π]
     key, subkey = random.split(key)
@@ -61,11 +66,12 @@ def actions_to_phase_space(Jr, Jz, Lz, params, key):
     x = R * jnp.cos(phi)
     y = R * jnp.sin(phi)
     
-
     #Radial velocity due to epicyclic motion
     v_R = -A_R * kap * jnp.sin(theta_R)
     #Azimuthal velocity: for a simple model, we use Lz/R 
-    v_phi = Lz / R
+    delta_vphi = - (2 * Omega / kap) * A_R * jnp.sin(theta_R) \
+                + (R - Rc_val) * dO_dR
+    v_phi     = Omega * R + delta_vphi
     #Vertical velocity due to vertical oscillation
     v_z = -A_z * nu_val * jnp.sin(theta_z)
     
