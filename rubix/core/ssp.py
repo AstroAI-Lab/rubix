@@ -79,6 +79,7 @@ def get_lookup_interpolation_vmap(config: dict) -> Callable:
     """
     lookup = get_lookup_interpolation(config)
     lookup_vmap = jax.vmap(lookup, in_axes=(0, 0))
+    
     return lookup_vmap
 
 

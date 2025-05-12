@@ -55,9 +55,13 @@ def get_calculate_spectra(config: dict) -> Callable:
     >>> rubixdata.stars.spectra
     """
     logger = get_logger(config.get("logger", None))
-    lookup_interpolation_pmap = get_lookup_interpolation_pmap(config)
-    # lookup_interpolation_vmap = get_lookup_interpolation_vmap(config)
+    #lookup_interpolation_pmap = get_lookup_interpolation_pmap(config)
+    #lookup_interpolation_vmap = get_lookup_interpolation_vmap(config)
     lookup_interpolation = get_lookup_interpolation(config)
+    
+    def lookup_interpolation_laxmap(age_metallicity):
+        age, metallicity = age_metallicity
+        return lookup_interpolation(metallicity, age)
 
     @jaxtyped(typechecker=typechecker)
     def calculate_spectra(rubixdata: RubixData) -> RubixData:
@@ -99,6 +103,11 @@ def get_calculate_spectra(config: dict) -> Callable:
             metallicity,
             age,
         )
+        #spectra = jax.lax.map(
+        #    lookup_interpolation_laxmap,
+        #    (metallicity, age),
+        #    batch_size=2,
+        #)
         logger.debug(f"Calculation Finished! Spectra shape: {spectra.shape}")
         spectra_jax = jnp.array(spectra)
         #spectra_jax = jnp.expand_dims(spectra_jax, axis=0)
