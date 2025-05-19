@@ -3,15 +3,16 @@ import os
 #os.environ['XLA_FLAGS'] = '--xla_force_host_platform_device_count=3'
 
 # Specify the number of GPUs to use
-os.environ['CUDA_VISIBLE_DEVICES'] = "1,4,5,8,9"
+#os.environ['CUDA_VISIBLE_DEVICES'] = "1,4,5,8,9"
 
-os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"]   = "false"
+#os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"]   = "false"
 
 #Set the FSPS path to the template files
 #  os.environ['SPS_HOME'] = '/mnt/storage/annalena_data/sps_fsps'
 #os.environ['SPS_HOME'] = '/home/annalena/sps_fsps'
 #os.environ['SPS_HOME'] = '/Users/annalena/Documents/GitHub/fsps'
-os.environ['SPS_HOME'] = '/export/home/aschaibl/fsps'
+#os.environ['SPS_HOME'] = '/export/home/aschaibl/fsps'
+os.environ['SPS_HOME'] = '/home/annalena_data/sps_fsps'
 
 import jax
 import jax.numpy as jnp
