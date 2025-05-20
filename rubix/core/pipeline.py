@@ -186,6 +186,8 @@ class RubixPipeline:
         It splits the particle arrays (e.g. under stars and gas) into shards, runs
         the compiled pipeline on each shard, and then combines the resulting datacubes.
 
+        This is the recomended method to run the pipeline in parallel at the moment!!!
+
         Parameters
         ----------
         inputdata : object
@@ -330,6 +332,8 @@ class RubixPipeline:
         Runs the pipeline on sharded input data in parallel using jax.shard_map.
         It splits the particle arrays (e.g. under stars and gas) into shards, runs
         the compiled pipeline on each shard, and then combines the resulting datacubes.
+
+        This is an experimental function and is not recommended to use at the moment!!!
 
         Parameters
         ----------
