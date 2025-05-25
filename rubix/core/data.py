@@ -432,8 +432,8 @@ def convert_to_rubix(config: Union[dict, str]):
             logger.info("Loading data from IllustrisAPI")
             api = IllustrisAPI(**config["data"]["args"], logger=logger)
             api.load_galaxy(**config["data"]["load_galaxy_args"])
-        else:
-            raise ValueError(f"Unknown data source: {config['data']['name']}.")
+        #else:
+        #    raise ValueError(f"Unknown data source: {config['data']['name']}.")
 
             # Load the saved data into the input handler
     logger.info("Loading data into input handler")

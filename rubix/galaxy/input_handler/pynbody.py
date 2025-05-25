@@ -84,6 +84,42 @@ class PynbodyHandler(BaseHandler):
                     getattr(self.sim, cls), fields[cls], units[cls], cls
                 )
 
+        # for cls in self.data:
+        #    self.logger.info(f"Loaded {cls} data: {self.data[cls].keys()}")
+        #    self.logger.info("Assigning metals to gas particles........")
+
+        # Combine HI and OxMassFrac into a two-column metals field for gas
+        #    self.data["gas"]["metals"] = np.column_stack((self.data["gas"]["HI"],
+        #                                                self.data["gas"]["OxMassFrac"]))
+        #    self.logger.info("Metals assigned to gas particles........")
+        #    self.logger.info("Metals shape is: ", self.data["gas"]["metals"].shape)
+
+        hi_data = self.load_particle_data(
+            getattr(self.sim, "gas"),
+            {"HI": "HI"},
+            {"HI": u.dimensionless_unscaled},
+            "gas",
+        )
+        ox_data = self.load_particle_data(
+            getattr(self.sim, "gas"),
+            {"OxMassFrac": "OxMassFrac"},
+            {"OxMassFrac": u.dimensionless_unscaled},
+            "gas",
+        )
+        # fe_data = self.load_particle_data(getattr(self.sim, "gas"), {"FeMassFrac": "FeMassFrac"}, {"FeMassFrac": u.dimensionless_unscaled}, "gas")
+        # self.data["gas"]["metals"] = np.column_stack((hi_data["HI"], ox_data["OxMassFrac"]))
+        # Create a metals array with 10 columns, filled with zeros initially
+        n_particles = hi_data["HI"].shape[0]
+        metals = np.zeros((n_particles, 10), dtype=hi_data["HI"].dtype)
+
+        # Place HI values at column 0 and OxMassFrac (O) at column 4 (that it is storred in the same way as IllustrisTNG)
+        metals[:, 0] = hi_data["HI"]
+        metals[:, 4] = ox_data["OxMassFrac"]
+
+        self.data["gas"]["metals"] = metals
+        self.logger.info("Metals assigned to gas particles.")
+        self.logger.info("Metals shape is: %s", self.data["gas"]["metals"].shape)
+
         self.logger.info(
             f"Simulation snapshot and halo data loaded successfully for classes: {load_classes}."
         )
