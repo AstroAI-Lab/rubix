@@ -1,24 +1,23 @@
+import os
+from unittest.mock import MagicMock, mock_open, patch
+
+import jax.numpy as jnp
+import matplotlib
+import matplotlib.pyplot as plt
 import pytest
-from unittest.mock import MagicMock, patch, mock_open
+from astropy.table import Table
+
 from rubix.telescope.filters.filters import (
     Filter,
     FilterCurves,
+    _load_filter_list_for_instrument,
     convolve_filter_with_spectra,
     load_filter,
-    save_filters,
     print_filter_list,
     print_filter_list_info,
     print_filter_property,
-    _load_filter_list_for_instrument,
+    save_filters,
 )
-
-import os
-from astropy.table import Table
-
-import jax.numpy as jnp
-
-import matplotlib
-import matplotlib.pyplot as plt
 
 # Use the Agg backend for testing to avoid opening a figure window
 matplotlib.use("Agg")

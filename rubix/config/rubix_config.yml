@@ -132,7 +132,7 @@ BaseHandler:
       internal_energy: "erg/g"
       velocity: "km/s"
       electron_abundance: ""
-      temperature: "K" 
+      temperature: "K"
 
 ssp:
   # units of the SSP grid that is used internally in the code

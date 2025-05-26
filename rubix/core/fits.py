@@ -1,11 +1,14 @@
+import os
+
+import matplotlib.pyplot as plt
 import numpy as np
 from astropy.io import fits
+from matplotlib.colors import LogNorm
+from mpdaf.obj import Cube
+
 from rubix.core.telescope import get_telescope
 from rubix.logger import get_logger
-from mpdaf.obj import Cube
-import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
-import os
+
 
 def store_fits(config, data, filepath):
     """
@@ -22,6 +25,7 @@ def store_fits(config, data, filepath):
     logger_config = config.get("logger", None)
     logger = get_logger(logger_config)
 
+    """
     if "cube_type" not in config["data"]["args"]:
         datacube = data.stars.datacube
         parttype = "stars"
@@ -31,6 +35,8 @@ def store_fits(config, data, filepath):
     elif config["data"]["args"]["cube_type"] == "gas":
         datacube = data.gas.datacube
         parttype = "gas"
+    """
+    datacube = data
 
     telescope = get_telescope(config)
 
@@ -41,7 +47,7 @@ def store_fits(config, data, filepath):
     hdr["ROTATION"] = config["galaxy"]["rotation"]["type"]
     hdr["SIM"] = config["simulation"]["name"]
 
-    #For Illustris and NIHAO
+    # For Illustris and NIHAO
     galaxy_id = config["data"]["load_galaxy_args"]["id"]
     snapshot = config["data"]["args"]["snapshot"]
 
@@ -89,13 +95,14 @@ def store_fits(config, data, filepath):
 
     output_filename = (
         f"{filepath}{config['simulation']['name']}_id{galaxy_id}_snap{snapshot}_"
-        f"{parttype}_subset{config['data']['subset']['use_subset']}.fits"
+        f"subset{config['data']['subset']['use_subset']}.fits"
     )
 
     os.makedirs(os.path.dirname(output_filename), exist_ok=True)
     hdul = fits.HDUList([empty_primary, image_hdu1])
     hdul.writeto(output_filename, overwrite=True)
     logger.info(f"Datacube saved to {output_filename}")
+
 
 def load_fits(filepath):
     """

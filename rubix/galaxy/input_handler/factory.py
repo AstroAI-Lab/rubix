@@ -1,10 +1,12 @@
+from typing import Union
+from unittest.mock import MagicMock
+
+from beartype import beartype as typechecker
+from jaxtyping import Array, Float, jaxtyped
+
 from .base import BaseHandler
 from .illustris import IllustrisHandler
 from .pynbody import PynbodyHandler
-from typing import Union
-from unittest.mock import MagicMock
-from jaxtyping import Array, Float, jaxtyped
-from beartype import beartype as typechecker
 
 __all__ = ["IllustrisHandler", "BaseHandler"]
 

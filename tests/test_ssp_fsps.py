@@ -1,12 +1,14 @@
-import pytest
-import numpy as np
-from unittest.mock import patch
-from rubix.spectra.ssp.grid import SSPGrid
-from rubix.spectra.ssp.fsps_grid import write_fsps_data_to_disk
-import sys
 import os
-import h5py
+import sys
 from importlib import reload
+from unittest.mock import patch
+
+import h5py
+import numpy as np
+import pytest
+
+from rubix.spectra.ssp.fsps_grid import write_fsps_data_to_disk
+from rubix.spectra.ssp.grid import SSPGrid
 
 
 # Mock the fsps.StellarPopulation class

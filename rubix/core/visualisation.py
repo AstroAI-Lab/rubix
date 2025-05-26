@@ -1,10 +1,10 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from mpdaf.obj import Cube
+import h5py
 import ipywidgets as widgets
+import matplotlib.pyplot as plt
+import numpy as np
 from ipywidgets import interact
 from jdaviz import Cubeviz
-import h5py
+from mpdaf.obj import Cube
 
 
 def visualize_rubix(filename):

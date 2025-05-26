@@ -1,5 +1,6 @@
-from rubix.utils import read_yaml
 import os
+
+from rubix.utils import read_yaml
 
 PARENT_DIR = os.path.dirname(os.path.abspath(__file__))
 RUBIX_CONFIG_PATH = os.path.join(PARENT_DIR, "rubix_config.yml")

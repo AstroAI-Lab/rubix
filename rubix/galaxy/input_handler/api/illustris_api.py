@@ -1,7 +1,9 @@
 import os
-import requests
-import h5py
 from typing import List, Union
+
+import h5py
+import requests
+
 from rubix import config
 
 

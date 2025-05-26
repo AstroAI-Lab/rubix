@@ -1,7 +1,9 @@
+from copy import deepcopy
+
+from jax.tree_util import Partial
+
 from . import abstract_pipeline as apl
 from .transformer import bound_transformer
-from jax.tree_util import Partial
-from copy import deepcopy
 
 
 class LinearTransformerPipeline(apl.AbstractPipeline):
@@ -176,7 +178,6 @@ class LinearTransformerPipeline(apl.AbstractPipeline):
             ValueError
                 _description_
         """
-        print("Arguments: ", *args)
         if len(args) == 0:
             raise ValueError("Cannot apply the pipeline to an empty list of arguments")
 

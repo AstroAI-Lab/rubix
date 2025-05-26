@@ -1,18 +1,20 @@
-import equinox as eqx
-import jax.numpy as jnp
-from astropy import units as u
-from astropy.io import fits
 import os
-import h5py
-import requests
-from rubix import config as rubix_config
-from rubix.logger import get_logger
-from interpax import interp2d
-from jax.tree_util import Partial
 from dataclasses import dataclass, fields
 from typing import List, Tuple, Union
-from jaxtyping import Int, Array, Float, jaxtyped
+
+import equinox as eqx
+import h5py
+import jax.numpy as jnp
+import requests
+from astropy import units as u
+from astropy.io import fits
 from beartype import beartype as typechecker
+from interpax import interp2d
+from jax.tree_util import Partial
+from jaxtyping import Array, Float, Int, jaxtyped
+
+from rubix import config as rubix_config
+from rubix.logger import get_logger
 
 SSP_UNITS = rubix_config["ssp"]["units"]
 

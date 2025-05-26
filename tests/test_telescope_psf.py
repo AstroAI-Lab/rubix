@@ -1,8 +1,9 @@
-import pytest
-from rubix.telescope.psf.psf import get_psf_kernel, apply_psf
-import numpy as np
 import jax.numpy as jnp
+import numpy as np
+import pytest
 from jax.scipy.signal import convolve2d
+
+from rubix.telescope.psf.psf import apply_psf, get_psf_kernel
 
 
 def test_get_psf_kernel_gaussian():

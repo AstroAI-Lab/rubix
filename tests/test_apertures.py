@@ -1,10 +1,11 @@
-import pytest  # type: ignore # noqa
 import jax.numpy as jnp
 import numpy as np
+import pytest  # type: ignore # noqa
+
 from rubix.telescope.apertures import (
+    CIRCULAR_APERTURE,
     HEXAGONAL_APERTURE,
     SQUARE_APERTURE,
-    CIRCULAR_APERTURE,
 )
 
 

@@ -1,14 +1,22 @@
-import jax.numpy as jnp
-import jax
-#from jax.scipy.special import comb
-from scipy.special import comb #whenever there is a jax version of comb, replace this!!! 
-#Might come soon according to this github PR: https://github.com/jax-ml/jax/pull/18389
-
 from typing import Tuple
-from jaxtyping import Array, Float, jaxtyped
-from beartype import beartype as typechecker
 
-def test_valid_x_range(wave: Float[Array, "n"], wave_range: Float[Array, "2"], outname: str) -> None: # pragma no cover
+import jax
+import jax.numpy as jnp
+from beartype import beartype as typechecker
+from jaxtyping import Array, Float, jaxtyped
+
+# from jax.scipy.special import comb
+from scipy.special import (  # whenever there is a jax version of comb, replace this!!!
+    comb,
+)
+
+# Might come soon according to this github PR: https://github.com/jax-ml/jax/pull/18389
+
+
+
+def test_valid_x_range(
+    wave: Float[Array, "n"], wave_range: Float[Array, "2"], outname: str
+) -> None:  # pragma no cover
     """
     Test if the input wavelength is within the valid range of the model.
 
@@ -16,10 +24,10 @@ def test_valid_x_range(wave: Float[Array, "n"], wave_range: Float[Array, "2"], o
     ----------
     wave : Float[Array, "n"]
         The input wavelength to test.
-        
+
     wave_range : Float[Array, "2"]
         The valid range of the model.
-        
+
     outname : str
         The name of the model for error message.
 
@@ -29,9 +37,10 @@ def test_valid_x_range(wave: Float[Array, "n"], wave_range: Float[Array, "2"], o
     """
 
     deltacheck = 1e-6  # delta to allow for small numerical issues
-    #if jnp.logical_or(
+
+    # if jnp.logical_or(
     #    jnp.any(wave <= (wave_range[0] - deltacheck)), jnp.any(wave >= (wave_range[1] + deltacheck))
-    #):
+    # ):
     #    raise ValueError(
     #        "Input wave outside of range defined for "
     #        + outname
@@ -50,12 +59,16 @@ def test_valid_x_range(wave: Float[Array, "n"], wave_range: Float[Array, "2"], o
         return None
 
     condition = jnp.logical_or(
-        jnp.any(wave <= (wave_range[0] - deltacheck)), jnp.any(wave >= (wave_range[1] + deltacheck))
+        jnp.any(wave <= (wave_range[0] - deltacheck)),
+        jnp.any(wave >= (wave_range[1] + deltacheck)),
     )
     jax.lax.cond(condition, true_fn, false_fn, operand=None)
-    
+
+
 @jaxtyped(typechecker=typechecker)
-def _smoothstep(x: Float[Array, "n_wave"], x_min: float = 0, x_max: float = 1, N: int = 1) -> Float[Array, "n_wave"]: 
+def _smoothstep(
+    x: Float[Array, "n_wave"], x_min: float = 0, x_max: float = 1, N: int = 1
+) -> Float[Array, "n_wave"]:
     """
     Smoothstep function. This function is a polynomial approximation to the smoothstep function.
     The smoothstep function is a function commonly used in computer graphics to interpolate smoothly between two values.
@@ -70,8 +83,11 @@ def _smoothstep(x: Float[Array, "n_wave"], x_min: float = 0, x_max: float = 1, N
 
     return result
 
+
 @jaxtyped(typechecker=typechecker)
-def poly_map_domain(oldx: Float[Array, "n"], domain: Tuple[float, float], window: Tuple[float, float]) -> Float[Array, "n"]:
+def poly_map_domain(
+    oldx: Float[Array, "n"], domain: Tuple[float, float], window: Tuple[float, float]
+) -> Float[Array, "n"]:
     """
     Map domain into window by shifting and scaling.
 

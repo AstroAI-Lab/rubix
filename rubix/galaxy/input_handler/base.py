@@ -1,13 +1,15 @@
-from abc import ABC, abstractmethod
-import os
-import h5py
 import logging
+import os
+from abc import ABC, abstractmethod
+from typing import List, Optional, Union
+
 import astropy.units as u
-from typing import List, Union, Optional
+import h5py
+from beartype import beartype as typechecker
+from jaxtyping import Array, Float, jaxtyped
+
 from rubix import config
 from rubix.logger import get_logger
-from jaxtyping import Array, Float, jaxtyped
-from beartype import beartype as typechecker
 
 
 @jaxtyped(typechecker=typechecker)

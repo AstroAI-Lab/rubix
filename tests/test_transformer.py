@@ -1,8 +1,9 @@
-from rubix.pipeline import transformer as pt
 import jax.numpy as jnp
-from jax import random, jit, make_jaxpr
-from jax.errors import TracerBoolConversionError
 import pytest
+from jax import jit, make_jaxpr, random
+from jax.errors import TracerBoolConversionError
+
+from rubix.pipeline import transformer as pt
 
 
 def func(

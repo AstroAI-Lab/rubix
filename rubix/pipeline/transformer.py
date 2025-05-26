@@ -1,7 +1,6 @@
 from copy import deepcopy
 
-from jax import jit
-from jax import make_jaxpr
+from jax import jit, make_jaxpr
 from jax.tree_util import Partial
 
 

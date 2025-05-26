@@ -1,18 +1,21 @@
-import jax.numpy as jnp
-from rubix.telescope.utils import (
-    calculate_spatial_bin_edges,
-    square_spaxel_assignment,
-    mask_particles_outside_aperture,
-)
-from rubix.telescope.base import BaseTelescope
-from rubix.telescope.factory import TelescopeFactory
-from rubix.logger import get_logger
-from .cosmology import get_cosmology
-from .data import RubixData
 from typing import Callable, Union
 
-from jaxtyping import Array, Float, jaxtyped
+import jax.numpy as jnp
 from beartype import beartype as typechecker
+from jaxtyping import Array, Float, jaxtyped
+
+from rubix.logger import get_logger
+from rubix.telescope.base import BaseTelescope
+from rubix.telescope.factory import TelescopeFactory
+from rubix.telescope.utils import (
+    calculate_spatial_bin_edges,
+    mask_particles_outside_aperture,
+    square_spaxel_assignment,
+)
+
+from .cosmology import get_cosmology
+from .data import RubixData
+
 
 @jaxtyped(typechecker=typechecker)
 def get_telescope(config: Union[str, dict]) -> BaseTelescope:
@@ -110,7 +113,7 @@ def get_spaxel_assignment(config: dict) -> Callable:
             )
             rubixdata.stars.pixel_assignment = pixel_assignment
             rubixdata.stars.spatial_bin_edges = spatial_bin_edges
-        
+
         if rubixdata.gas.coords is not None:
             pixel_assignment = square_spaxel_assignment(
                 rubixdata.gas.coords, spatial_bin_edges
@@ -190,8 +193,8 @@ def get_filter_particles(config: dict) -> Callable:
             mask_jax = jnp.array(mask)
             setattr(rubixdata.gas, "mask", mask_jax)
             # rubixdata.gas.mask = mask
-            #masked_metals = jnp.where(mask_jax[:, jnp.newaxis], rubixdata.gas.metals, 0)
-            #setattr(rubixdata.gas, "metals", masked_metals)
+            # masked_metals = jnp.where(mask_jax[:, jnp.newaxis], rubixdata.gas.metals, 0)
+            # setattr(rubixdata.gas, "metals", masked_metals)
 
         return rubixdata
 
