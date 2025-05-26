@@ -1,5 +1,7 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
+
 from rubix.galaxy.input_handler.factory import get_input_handler
 
 

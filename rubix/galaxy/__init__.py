@@ -1,6 +1,6 @@
 from .input_handler import (
-    IllustrisHandler,
     BaseHandler,
     IllustrisAPI,
+    IllustrisHandler,
     get_input_handler,
 )

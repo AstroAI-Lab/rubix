@@ -1,13 +1,12 @@
-from jax import lax, vmap, jit
-import jax.numpy as jnp
-from .utils import trapz
+from typing import Union
 
 import equinox as eqx
-
-from typing import Union
-from jaxtyping import Array, Float, jaxtyped
+import jax.numpy as jnp
 from beartype import beartype as typechecker
+from jax import jit, lax, vmap
+from jaxtyping import Array, Float, jaxtyped
 
+from .utils import trapz
 
 # TODO: maybe change this to load from the config file?
 C_SPEED = 2.99792458e8  # m/s

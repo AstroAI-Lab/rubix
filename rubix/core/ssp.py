@@ -1,11 +1,11 @@
+from typing import Callable
+
 import jax
+from beartype import beartype as typechecker
+from jaxtyping import jaxtyped
 
 from rubix.logger import get_logger
 from rubix.spectra.ssp.factory import get_ssp_template
-
-from typing import Callable
-from jaxtyping import jaxtyped
-from beartype import beartype as typechecker
 
 
 @jaxtyped(typechecker=typechecker)
@@ -79,7 +79,7 @@ def get_lookup_interpolation_vmap(config: dict) -> Callable:
     """
     lookup = get_lookup_interpolation(config)
     lookup_vmap = jax.vmap(lookup, in_axes=(0, 0))
-    
+
     return lookup_vmap
 
 

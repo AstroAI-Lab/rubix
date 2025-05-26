@@ -1,9 +1,10 @@
+from typing import Union
+
+import jax.numpy as jnp
+from beartype import beartype as typechecker
 from jax import jit
 from jax.lax import scan
-from typing import Union
-import jax.numpy as jnp
 from jaxtyping import Array, Float, jaxtyped
-from beartype import beartype as typechecker
 
 
 # Source: https://github.com/ArgonneCPAC/dsps/blob/b81bac59e545e2d68ccf698faba078d87cfa2dd8/dsps/utils.py#L247C1-L256C1

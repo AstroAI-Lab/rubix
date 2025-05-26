@@ -1,11 +1,14 @@
+import os
+
+import matplotlib.pyplot as plt
 import numpy as np
 from astropy.io import fits
+from matplotlib.colors import LogNorm
+from mpdaf.obj import Cube
+
 from rubix.core.telescope import get_telescope
 from rubix.logger import get_logger
-from mpdaf.obj import Cube
-import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
-import os
+
 
 def store_fits(config, data, filepath):
     """
@@ -44,7 +47,7 @@ def store_fits(config, data, filepath):
     hdr["ROTATION"] = config["galaxy"]["rotation"]["type"]
     hdr["SIM"] = config["simulation"]["name"]
 
-    #For Illustris and NIHAO
+    # For Illustris and NIHAO
     galaxy_id = config["data"]["load_galaxy_args"]["id"]
     snapshot = config["data"]["args"]["snapshot"]
 
@@ -99,6 +102,7 @@ def store_fits(config, data, filepath):
     hdul = fits.HDUList([empty_primary, image_hdu1])
     hdul.writeto(output_filename, overwrite=True)
     logger.info(f"Datacube saved to {output_filename}")
+
 
 def load_fits(filepath):
     """

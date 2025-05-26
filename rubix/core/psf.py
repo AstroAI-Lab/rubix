@@ -1,12 +1,13 @@
-from rubix.telescope.psf.psf import get_psf_kernel, apply_psf
-from rubix.logger import get_logger
+from typing import Callable, Dict
+
+import jax.numpy as jnp
+from beartype import beartype as typechecker
+from jaxtyping import jaxtyped
 
 from rubix.logger import get_logger
-from typing import Callable, Dict
-import jax.numpy as jnp
+from rubix.telescope.psf.psf import apply_psf, get_psf_kernel
+
 from .data import RubixData
-from jaxtyping import jaxtyped
-from beartype import beartype as typechecker
 
 
 # TODO: add option to disable PSF convolution
@@ -40,7 +41,7 @@ def get_convolve_psf(config: dict) -> Callable:
     """
 
     logger = get_logger(config.get("logger", None))
-    
+
     # Check if key exists in config file
     if "psf" not in config["telescope"]:
         raise ValueError("PSF configuration not found in telescope configuration")
