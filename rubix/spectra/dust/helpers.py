@@ -13,7 +13,6 @@ from scipy.special import (  # whenever there is a jax version of comb, replace 
 # Might come soon according to this github PR: https://github.com/jax-ml/jax/pull/18389
 
 
-
 def test_valid_x_range(
     wave: Float[Array, "n"], wave_range: Float[Array, "2"], outname: str
 ) -> None:  # pragma no cover
