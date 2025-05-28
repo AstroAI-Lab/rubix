@@ -111,7 +111,8 @@ def retrieve_ssp_data_from_fsps(
         _wave, _fluxes = sp.get_spectrum(zmet=zmet, tage=tage, peraa=peraa)
         spectrum_collector.append(_fluxes)
     ssp_wave = np.array(_wave)
-    ssp_wave_centered = ssp_wave - 1.5
+    offset = (_wave[1] - _wave[0]) / 2.
+    ssp_wave_centered = ssp_wave - offset
     ssp_flux = np.array(spectrum_collector)
 
     grid = SSPGrid(ssp_lg_age_gyr, ssp_lgmet, ssp_wave_centered, ssp_flux)
