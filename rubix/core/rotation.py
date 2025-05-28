@@ -1,8 +1,10 @@
-from rubix.logger import get_logger
-from rubix.galaxy.alignment import rotate_galaxy as rotate_galaxy_core
-from .data import RubixData
-from jaxtyping import jaxtyped
 from beartype import beartype as typechecker
+from jaxtyping import jaxtyped
+
+from rubix.galaxy.alignment import rotate_galaxy as rotate_galaxy_core
+from rubix.logger import get_logger
+
+from .data import RubixData
 
 
 @jaxtyped(typechecker=typechecker)

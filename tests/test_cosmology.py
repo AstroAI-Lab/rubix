@@ -1,6 +1,7 @@
 import pytest
-from jax import numpy as jnp
 from astropy.cosmology import Planck15 as astropy_cosmo
+from jax import numpy as jnp
+
 from rubix.cosmology import PLANCK15 as rubix_cosmo
 
 # Define the cosmological parameters similar to the ones used in the BaseCosmology class

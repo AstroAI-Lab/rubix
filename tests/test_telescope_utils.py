@@ -1,14 +1,15 @@
-from rubix.telescope.utils import (
-    square_spaxel_assignment,
-    mask_particles_outside_aperture,
-    calculate_spatial_bin_edges,
-)
+from unittest.mock import MagicMock
+
 import jax
 import jax.numpy as jnp
-from unittest.mock import MagicMock
 import numpy as np
 
 from rubix.cosmology.base import BaseCosmology
+from rubix.telescope.utils import (
+    calculate_spatial_bin_edges,
+    mask_particles_outside_aperture,
+    square_spaxel_assignment,
+)
 
 # enfrce that jax uses cpu only
 

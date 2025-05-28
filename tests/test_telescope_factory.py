@@ -1,18 +1,20 @@
+from unittest.mock import MagicMock, patch
+
+import jax
+import jax.numpy as jnp
+import numpy as np
 import pytest
-from unittest.mock import patch, MagicMock
-from rubix.telescope.base import BaseTelescope
+import yaml
+
 from rubix.telescope.apertures import (
-    SQUARE_APERTURE,
     CIRCULAR_APERTURE,
     HEXAGONAL_APERTURE,
+    SQUARE_APERTURE,
 )
+from rubix.telescope.base import BaseTelescope
 from rubix.telescope.factory import (
     TelescopeFactory,
 )
-import numpy as np
-import yaml
-import jax
-import jax.numpy as jnp
 
 jax.config.update("jax_platform_name", "cpu")
 

@@ -1,6 +1,7 @@
 import pytest
-from rubix.cosmology import RubixCosmology, PLANCK15
+
 from rubix.core.cosmology import get_cosmology
+from rubix.cosmology import PLANCK15, RubixCosmology
 
 
 def test_get_cosmology_planck15():

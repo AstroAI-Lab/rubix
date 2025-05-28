@@ -1,15 +1,16 @@
-import jax.numpy as jnp
 import equinox
+import jax.numpy as jnp
+from beartype import beartype as typechecker
+from jaxtyping import Array, Float, jaxtyped
 
 from .dust_baseclasses import BaseExtRvModel
+from .generic_models import FM90, Drude1d, Polynomial1d, PowerLaw1d, _modified_drude
 from .helpers import _smoothstep
-from .generic_models import PowerLaw1d, Polynomial1d, Drude1d, _modified_drude, FM90
 
-from jaxtyping import Array, Float, jaxtyped
-from beartype import beartype as typechecker
-
-
-RV_MODELS = ["Cardelli89", "Gordon23"] #"O94", "F99", "F04", "VCG04", "GCC09", "M14", "G16", "F19", "D22", "G23"]
+RV_MODELS = [
+    "Cardelli89",
+    "Gordon23",
+]  # "O94", "F99", "F04", "VCG04", "GCC09", "M14", "G16", "F19", "D22", "G23"]
 
 wave_range_CCM89 = [0.3, 10.0]
 Rv_range_CCM89 = [2.0, 6.0]
@@ -17,11 +18,12 @@ Rv_range_CCM89 = [2.0, 6.0]
 wave_range_G23 = [0.0912, 32.0]
 Rv_range_G23 = [2.3, 5.6]
 
+
 @equinox.filter_jit
 @jaxtyped(typechecker=typechecker)
 class Cardelli89(BaseExtRvModel):
     r"""
-    Calculate the extinction curve of the Milky Way according to the 
+    Calculate the extinction curve of the Milky Way according to the
     Cardelli, Clayton, & Mathis (1989) Milky Way R(V) dependent model.
 
     Parameters
@@ -80,30 +82,38 @@ class Cardelli89(BaseExtRvModel):
         plt.show()
     """
 
-    #wave: Float[Array, "n_wave"]
-    
-    #wave_range: Float[Array, "2"] = equinox.field(converter=jnp.asarray, static=True, default_factory=lambda: jnp.array(wave_range_CCM89))
-    wave_range_l: float = equinox.field(converter=float, static=True, default=wave_range_CCM89[0])
-    wave_range_h: float = equinox.field(converter=float, static=True, default=wave_range_CCM89[1])
-    
+    # wave: Float[Array, "n_wave"]
+
+    # wave_range: Float[Array, "2"] = equinox.field(converter=jnp.asarray, static=True, default_factory=lambda: jnp.array(wave_range_CCM89))
+    wave_range_l: float = equinox.field(
+        converter=float, static=True, default=wave_range_CCM89[0]
+    )
+    wave_range_h: float = equinox.field(
+        converter=float, static=True, default=wave_range_CCM89[1]
+    )
+
     Rv: float = equinox.field(converter=float, static=True, default=3.1)
-    #Rv_range: Float[Array, "2"] = equinox.field(converter=jnp.asarray, static=True, default_factory=lambda: jnp.array(Rv_range_CCM89))
-    Rv_range_l: float = equinox.field(converter=float, static=True, default=Rv_range_CCM89[0])
-    Rv_range_h: float = equinox.field(converter=float, static=True, default=Rv_range_CCM89[1])
+    # Rv_range: Float[Array, "2"] = equinox.field(converter=jnp.asarray, static=True, default_factory=lambda: jnp.array(Rv_range_CCM89))
+    Rv_range_l: float = equinox.field(
+        converter=float, static=True, default=Rv_range_CCM89[0]
+    )
+    Rv_range_h: float = equinox.field(
+        converter=float, static=True, default=Rv_range_CCM89[1]
+    )
 
     def evaluate(self, wave: Float[Array, "n_wave"]) -> Float[Array, "n_wave"]:
         """
-            Cardelli, Clayton, and Mathis (1989, ApJ, 345, 245) function
+        Cardelli, Clayton, and Mathis (1989, ApJ, 345, 245) function
 
-            Parameters
-            ----------
-            wave: float
-                expects wave as wavelengths in microns.
+        Parameters
+        ----------
+        wave: float
+            expects wave as wavelengths in microns.
 
-            Returns
-            -------
-            axav: jax numpy array (float)
-                A(wave)/A(V) extinction curve [mag]
+        Returns
+        -------
+        axav: jax numpy array (float)
+            A(wave)/A(V) extinction curve [mag]
         """
 
         # setup the a & b coefficient vectors
@@ -118,23 +128,40 @@ class Cardelli89(BaseExtRvModel):
         fuv_mask = jnp.logical_and(8 < wave, wave <= 10)
 
         # Infrared
-        a = jnp.where(ir_mask, 0.574 * wave ** 1.61, a)
-        b = jnp.where(ir_mask, -0.527 * wave ** 1.61, b)
+        a = jnp.where(ir_mask, 0.574 * wave**1.61, a)
+        b = jnp.where(ir_mask, -0.527 * wave**1.61, b)
 
         # NIR/optical
         y = wave - 1.82
-        a = jnp.where(opt_mask, 1 + 0.17699*y - 0.50447*y**2 - 0.02427*y**3 + 0.72085*y**4 + 0.01979*y**5 - 0.77530*y**6 + 0.32999*y**7, a)
-        b = jnp.where(opt_mask, 1.41338*y + 2.28305*y**2 + 1.07233*y**3 - 5.38434*y**4 - 0.62251*y**5 + 5.30260*y**6 - 2.09002*y**7, b)
-
         a = jnp.where(
-            nuv_mask,
-            1.752 - 0.316 * wave - 0.104 / ((wave - 4.67) ** 2 + 0.341),
-            a
+            opt_mask,
+            1
+            + 0.17699 * y
+            - 0.50447 * y**2
+            - 0.02427 * y**3
+            + 0.72085 * y**4
+            + 0.01979 * y**5
+            - 0.77530 * y**6
+            + 0.32999 * y**7,
+            a,
         )
         b = jnp.where(
-            nuv_mask,
-            -3.09 + 1.825 * wave + 1.206 / ((wave - 4.62) ** 2 + 0.263),
-            b
+            opt_mask,
+            1.41338 * y
+            + 2.28305 * y**2
+            + 1.07233 * y**3
+            - 5.38434 * y**4
+            - 0.62251 * y**5
+            + 5.30260 * y**6
+            - 2.09002 * y**7,
+            b,
+        )
+
+        a = jnp.where(
+            nuv_mask, 1.752 - 0.316 * wave - 0.104 / ((wave - 4.67) ** 2 + 0.341), a
+        )
+        b = jnp.where(
+            nuv_mask, -3.09 + 1.825 * wave + 1.206 / ((wave - 4.62) ** 2 + 0.263), b
         )
 
         # far-NUV
@@ -144,8 +171,8 @@ class Cardelli89(BaseExtRvModel):
 
         # FUV
         y = wave - 8.0
-        a = jnp.where(fuv_mask, -1.073 - 0.628*y + 0.137*y**2 - 0.070*y**3, a)
-        b = jnp.where(fuv_mask, 13.670 + 4.257*y - 0.420*y**2 + 0.374*y**3, b)
+        a = jnp.where(fuv_mask, -1.073 - 0.628 * y + 0.137 * y**2 - 0.070 * y**3, a)
+        b = jnp.where(fuv_mask, 13.670 + 4.257 * y - 0.420 * y**2 + 0.374 * y**3, b)
 
         # return A(x)/A(V)
         return a + b / self.Rv
@@ -205,18 +232,25 @@ class Gordon23(BaseExtRvModel):
         ax.legend(loc='best')
         plt.show()
     """
-    
-    #wave_range: ClassVar[Float[Array, "2"]] = equinox.field(converter=jnp.asarray, static=True, default=jnp.array(wave_range_G23))
-    #Rv_range: ClassVar[Float[Array, "2"]] = equinox.field(converter=jnp.asarray, static=True, default=jnp.array(Rv_range_G23))
 
-    wave_range_l: float = equinox.field(converter=float, static=True, default=wave_range_G23[0])
-    wave_range_h: float = equinox.field(converter=float, static=True, default=wave_range_G23[1])
-    
+    # wave_range: ClassVar[Float[Array, "2"]] = equinox.field(converter=jnp.asarray, static=True, default=jnp.array(wave_range_G23))
+    # Rv_range: ClassVar[Float[Array, "2"]] = equinox.field(converter=jnp.asarray, static=True, default=jnp.array(Rv_range_G23))
+
+    wave_range_l: float = equinox.field(
+        converter=float, static=True, default=wave_range_G23[0]
+    )
+    wave_range_h: float = equinox.field(
+        converter=float, static=True, default=wave_range_G23[1]
+    )
+
     Rv: float = equinox.field(converter=float, static=True, default=3.1)
-    #Rv_range: Float[Array, "2"] = equinox.field(converter=jnp.asarray, static=True, default_factory=lambda: jnp.array(Rv_range_CCM89))
-    Rv_range_l: float = equinox.field(converter=float, static=True, default=Rv_range_G23[0])
-    Rv_range_h: float = equinox.field(converter=float, static=True, default=Rv_range_G23[1])
-
+    # Rv_range: Float[Array, "2"] = equinox.field(converter=jnp.asarray, static=True, default_factory=lambda: jnp.array(Rv_range_CCM89))
+    Rv_range_l: float = equinox.field(
+        converter=float, static=True, default=Rv_range_G23[0]
+    )
+    Rv_range_h: float = equinox.field(
+        converter=float, static=True, default=Rv_range_G23[1]
+    )
 
     def evaluate(self, wave: Float[Array, "n_wave"]) -> Float[Array, "n_wave"]:
         """
@@ -252,7 +286,6 @@ class Gordon23(BaseExtRvModel):
         uvopt_waves = [0.3, 0.33]
         uvopt_overlap = jnp.logical_and(wave >= uvopt_waves[0], wave <= uvopt_waves[1])
 
-
         # NIR/MIR
         # fmt: off
         # (scale, alpha1, alpha2, swave, swidth), sil1, sil2
@@ -262,7 +295,9 @@ class Gordon23(BaseExtRvModel):
         # fmt: on
 
         a = jnp.where(ir_mask, self.nirmir_intercept(wave, ir_a), a)
-        b = jnp.where(ir_mask, PowerLaw1d(x=wave, amplitude=-1.01251, x_0=1.0, alpha=-1.06099), b)
+        b = jnp.where(
+            ir_mask, PowerLaw1d(x=wave, amplitude=-1.01251, x_0=1.0, alpha=-1.06099), b
+        )
 
         # optical
         # fmt: off
@@ -277,7 +312,9 @@ class Gordon23(BaseExtRvModel):
                  0.1713 , 1.587, 0.243]
         # fmt: on
 
-        def compound_polynomial_drude_model(x: Float[Array, "n_wave"], params: Float[Array, "m"]) -> Float[Array, "n_wave"]:
+        def compound_polynomial_drude_model(
+            x: Float[Array, "n_wave"], params: Float[Array, "m"]
+        ) -> Float[Array, "n_wave"]:
             """
             Compound polynomial and Drude model
 
@@ -301,35 +338,64 @@ class Gordon23(BaseExtRvModel):
             poly_result = Polynomial1d(x, poly_coeffs)
 
             # Evaluate the Drude models
-            drude_result_1 = Drude1d(x, amplitude=drude_params[0], x_0=drude_params[1], fwhm=drude_params[2])
-            drude_result_2 = Drude1d(x, amplitude=drude_params[3], x_0=drude_params[4], fwhm=drude_params[5])
-            drude_result_3 = Drude1d(x, amplitude=drude_params[6], x_0=drude_params[7], fwhm=drude_params[8])
+            drude_result_1 = Drude1d(
+                x, amplitude=drude_params[0], x_0=drude_params[1], fwhm=drude_params[2]
+            )
+            drude_result_2 = Drude1d(
+                x, amplitude=drude_params[3], x_0=drude_params[4], fwhm=drude_params[5]
+            )
+            drude_result_3 = Drude1d(
+                x, amplitude=drude_params[6], x_0=drude_params[7], fwhm=drude_params[8]
+            )
 
             # Combine the results
             return poly_result + drude_result_1 + drude_result_2 + drude_result_3
-        
+
         a = jnp.where(opt_mask, compound_polynomial_drude_model(1 / wave, opt_a), a)
         b = jnp.where(opt_mask, compound_polynomial_drude_model(1 / wave, opt_b), b)
 
-
         # overlap between optical/ir
         weights = _smoothstep(wave, x_min=optir_waves[0], x_max=optir_waves[1], N=1)
-        a = jnp.where(optir_overlap, (1.0 - weights) * compound_polynomial_drude_model(1 / wave, opt_a) + weights * self.nirmir_intercept(wave, ir_a), a)
-        b = jnp.where(optir_overlap, (1.0 - weights) * compound_polynomial_drude_model(1 / wave, opt_b) + weights * PowerLaw1d(x=wave, amplitude=-1.01251, x_0=1.0, alpha=-1.06099), b)
+        a = jnp.where(
+            optir_overlap,
+            (1.0 - weights) * compound_polynomial_drude_model(1 / wave, opt_a)
+            + weights * self.nirmir_intercept(wave, ir_a),
+            a,
+        )
+        b = jnp.where(
+            optir_overlap,
+            (1.0 - weights) * compound_polynomial_drude_model(1 / wave, opt_b)
+            + weights * PowerLaw1d(x=wave, amplitude=-1.01251, x_0=1.0, alpha=-1.06099),
+            b,
+        )
 
         # Ultraviolet
-        a = jnp.where(uv_mask, FM90(1 / wave, 0.81297, 0.2775, 1.06295, 0.11303, 4.60, 0.99), a)
-        b = jnp.where(uv_mask, FM90(1 / wave, -2.97868, 1.89808, 3.10334, 0.65484, 4.60, 0.99), b)
+        a = jnp.where(
+            uv_mask, FM90(1 / wave, 0.81297, 0.2775, 1.06295, 0.11303, 4.60, 0.99), a
+        )
+        b = jnp.where(
+            uv_mask, FM90(1 / wave, -2.97868, 1.89808, 3.10334, 0.65484, 4.60, 0.99), b
+        )
 
         # overlap between uv/optical
         weights = _smoothstep(wave, x_min=uvopt_waves[0], x_max=uvopt_waves[1], N=1)
-        a = jnp.where(uvopt_overlap, (1.0 - weights) * FM90(1 / wave, 0.81297, 0.2775, 1.06295, 0.11303, 4.60, 0.99) + weights * compound_polynomial_drude_model(1 / wave, opt_a), a)
-        b = jnp.where(uvopt_overlap, (1.0 - weights) * FM90(1 / wave, -2.97868, 1.89808, 3.10334, 0.65484, 4.60, 0.99) + weights * compound_polynomial_drude_model(1 / wave, opt_b), b)
+        a = jnp.where(
+            uvopt_overlap,
+            (1.0 - weights)
+            * FM90(1 / wave, 0.81297, 0.2775, 1.06295, 0.11303, 4.60, 0.99)
+            + weights * compound_polynomial_drude_model(1 / wave, opt_a),
+            a,
+        )
+        b = jnp.where(
+            uvopt_overlap,
+            (1.0 - weights)
+            * FM90(1 / wave, -2.97868, 1.89808, 3.10334, 0.65484, 4.60, 0.99)
+            + weights * compound_polynomial_drude_model(1 / wave, opt_b),
+            b,
+        )
 
         # return A(x)/A(V)
         return a + b * (1 / self.Rv - 1 / 3.1)
-
-
 
     @staticmethod
     def nirmir_intercept(wave, params):
@@ -376,7 +442,7 @@ class Gordon23(BaseExtRvModel):
         return axav
 
 
-#TODO: Implement more jax versions of extinction models from astropy, see https://dust-extinction.readthedocs.io/en/latest/index.html
+# TODO: Implement more jax versions of extinction models from astropy, see https://dust-extinction.readthedocs.io/en/latest/index.html
 
 # Create a dictionary to map model names to classes
 Rv_model_dict = {

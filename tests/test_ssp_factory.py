@@ -1,11 +1,12 @@
-import pytest
-import numpy as np
-from unittest.mock import patch, MagicMock
-from rubix.spectra.ssp.factory import get_ssp_template
-from rubix.spectra.ssp.factory import HDF5SSPGrid, pyPipe3DSSPGrid
-from rubix.paths import TEMPLATE_PATH
-from copy import deepcopy
 import sys
+from copy import deepcopy
+from unittest.mock import MagicMock, patch
+
+import numpy as np
+import pytest
+
+from rubix.paths import TEMPLATE_PATH
+from rubix.spectra.ssp.factory import HDF5SSPGrid, get_ssp_template, pyPipe3DSSPGrid
 
 
 # Fixture to reset the configuration after each test
@@ -78,9 +79,9 @@ def test_get_ssp_template_existing_template():
                 template = get_ssp_template(template_name)
                 template_class_name = config["ssp"]["templates"][template_name]["name"]
                 assert template.__class__.__name__ == template_class_name
-            assert mock_write_fsps_data_to_disk.call_count <= 1, (
-                f"Expected at most 1 call to 'write_fsps_data_to_disk', but got {mock_write_fsps_data_to_disk.call_count}"
-            )
+            assert (
+                mock_write_fsps_data_to_disk.call_count <= 1
+            ), f"Expected at most 1 call to 'write_fsps_data_to_disk', but got {mock_write_fsps_data_to_disk.call_count}"
 
 
 def test_get_ssp_template_existing_template_BC03():
