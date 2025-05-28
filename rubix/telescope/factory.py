@@ -1,17 +1,19 @@
+import os
+import warnings
+from typing import Optional, Union
+
 import numpy as np
+from beartype import beartype as typechecker
+from jaxtyping import jaxtyped
+
 from rubix.telescope.apertures import (
-    SQUARE_APERTURE,
     CIRCULAR_APERTURE,
     HEXAGONAL_APERTURE,
+    SQUARE_APERTURE,
 )
 from rubix.telescope.base import BaseTelescope
 from rubix.telescope.utils import calculate_wave_edges, calculate_wave_seq
 from rubix.utils import read_yaml
-import os
-import warnings
-from typing import Optional, Union
-from jaxtyping import jaxtyped
-from beartype import beartype as typechecker
 
 PATH = os.path.dirname(os.path.abspath(__file__))
 TELESCOPE_CONFIG_PATH = os.path.join(PATH, "telescopes.yaml")

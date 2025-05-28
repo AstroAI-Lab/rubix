@@ -1,9 +1,9 @@
 from typing import List, Optional, Union
-from jaxtyping import Int, Float, Array, jaxtyped
-from beartype import beartype as typechecker
-import numpy as np
 
 import equinox as eqx
+import numpy as np
+from beartype import beartype as typechecker
+from jaxtyping import Array, Float, Int, jaxtyped
 
 
 @jaxtyped(typechecker=typechecker)

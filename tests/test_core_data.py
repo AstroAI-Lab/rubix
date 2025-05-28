@@ -1,15 +1,19 @@
-from unittest.mock import MagicMock, Mock, patch, call
+from unittest.mock import MagicMock, Mock, call, patch
 
 import jax
 import jax.numpy as jnp
+
 from rubix.core.data import (
+    Galaxy,
+    GasData,
+    RubixData,
+    StarsData,
     convert_to_rubix,
+    get_reshape_data,
+    get_rubix_data,
     prepare_input,
     reshape_array,
-    get_rubix_data,
-    get_reshape_data,
 )
-from rubix.core.data import RubixData, Galaxy, StarsData, GasData
 
 # Mock configuration for tests
 config_dict = {
@@ -137,7 +141,6 @@ def test_prepare_input(mock_center_particles, mock_path_join):
             call(config_dict["output_path"], "rubix_galaxy.h5")
             in mock_path_join.call_args_list
         )
-
 
 
 @patch("rubix.core.data.os.path.join")

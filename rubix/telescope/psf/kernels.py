@@ -1,5 +1,5 @@
 import jax.numpy as jnp
-from jaxtyping import Float, Array
+from jaxtyping import Array, Float
 
 
 def gaussian_kernel_2d(m: int, n: int, sigma: float) -> Float[Array, "m n"]:

@@ -1,18 +1,23 @@
+from typing import Tuple
+
 import jax.numpy as jnp
+from beartype import beartype as typechecker
+from jaxtyping import Array, Float, jaxtyped
 
 from .helpers import poly_map_domain
-#TODO: add runtime type checking for valid x ranges
+
+# TODO: add runtime type checking for valid x ranges
 # can be achieved by using chekify...
-#from .dust_baseclasses import test_valid_x_range
+# from .dust_baseclasses import test_valid_x_range
 
-from typing import Tuple
-from jaxtyping import Array, Float, jaxtyped
-from beartype import beartype as typechecker
 
-#TODO: Implement functions as classes?
+# TODO: Implement functions as classes?
+
 
 @jaxtyped(typechecker=typechecker)
-def PowerLaw1d(x: Float[Array, "n_wave"], amplitude: float, x_0: float, alpha: float) -> Float[Array, "n_wave"]:
+def PowerLaw1d(
+    x: Float[Array, "n_wave"], amplitude: float, x_0: float, alpha: float
+) -> Float[Array, "n_wave"]:
     """
     Calculate a power law function.
     Function inspired by astropy.modeling.functional_models.PowerLaw1D.
@@ -32,7 +37,7 @@ def PowerLaw1d(x: Float[Array, "n_wave"], amplitude: float, x_0: float, alpha: f
     -------
     Float[Array, "n_wave"]
         Output array after applying the power law.
-    
+
     Notes
     -----
     Model formula (with :math:`A` for ``amplitude`` and :math:`\\alpha` for ``alpha``):
@@ -43,15 +48,20 @@ def PowerLaw1d(x: Float[Array, "n_wave"], amplitude: float, x_0: float, alpha: f
     return amplitude * xx ** (-alpha)
 
 
-def Polynomial1d(x: Float[Array, "n"], coeffs: Float[Array, "m"], domain: Tuple[float, float] = (-1., 1.), window: Tuple[float, float] = (-1., 1.)) -> Float[Array, "n"]:
+def Polynomial1d(
+    x: Float[Array, "n"],
+    coeffs: Float[Array, "m"],
+    domain: Tuple[float, float] = (-1.0, 1.0),
+    window: Tuple[float, float] = (-1.0, 1.0),
+) -> Float[Array, "n"]:
     r"""
-    Evaluate a 1D polynomial model defined as 
+    Evaluate a 1D polynomial model defined as
 
     .. math::
 
         P = \sum_{i=0}^{i=n}C_{i} * x^{i}
-    
-    This function inspired by astropy.modelling.polynomial.Polynomial1D. 
+
+    This function inspired by astropy.modelling.polynomial.Polynomial1D.
 
     Parameters
     ----------
@@ -85,8 +95,11 @@ def Polynomial1d(x: Float[Array, "n"], coeffs: Float[Array, "m"], domain: Tuple[
         x = poly_map_domain(x, domain, window)
     return horner(x, coeffs)
 
+
 @jaxtyped(typechecker=typechecker)
-def Drude1d(x: Float[Array, "n"], amplitude: float = 1.0, x_0: float = 1.0, fwhm: float = 1.0):
+def Drude1d(
+    x: Float[Array, "n"], amplitude: float = 1.0, x_0: float = 1.0, fwhm: float = 1.0
+):
     r"""
     Evaluate the Drude model function.
     This function is inspired by astropy.modeling.functional_models.Drude1D.
@@ -110,7 +123,7 @@ def Drude1d(x: Float[Array, "n"], amplitude: float = 1.0, x_0: float = 1.0, fwhm
     -------
     result : ndarray
         Evaluated Drude model values.
-    
+
     Examples
     --------
     .. plot::
@@ -137,13 +150,14 @@ def Drude1d(x: Float[Array, "n"], amplitude: float = 1.0, x_0: float = 1.0, fwhm
     if x_0 == 0:
         raise ValueError("0 is not an allowed value for x_0")
     return (
-        amplitude
-        * ((fwhm / x_0) ** 2)
-        / ((x / x_0 - x_0 / x) ** 2 + (fwhm / x_0) ** 2)
+        amplitude * ((fwhm / x_0) ** 2) / ((x / x_0 - x_0 / x) ** 2 + (fwhm / x_0) ** 2)
     )
 
+
 @jaxtyped(typechecker=typechecker)
-def _modified_drude(x: Float[Array, "n"], scale: float, x_o: float, gamma_o: float, asym: float) -> Float[Array, "n"]:
+def _modified_drude(
+    x: Float[Array, "n"], scale: float, x_o: float, gamma_o: float, asym: float
+) -> Float[Array, "n"]:
     """
     Modified Drude function to have a variable asymmetry.  Drude profiles
     are intrinsically asymmetric with the asymmetry fixed by specific central
@@ -167,7 +181,7 @@ def _modified_drude(x: Float[Array, "n"], scale: float, x_o: float, gamma_o: flo
 
     asym : float
         asymmetry where a value of 0 results in a standard Drude profile
-    
+
     Returns
     -------
     y : ndarray
@@ -178,8 +192,17 @@ def _modified_drude(x: Float[Array, "n"], scale: float, x_o: float, gamma_o: flo
 
     return y
 
+
 @jaxtyped(typechecker=typechecker)
-def FM90(x: Float[Array, "n"], C1: float = 0.10, C2: float = 0.70, C3: float = 3.23, C4: float = 0.41, xo: float = 4.59, gamma: float = 0.95) -> Float[Array, "n"]:
+def FM90(
+    x: Float[Array, "n"],
+    C1: float = 0.10,
+    C2: float = 0.70,
+    C3: float = 3.23,
+    C4: float = 0.41,
+    xo: float = 4.59,
+    gamma: float = 0.95,
+) -> Float[Array, "n"]:
     r"""
     Fitzpatrick & Massa (1990) 6 parameter ultraviolet shape model
 
@@ -274,9 +297,9 @@ def FM90(x: Float[Array, "n"], C1: float = 0.10, C2: float = 0.70, C3: float = 3
         "C3": (-1.0, 6.0),
         "C4": (-0.5, 1.5),
         "xo": (4.5, 4.9),
-        "gamma": (0.6, 1.7)
+        "gamma": (0.6, 1.7),
     }
-    
+
     # Check if parameters are within bounds
     if not (bounds["C1"][0] <= C1 <= bounds["C1"][1]):
         raise ValueError(f"C1 is out of bounds: {C1}")
@@ -292,8 +315,7 @@ def FM90(x: Float[Array, "n"], C1: float = 0.10, C2: float = 0.70, C3: float = 3
         raise ValueError(f"gamma is out of bounds: {gamma}")
 
     x_range = [1 / 0.35, 1 / 0.09]
-    #test_valid_x_range(x, x_range, "FM90")
-
+    # test_valid_x_range(x, x_range, "FM90")
 
     # linear term
     exvebv = C1 + C2 * x
@@ -305,7 +327,9 @@ def FM90(x: Float[Array, "n"], C1: float = 0.10, C2: float = 0.70, C3: float = 3
     # FUV rise term
     fnuv_mask = x >= 5.9
     y = jnp.where(fnuv_mask, x - 5.9, 0.0)
-    exvebv = jnp.where(fnuv_mask, exvebv + C4 * (0.5392 * (y**2) + 0.05644 * (y**3)), exvebv)
+    exvebv = jnp.where(
+        fnuv_mask, exvebv + C4 * (0.5392 * (y**2) + 0.05644 * (y**3)), exvebv
+    )
 
     # return E(x-V)/E(B-V)
     return exvebv

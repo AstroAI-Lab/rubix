@@ -1,11 +1,12 @@
-import pytest
-from unittest.mock import patch, MagicMock
+import os  # noqa
+from unittest.mock import MagicMock, patch
+
 import jax.numpy as jnp
+import pytest
+
 from rubix.core.pipeline import RubixPipeline
 from rubix.spectra.ssp.grid import SSPGrid
 from rubix.telescope.base import BaseTelescope
-
-import os  # noqa
 
 
 # Dummy data functions
@@ -64,14 +65,12 @@ user_config = {
         },
     },
     "ssp": {
-        "template": {
-            "name": "BruzualCharlot2003"
-        },
+        "template": {"name": "BruzualCharlot2003"},
         "dust": {
-            "extinction_model": "Cardelli89", #"Gordon23", 
-            "dust_to_gas_ratio": 0.01, # need to check Remyer's paper
-            "dust_to_metals_ratio": 0.4, # do we need this ratio if we set the dust_to_gas_ratio?
-            "dust_grain_density": 3.5, # g/cm^3 #check this value
+            "extinction_model": "Cardelli89",  # "Gordon23",
+            "dust_to_gas_ratio": 0.01,  # need to check Remyer's paper
+            "dust_to_metals_ratio": 0.4,  # do we need this ratio if we set the dust_to_gas_ratio?
+            "dust_grain_density": 3.5,  # g/cm^3 #check this value
             "Rv": 3.1,
         },
     },

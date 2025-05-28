@@ -4,9 +4,9 @@ https://github.com/kateharborne/SimSpin/blob/4e8f0af0ebc0e43cc31729978deb3a554e0
 """
 
 import jax.numpy as jnp
-from jax.scipy.signal import convolve
 from jax import vmap
-from jaxtyping import Float, Array
+from jax.scipy.signal import convolve
+from jaxtyping import Array, Float
 
 
 def gaussian1d(x: Float[Array, " n_x"], sigma: float) -> Float[Array, " n_x"]:

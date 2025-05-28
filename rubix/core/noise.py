@@ -1,14 +1,16 @@
-import jax.numpy as jnp
-from rubix.telescope.noise.noise import (
-    calculate_noise_cube,
-    SUPPORTED_NOISE_DISTRIBUTIONS,
-)
-from .data import RubixData
-from rubix.logger import get_logger
-from .data import RubixData
 from typing import Callable
-from jaxtyping import jaxtyped
+
+import jax.numpy as jnp
 from beartype import beartype as typechecker
+from jaxtyping import jaxtyped
+
+from rubix.logger import get_logger
+from rubix.telescope.noise.noise import (
+    SUPPORTED_NOISE_DISTRIBUTIONS,
+    calculate_noise_cube,
+)
+
+from .data import RubixData
 
 
 @jaxtyped(typechecker=typechecker)

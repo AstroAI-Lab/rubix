@@ -1,9 +1,10 @@
-import jax.numpy as jnp
-from rubix.galaxy.input_handler.base import create_rubix_galaxy
-from rubix import config
 import jax
-from rubix.spectra.ssp.factory import get_ssp_template
+import jax.numpy as jnp
+
+from rubix import config
+from rubix.galaxy.input_handler.base import create_rubix_galaxy
 from rubix.logger import get_logger
+from rubix.spectra.ssp.factory import get_ssp_template
 
 
 def random_data(n_particles, min_val, max_val, dimension, key=42):

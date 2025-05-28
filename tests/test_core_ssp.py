@@ -1,13 +1,14 @@
+import jax.numpy as jnp
 import pytest
+
+from rubix import config
 from rubix.core.data import reshape_array
 from rubix.core.ssp import (
     get_lookup_interpolation,
-    get_ssp,
-    get_lookup_interpolation_vmap,
     get_lookup_interpolation_pmap,
+    get_lookup_interpolation_vmap,
+    get_ssp,
 )
-from rubix import config
-import jax.numpy as jnp
 
 ssp_config = config["ssp"]
 supported_templates = ssp_config["templates"]

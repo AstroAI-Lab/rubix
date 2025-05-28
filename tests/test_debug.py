@@ -1,9 +1,10 @@
 import h5py
 import jax.numpy as jnp
-from rubix.debug import (
-    random_data,
+
+from rubix.debug import (  # Adjust the import based on your actual file structure
     create_dummy_rubix,
-)  # Adjust the import based on your actual file structure
+    random_data,
+)
 from rubix.utils import print_hdf5_file_structure
 
 

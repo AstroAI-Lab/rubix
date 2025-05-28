@@ -1,6 +1,7 @@
-import pytest
-from rubix.core.lsf import get_convolve_lsf
 import jax.numpy as jnp
+import pytest
+
+from rubix.core.lsf import get_convolve_lsf
 
 
 def test_get_convolve_lsf_missing_lsf_key():

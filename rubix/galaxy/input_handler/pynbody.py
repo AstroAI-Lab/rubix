@@ -1,12 +1,16 @@
-from .base import BaseHandler
-import pynbody
-import numpy as np
-from rubix.utils import SFTtoAge
 import logging
-import astropy.units as u
-import yaml
 import os
+
+import astropy.units as u
+import numpy as np
+import pynbody
+import yaml
+
 from rubix.units import Zsun
+from rubix.utils import SFTtoAge
+
+from .base import BaseHandler
+
 
 class PynbodyHandler(BaseHandler):
     def __init__(
