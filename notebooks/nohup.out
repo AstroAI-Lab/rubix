@@ -1,0 +1,204 @@
+Processing galaxy_id: g5.02e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g5.02e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Input notebook does not contain a cell with tag 'parameters'
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:01<00:19,  1.22s/cell]Executing:  29%|██▉       | 5/17 [17:41<45:08, 225.74s/cell]Executing:  41%|████      | 7/17 [18:22<24:41, 148.20s/cell]Executing:  53%|█████▎    | 9/17 [19:06<13:51, 103.99s/cell]Executing:  59%|█████▉    | 10/17 [19:07<09:42, 83.19s/cell]Executing:  65%|██████▍   | 11/17 [19:10<06:33, 65.51s/cell]Executing:  71%|███████   | 12/17 [19:11<04:08, 49.79s/cell]Executing:  76%|███████▋  | 13/17 [19:11<02:28, 37.15s/cell]Executing:  82%|████████▏ | 14/17 [19:13<01:23, 27.84s/cell]Executing:  88%|████████▊ | 15/17 [19:17<00:42, 21.07s/cell]Executing: 100%|██████████| 17/17 [19:25<00:00, 13.59s/cell]Wait for final termination of kernel timed out - continuing...
+Executing: 100%|██████████| 17/17 [19:36<00:00, 69.21s/cell]
+Processing galaxy_id: g5.31e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g5.31e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Input notebook does not contain a cell with tag 'parameters'
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:01<00:25,  1.60s/cell]Executing:  29%|██▉       | 5/17 [08:17<21:08, 105.73s/cell]Executing:  41%|████      | 7/17 [08:31<11:24, 68.41s/cell] Executing:  53%|█████▎    | 9/17 [09:04<06:41, 50.20s/cell]Executing:  65%|██████▍   | 11/17 [09:05<03:21, 33.67s/cell]Executing:  71%|███████   | 12/17 [09:06<02:16, 27.25s/cell]Executing:  76%|███████▋  | 13/17 [09:06<01:25, 21.45s/cell]Executing:  82%|████████▏ | 14/17 [09:07<00:49, 16.56s/cell]Executing:  88%|████████▊ | 15/17 [09:08<00:25, 12.72s/cell]Executing:  94%|█████████▍| 16/17 [09:08<00:09,  9.41s/cell]Executing: 100%|██████████| 17/17 [09:09<00:00,  7.02s/cell]Executing: 100%|██████████| 17/17 [09:16<00:00, 32.75s/cell]
+Processing galaxy_id: g5.38e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g5.38e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Input notebook does not contain a cell with tag 'parameters'
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:01<00:20,  1.26s/cell]Executing:  29%|██▉       | 5/17 [07:10<18:17, 91.50s/cell]Executing:  41%|████      | 7/17 [07:25<09:56, 59.69s/cell]Executing:  53%|█████▎    | 9/17 [08:15<06:21, 47.67s/cell]Executing:  65%|██████▍   | 11/17 [08:18<03:13, 32.18s/cell]Executing:  71%|███████   | 12/17 [08:18<02:10, 26.03s/cell]Executing:  76%|███████▋  | 13/17 [08:18<01:21, 20.47s/cell]Executing:  82%|████████▏ | 14/17 [08:19<00:47, 15.77s/cell]Executing:  88%|████████▊ | 15/17 [08:20<00:23, 12.00s/cell]Executing:  94%|█████████▍| 16/17 [08:20<00:08,  8.85s/cell]Executing: 100%|██████████| 17/17 [08:21<00:00,  6.69s/cell]Executing: 100%|██████████| 17/17 [08:27<00:00, 29.86s/cell]
+Processing galaxy_id: g5.46e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g5.46e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Input notebook does not contain a cell with tag 'parameters'
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:01<00:21,  1.33s/cell]Executing:  24%|██▎       | 4/17 [00:01<00:03,  3.48cell/s]Executing:  24%|██▎       | 4/17 [00:19<00:03,  3.48cell/s]Executing:  29%|██▉       | 5/17 [05:28<18:16, 91.34s/cell]Executing:  41%|████      | 7/17 [05:45<09:06, 54.68s/cell]Executing:  53%|█████▎    | 9/17 [06:52<06:11, 46.43s/cell]Executing:  59%|█████▉    | 10/17 [06:52<04:14, 36.40s/cell]Executing:  65%|██████▍   | 11/17 [06:55<02:49, 28.32s/cell]Executing:  71%|███████   | 12/17 [06:55<01:46, 21.21s/cell]Executing:  76%|███████▋  | 13/17 [06:55<01:02, 15.63s/cell]Executing:  82%|████████▏ | 14/17 [06:56<00:34, 11.50s/cell]Executing:  88%|████████▊ | 15/17 [06:56<00:16,  8.47s/cell]Executing: 100%|██████████| 17/17 [06:57<00:00,  4.93s/cell]Executing: 100%|██████████| 17/17 [07:03<00:00, 24.93s/cell]
+Processing galaxy_id: g5.55e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g5.55e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Input notebook does not contain a cell with tag 'parameters'
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:01<00:19,  1.21s/cell]Executing:  12%|█▏        | 2/17 [00:01<00:10,  1.46cell/s]Executing:  29%|██▉       | 5/17 [1:35:32<4:33:34, 1367.85s/cell]Executing:  35%|███▌      | 6/17 [1:35:32<3:07:01, 1020.10s/cell]Executing:  41%|████      | 7/17 [1:36:13<2:06:32, 759.26s/cell] Executing:  53%|█████▎    | 9/17 [1:37:56<1:00:26, 453.29s/cell]Executing:  59%|█████▉    | 10/17 [1:37:57<40:26, 346.59s/cell] Executing:  65%|██████▍   | 11/17 [1:38:11<26:17, 262.96s/cell]Executing:  71%|███████   | 12/17 [1:38:13<16:08, 193.69s/cell]Executing:  76%|███████▋  | 13/17 [1:38:14<09:23, 140.90s/cell]Executing:  82%|████████▏ | 14/17 [1:38:17<05:06, 102.09s/cell]Executing:  88%|████████▊ | 15/17 [1:38:18<02:26, 73.13s/cell] Executing: 100%|██████████| 17/17 [1:38:44<00:00, 46.09s/cell]Wait for final termination of kernel timed out - continuing...
+Executing: 100%|██████████| 17/17 [1:38:56<00:00, 349.20s/cell]
+Processing galaxy_id: g6.96e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g6.96e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Input notebook does not contain a cell with tag 'parameters'
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:01<00:25,  1.61s/cell]Executing:  29%|██▉       | 5/17 [06:22<16:14, 81.22s/cell]Executing:  41%|████      | 7/17 [06:39<08:57, 53.75s/cell]Executing:  53%|█████▎    | 9/17 [07:19<05:35, 41.92s/cell]Executing:  65%|██████▍   | 11/17 [07:21<02:49, 28.29s/cell]Executing:  71%|███████   | 12/17 [07:21<01:54, 22.90s/cell]Executing:  76%|███████▋  | 13/17 [07:22<01:12, 18.03s/cell]Executing:  82%|████████▏ | 14/17 [07:22<00:41, 13.92s/cell]Executing:  88%|████████▊ | 15/17 [07:23<00:21, 10.61s/cell]Executing: 100%|██████████| 17/17 [07:24<00:00,  6.36s/cell]Executing: 100%|██████████| 17/17 [07:30<00:00, 26.52s/cell]
+Processing galaxy_id: g7.55e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g7.55e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Input notebook does not contain a cell with tag 'parameters'
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:01<00:19,  1.25s/cell]Executing:  29%|██▉       | 5/17 [05:13<13:18, 66.57s/cell]Executing:  41%|████      | 7/17 [05:32<07:30, 45.01s/cell]Executing:  53%|█████▎    | 9/17 [06:10<04:46, 35.85s/cell]Executing:  59%|█████▉    | 10/17 [06:10<03:20, 28.69s/cell]Executing:  65%|██████▍   | 11/17 [06:11<02:15, 22.58s/cell]Executing:  71%|███████   | 12/17 [06:11<01:25, 17.19s/cell]Executing:  76%|███████▋  | 13/17 [06:11<00:51, 12.86s/cell]Executing:  82%|████████▏ | 14/17 [06:12<00:28,  9.62s/cell]Executing:  88%|████████▊ | 15/17 [06:13<00:14,  7.19s/cell]Executing: 100%|██████████| 17/17 [06:14<00:00,  4.17s/cell]Executing: 100%|██████████| 17/17 [06:21<00:00, 22.44s/cell]
+Processing galaxy_id: g7.66e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g7.66e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Input notebook does not contain a cell with tag 'parameters'
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:01<00:20,  1.28s/cell]2025-03-24 17:03:07.565082: E external/xla/xla/service/slow_operation_alarm.cc:73] Constant folding an instruction is taking > 1s:
+
+  %gather.423 = f32[10,107,5994]{2,1,0} gather(f32[11,107,5994]{2,1,0} %constant.7504, s32[10,1]{1,0} %constant.7532), offset_dims={1,2}, collapsed_slice_dims={0}, start_index_map={0}, index_vector_dim=1, slice_sizes={1,107,5994}, metadata={op_name="jit(<unnamed wrapped function>)/jit(main)/jit(interp2d)/jit(fun)/jit(_take)/gather" source_file="/home/annalena/rubix/rubix/core/ifu.py" source_line=107}
+
+This isn't necessarily a bug; constant-folding is inherently a trade-off between compilation time and speed at runtime. XLA has some guards that attempt to keep constant folding from taking too long, but fundamentally you'll always be able to come up with an input program that takes a long time.
+
+If you'd like to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+2025-03-24 17:03:07.590940: E external/xla/xla/service/slow_operation_alarm.cc:140] The operation took 1.033086561s
+Constant folding an instruction is taking > 1s:
+
+  %gather.423 = f32[10,107,5994]{2,1,0} gather(f32[11,107,5994]{2,1,0} %constant.7504, s32[10,1]{1,0} %constant.7532), offset_dims={1,2}, collapsed_slice_dims={0}, start_index_map={0}, index_vector_dim=1, slice_sizes={1,107,5994}, metadata={op_name="jit(<unnamed wrapped function>)/jit(main)/jit(interp2d)/jit(fun)/jit(_take)/gather" source_file="/home/annalena/rubix/rubix/core/ifu.py" source_line=107}
+
+This isn't necessarily a bug; constant-folding is inherently a trade-off between compilation time and speed at runtime. XLA has some guards that attempt to keep constant folding from taking too long, but fundamentally you'll always be able to come up with an input program that takes a long time.
+
+If you'd like to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+Executing:  29%|██▉       | 5/17 [07:36<19:23, 96.97s/cell]Executing:  41%|████      | 7/17 [07:57<10:44, 64.40s/cell]Executing:  53%|█████▎    | 9/17 [08:35<06:27, 48.43s/cell]Executing:  59%|█████▉    | 10/17 [08:35<04:31, 38.79s/cell]Executing:  65%|██████▍   | 11/17 [08:37<03:02, 30.43s/cell]Executing:  71%|███████   | 12/17 [08:37<01:55, 23.16s/cell]Executing:  76%|███████▋  | 13/17 [08:37<01:09, 17.31s/cell]Executing:  82%|████████▏ | 14/17 [08:38<00:38, 12.88s/cell]Executing:  88%|████████▊ | 15/17 [08:39<00:19,  9.55s/cell]Executing: 100%|██████████| 17/17 [08:40<00:00,  5.51s/cell]Executing: 100%|██████████| 17/17 [08:48<00:00, 31.10s/cell]
+Processing galaxy_id: g8.13e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g8.13e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Input notebook does not contain a cell with tag 'parameters'
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:01<00:19,  1.21s/cell]Executing:  29%|██▉       | 5/17 [09:52<25:11, 125.93s/cell]Executing:  41%|████      | 7/17 [10:19<13:53, 83.39s/cell] Executing:  53%|█████▎    | 9/17 [11:00<08:11, 61.43s/cell]Executing:  65%|██████▍   | 11/17 [11:03<04:08, 41.35s/cell]Executing:  71%|███████   | 12/17 [11:03<02:47, 33.44s/cell]Executing:  76%|███████▋  | 13/17 [11:03<01:45, 26.28s/cell]Executing:  82%|████████▏ | 14/17 [11:04<01:00, 20.22s/cell]Executing:  88%|████████▊ | 15/17 [11:04<00:30, 15.30s/cell]Executing: 100%|██████████| 17/17 [11:05<00:00,  9.03s/cell]Executing: 100%|██████████| 17/17 [11:13<00:00, 39.63s/cell]
+Processing galaxy_id: g8.26e11
+Running Papermill for pipeline: calc_ifu with galaxy_id: g8.26e11 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Input notebook does not contain a cell with tag 'parameters'
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:01<00:18,  1.16s/cell]Executing:  29%|██▉       | 5/17 [07:06<18:09, 90.76s/cell]Executing:  41%|████      | 7/17 [07:25<10:00, 60.05s/cell]Executing:  53%|█████▎    | 9/17 [08:03<06:04, 45.60s/cell]Executing:  65%|██████▍   | 11/17 [08:05<03:03, 30.67s/cell]Executing:  71%|███████   | 12/17 [08:05<02:04, 24.80s/cell]Executing:  76%|███████▋  | 13/17 [08:06<01:18, 19.55s/cell]Executing:  82%|████████▏ | 14/17 [08:06<00:45, 15.08s/cell]Executing:  88%|████████▊ | 15/17 [08:07<00:22, 11.47s/cell]Executing: 100%|██████████| 17/17 [08:08<00:00,  6.82s/cell]Executing: 100%|██████████| 17/17 [08:14<00:00, 29.09s/cell]
+Processing galaxy_id: g1.12e12
+Running Papermill for pipeline: calc_ifu with galaxy_id: g1.12e12 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Input notebook does not contain a cell with tag 'parameters'
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:01<00:22,  1.43s/cell]Executing:  24%|██▎       | 4/17 [00:01<00:04,  3.14cell/s]Executing:  24%|██▎       | 4/17 [00:20<00:04,  3.14cell/s]Executing:  29%|██▉       | 5/17 [11:26<38:11, 190.96s/cell]Executing:  41%|████      | 7/17 [11:50<18:37, 111.78s/cell]Executing:  53%|█████▎    | 9/17 [12:29<10:07, 75.97s/cell] Executing:  65%|██████▍   | 11/17 [12:30<04:54, 49.08s/cell]Executing:  71%|███████   | 12/17 [12:31<03:15, 39.18s/cell]Executing:  76%|███████▋  | 13/17 [12:31<02:01, 30.44s/cell]Executing:  82%|████████▏ | 14/17 [12:31<01:09, 23.17s/cell]Executing:  88%|████████▊ | 15/17 [12:32<00:34, 17.38s/cell]Executing: 100%|██████████| 17/17 [12:33<00:00, 10.16s/cell]Executing: 100%|██████████| 17/17 [12:43<00:00, 44.93s/cell]
+Processing galaxy_id: g1.77e12
+Running Papermill for pipeline: calc_ifu with galaxy_id: g1.77e12 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Input notebook does not contain a cell with tag 'parameters'
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:01<00:24,  1.56s/cell]2025-03-24 17:44:37.160126: E external/xla/xla/service/slow_operation_alarm.cc:73] Constant folding an instruction is taking > 1s:
+
+  %gather.1049 = f32[10,107,5994]{2,1,0} gather(f32[11,107,5994]{2,1,0} %constant.15554, s32[10,1]{1,0} %constant.15583), offset_dims={1,2}, collapsed_slice_dims={0}, start_index_map={0}, index_vector_dim=1, slice_sizes={1,107,5994}, metadata={op_name="jit(<unnamed wrapped function>)/jit(main)/jit(interp2d)/jit(fun)/jit(_take)/gather" source_file="/home/annalena/rubix/rubix/core/ifu.py" source_line=107}
+
+This isn't necessarily a bug; constant-folding is inherently a trade-off between compilation time and speed at runtime. XLA has some guards that attempt to keep constant folding from taking too long, but fundamentally you'll always be able to come up with an input program that takes a long time.
+
+If you'd like to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+2025-03-24 17:44:37.163503: E external/xla/xla/service/slow_operation_alarm.cc:140] The operation took 1.003593605s
+Constant folding an instruction is taking > 1s:
+
+  %gather.1049 = f32[10,107,5994]{2,1,0} gather(f32[11,107,5994]{2,1,0} %constant.15554, s32[10,1]{1,0} %constant.15583), offset_dims={1,2}, collapsed_slice_dims={0}, start_index_map={0}, index_vector_dim=1, slice_sizes={1,107,5994}, metadata={op_name="jit(<unnamed wrapped function>)/jit(main)/jit(interp2d)/jit(fun)/jit(_take)/gather" source_file="/home/annalena/rubix/rubix/core/ifu.py" source_line=107}
+
+This isn't necessarily a bug; constant-folding is inherently a trade-off between compilation time and speed at runtime. XLA has some guards that attempt to keep constant folding from taking too long, but fundamentally you'll always be able to come up with an input program that takes a long time.
+
+If you'd like to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+Executing:  29%|██▉       | 5/17 [18:37<47:30, 237.56s/cell]Executing:  41%|████      | 7/17 [19:25<26:08, 156.84s/cell]Executing:  53%|█████▎    | 9/17 [20:07<14:34, 109.30s/cell]Executing:  65%|██████▍   | 11/17 [20:09<07:18, 73.12s/cell]Executing:  71%|███████   | 12/17 [20:09<04:55, 59.10s/cell]Executing:  76%|███████▋  | 13/17 [20:10<03:05, 46.41s/cell]Executing:  82%|████████▏ | 14/17 [20:10<01:46, 35.60s/cell]Executing:  88%|████████▊ | 15/17 [20:11<00:53, 26.80s/cell]Executing:  94%|█████████▍| 16/17 [20:11<00:19, 19.75s/cell]Executing: 100%|██████████| 17/17 [20:12<00:00, 14.62s/cell]Wait for final termination of kernel timed out - continuing...
+Executing: 100%|██████████| 17/17 [20:22<00:00, 71.94s/cell]
+Processing galaxy_id: g1.92e12
+Running Papermill for pipeline: calc_ifu with galaxy_id: g1.92e12 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Input notebook does not contain a cell with tag 'parameters'
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:01<00:22,  1.40s/cell]2025-03-24 18:04:36.420648: E external/xla/xla/service/slow_operation_alarm.cc:73] Constant folding an instruction is taking > 1s:
+
+  %gather.687 = f32[12,105,5994]{2,1,0} gather(f32[12,106,5994]{2,1,0} %constant.13891, s32[105,1]{1,0} %constant.13923), offset_dims={0,2}, collapsed_slice_dims={1}, start_index_map={1}, index_vector_dim=1, slice_sizes={12,1,5994}, metadata={op_name="jit(<unnamed wrapped function>)/jit(main)/jit(interp2d)/jit(fun)/jit(_take)/gather" source_file="/home/annalena/rubix/rubix/core/ifu.py" source_line=107}
+
+This isn't necessarily a bug; constant-folding is inherently a trade-off between compilation time and speed at runtime. XLA has some guards that attempt to keep constant folding from taking too long, but fundamentally you'll always be able to come up with an input program that takes a long time.
+
+If you'd like to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+2025-03-24 18:04:36.441490: E external/xla/xla/service/slow_operation_alarm.cc:140] The operation took 1.020945471s
+Constant folding an instruction is taking > 1s:
+
+  %gather.687 = f32[12,105,5994]{2,1,0} gather(f32[12,106,5994]{2,1,0} %constant.13891, s32[105,1]{1,0} %constant.13923), offset_dims={0,2}, collapsed_slice_dims={1}, start_index_map={1}, index_vector_dim=1, slice_sizes={12,1,5994}, metadata={op_name="jit(<unnamed wrapped function>)/jit(main)/jit(interp2d)/jit(fun)/jit(_take)/gather" source_file="/home/annalena/rubix/rubix/core/ifu.py" source_line=107}
+
+This isn't necessarily a bug; constant-folding is inherently a trade-off between compilation time and speed at runtime. XLA has some guards that attempt to keep constant folding from taking too long, but fundamentally you'll always be able to come up with an input program that takes a long time.
+
+If you'd like to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+Executing:  29%|██▉       | 5/17 [23:07<59:01, 295.09s/cell]Executing:  41%|████      | 7/17 [24:08<32:30, 195.04s/cell]Executing:  53%|█████▎    | 9/17 [24:41<17:39, 132.39s/cell]Executing:  65%|██████▍   | 11/17 [24:42<08:50, 88.49s/cell]Executing:  71%|███████   | 12/17 [24:43<05:57, 71.50s/cell]Executing:  76%|███████▋  | 13/17 [24:43<03:44, 56.15s/cell]Executing:  82%|████████▏ | 14/17 [24:43<02:09, 43.06s/cell]Executing:  88%|████████▊ | 15/17 [24:44<01:04, 32.38s/cell]Executing: 100%|██████████| 17/17 [24:45<00:00, 19.02s/cell]Wait for final termination of kernel timed out - continuing...
+Executing: 100%|██████████| 17/17 [24:56<00:00, 88.02s/cell]
+Processing galaxy_id: g2.79e12
+Running Papermill for pipeline: calc_ifu with galaxy_id: g2.79e12 at telescope: MUSE_ultraWFM
+Input Notebook:  fits_file_nihao_script.ipynb
+Output Notebook: fits_file_nihao_script_executed.ipynb
+Passed unknown parameter: galaxy_id
+Passed unknown parameter: pipeline_name
+Passed unknown parameter: telescope_name
+Input notebook does not contain a cell with tag 'parameters'
+Executing:   0%|          | 0/17 [00:00<?, ?cell/s]Executing notebook with kernel: python3
+Executing:   6%|▌         | 1/17 [00:01<00:27,  1.73s/cell]2025-03-24 18:30:00.393697: E external/xla/xla/service/slow_operation_alarm.cc:73] Constant folding an instruction is taking > 1s:
+
+  %gather.1241 = f32[10,107,5994]{2,1,0} gather(f32[11,107,5994]{2,1,0} %constant.19959, s32[10,1]{1,0} %constant.19989), offset_dims={1,2}, collapsed_slice_dims={0}, start_index_map={0}, index_vector_dim=1, slice_sizes={1,107,5994}, metadata={op_name="jit(<unnamed wrapped function>)/jit(main)/jit(interp2d)/jit(fun)/jit(_take)/gather" source_file="/home/annalena/rubix/rubix/core/ifu.py" source_line=107}
+
+This isn't necessarily a bug; constant-folding is inherently a trade-off between compilation time and speed at runtime. XLA has some guards that attempt to keep constant folding from taking too long, but fundamentally you'll always be able to come up with an input program that takes a long time.
+
+If you'd like to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+2025-03-24 18:30:00.399293: E external/xla/xla/service/slow_operation_alarm.cc:140] The operation took 1.005773456s
+Constant folding an instruction is taking > 1s:
+
+  %gather.1241 = f32[10,107,5994]{2,1,0} gather(f32[11,107,5994]{2,1,0} %constant.19959, s32[10,1]{1,0} %constant.19989), offset_dims={1,2}, collapsed_slice_dims={0}, start_index_map={0}, index_vector_dim=1, slice_sizes={1,107,5994}, metadata={op_name="jit(<unnamed wrapped function>)/jit(main)/jit(interp2d)/jit(fun)/jit(_take)/gather" source_file="/home/annalena/rubix/rubix/core/ifu.py" source_line=107}
+
+This isn't necessarily a bug; constant-folding is inherently a trade-off between compilation time and speed at runtime. XLA has some guards that attempt to keep constant folding from taking too long, but fundamentally you'll always be able to come up with an input program that takes a long time.
+
+If you'd like to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+Executing:  29%|██▉       | 5/17 [20:18<51:50, 259.18s/cell]Executing:  41%|████      | 7/17 [20:55<28:00, 168.08s/cell]Executing:  53%|█████▎    | 9/17 [21:13<14:58, 112.30s/cell]Executing:  65%|██████▍   | 11/17 [21:14<07:29, 74.97s/cell]Executing:  71%|███████   | 12/17 [21:14<05:02, 60.58s/cell]Executing:  76%|███████▋  | 13/17 [21:14<03:10, 47.55s/cell]Executing:  82%|████████▏ | 14/17 [21:14<01:49, 36.46s/cell]Executing:  88%|████████▊ | 15/17 [21:15<00:54, 27.39s/cell]Executing: 100%|██████████| 17/17 [21:16<00:00, 16.07s/cell]Executing: 100%|██████████| 17/17 [21:26<00:00, 75.65s/cell]
