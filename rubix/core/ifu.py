@@ -2,6 +2,7 @@ from typing import Callable, Union
 
 import jax
 import jax.numpy as jnp
+from jax import lax
 from beartype import beartype as typechecker
 from jaxtyping import Array, Float, jaxtyped
 
@@ -302,7 +303,7 @@ def get_doppler_shift_and_resampling(config: dict) -> Callable:
 
 
 @jaxtyped(typechecker=typechecker)
-def get_calculate_datacube(config: dict) -> Callable:
+def get_calculate_datacube_old(config: dict) -> Callable:
     """
     The function returns the function that calculates the datacube of the stars.
 
@@ -345,6 +346,71 @@ def get_calculate_datacube(config: dict) -> Callable:
         datacube_jax = jnp.array(datacube)
         setattr(rubixdata.stars, "datacube", datacube_jax)
         # rubixdata.stars.datacube = datacube
+        return rubixdata
+
+    return calculate_datacube
+
+
+@jaxtyped(typechecker=typechecker)
+def get_calculate_datacube(config: dict) -> Callable:
+    """
+    The function returns the function that calculates the datacube of the stars.
+
+    Args:
+        config (dict): The configuration dictionary
+
+    Returns:
+        The function that calculates the datacube of the stars.
+
+    Example
+    -------
+    >>> from rubix.core.ifu import get_calculate_datacube
+    >>> calculate_datacube = get_calculate_datacube(config)
+
+    >>> rubixdata = calculate_datacube(rubixdata)
+    >>> # Access the datacube of the stars
+    >>> rubixdata.stars.datacube
+    """
+    logger = get_logger(config.get("logger", None))
+    telescope = get_telescope(config)
+    num_spaxels = int(telescope.sbin)
+    num_segments = num_spaxels ** 2
+    wave_grid    = telescope.wave_seq 
+
+    # Bind the num_spaxels to the function
+    # calculate_cube_fn = jax.tree_util.Partial(calculate_cube, num_spaxels=num_spaxels)
+    # calculate_cube_pmap = jax.pmap(calculate_cube_fn)
+    
+    @jaxtyped(typechecker=typechecker)
+    def calculate_datacube(rubixdata: RubixData) -> RubixData:
+        logger.info("Calculating Data Cube...")
+
+        # 1. extract arrays
+        specs = rubixdata.stars.spectra            # (n_stars, n_wave)
+        pix   = rubixdata.stars.pixel_assignment   # (n_stars,)
+        nstar = specs.shape[0]
+
+        # initial empty cube: (num_segments, n_wave)
+        init_cube = jnp.zeros((num_segments, wave_grid.shape[-1]))
+
+        def scan_body(cube, i):
+            # process the single spectrum
+            spec_i = specs[i]       # shape (n_wave,)
+            pix_i  = pix[i]         # scalar in [0..nseg)
+            # accumulate
+            cube = cube.at[pix_i].add(spec_i)
+            return cube, None
+        
+        # scan over all particle indices 0..n_particles-1
+        cube_flat, _ = lax.scan(scan_body, 
+                                init_cube,
+                                jnp.arange(nstar, dtype=jnp.int32))
+
+        # reshape to (n_spaxels, n_spaxels, n_wave)
+        cube_3d = cube_flat.reshape(num_spaxels, num_spaxels, -1)
+
+        setattr(rubixdata.stars, "datacube", cube_3d)
+        logger.debug(f"Datacube shape: {cube_3d.shape}")
         return rubixdata
 
     return calculate_datacube

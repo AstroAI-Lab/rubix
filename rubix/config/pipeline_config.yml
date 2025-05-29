@@ -53,6 +53,61 @@ calc_ifu:
       args: []
       kwargs: {}
 
+calc_ifu_memory:
+  Transformers:
+    rotate_galaxy:
+      name: rotate_galaxy
+      depends_on: null
+      args: []
+      kwargs: {}
+    filter_particles:
+      name: filter_particles
+      depends_on: rotate_galaxy
+      args: []
+      kwargs: {}
+    spaxel_assignment:
+      name: spaxel_assignment
+      depends_on: filter_particles
+      args: []
+      kwargs: {}
+
+    calculate_spectra:
+      name: calculate_spectra
+      depends_on: spaxel_assignment
+      args: []
+      kwargs: {}
+
+    scale_spectrum_by_mass:
+      name: scale_spectrum_by_mass
+      depends_on: calculate_spectra
+      args: []
+      kwargs: {}
+    doppler_shift_and_resampling:
+      name: doppler_shift_and_resampling
+      depends_on: scale_spectrum_by_mass
+      args: []
+      kwargs: {}
+    calculate_datacube:
+      name: calculate_datacube
+      depends_on: doppler_shift_and_resampling
+      args: []
+      kwargs: {}
+    convolve_psf:
+      name: convolve_psf
+      depends_on: calculate_datacube
+      args: []
+      kwargs: {}
+    convolve_lsf:
+      name: convolve_lsf
+      depends_on: convolve_psf
+      args: []
+      kwargs: {}
+    apply_noise:
+      name: apply_noise
+      depends_on: convolve_lsf
+      args: []
+      kwargs: {}
+
 calc_dusty_ifu:
   Transformers:
     rotate_galaxy:
