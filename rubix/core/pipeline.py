@@ -31,7 +31,7 @@ from .data import (
 )
 from .dust import get_extinction
 from .ifu import (
-    #get_calculate_datacube,
+    get_calculate_datacube,
     get_calculate_spectra,
     get_doppler_shift_and_resampling,
     get_scale_spectrum_by_mass,
@@ -107,7 +107,7 @@ class RubixPipeline:
             self.user_config
         )
         apply_extinction = get_extinction(self.user_config)
-        #calculate_datacube = get_calculate_datacube(self.user_config)
+        calculate_datacube = get_calculate_datacube(self.user_config)
         calculate_datacube_particlewise = get_calculate_datacube_particlewise(
             self.user_config
         )
@@ -124,7 +124,7 @@ class RubixPipeline:
             scale_spectrum_by_mass,
             doppler_shift_and_resampling,
             apply_extinction,
-            #calculate_datacube,
+            calculate_datacube,
             calculate_datacube_particlewise,
             convolve_psf,
             convolve_lsf,

@@ -417,8 +417,14 @@ def get_particle_spectrum(config: dict) -> Callable:
 @jaxtyped(typechecker=typechecker)
 def get_calculate_datacube_laxscan(config: dict) -> Callable:
     """
-    The function returns the function that calculates the datacube of the stars.
+    The function returns the function that calculates the datacube of the stars. 
+    It takes RubixData as input. It calculates the spectrum for one stellar particle,
+    weights it by mass, doppler shifts it, resamples it to the telescope wavelength grid,
+    and finally adds the spectrum at the right position in the datacube.
 
+    This is done for every stellar particle in the RubixData object.
+    This is done by using a JAX lax.scan, which is a more efficient way to do this than a for loop.
+    
     Args:
         config (dict): The configuration dictionary
 
@@ -560,4 +566,5 @@ def get_calculate_datacube_particlewise(config: dict) -> Callable:
         logger.debug(f"Datacube shape: {cube_3d.shape}")
         return rubixdata
 
-    return jax.jit(calculate_datacube_particlewise)
+    #return jax.jit(calculate_datacube_particlewise)
+    return calculate_datacube_particlewise
