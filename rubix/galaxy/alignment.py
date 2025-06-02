@@ -233,11 +233,13 @@ def apply_rotation(
 def rotate_galaxy(
     positions: Float[Array, "* 3"],
     velocities: Float[Array, "* 3"],
-    masses: Float[Array, "..."],
+    positions_stars: Float[Array, "..."],
+    masses_stars: Float[Array, "..."],
     halfmass_radius: Union[Float[Array, "..."], float],
     alpha: float,
     beta: float,
     gamma: float,
+    key: str,
 ) -> Tuple[Float[Array, "* 3"], Float[Array, "* 3"]]:
     """
     Orientate the galaxy by applying a rotation matrix to the positions of the particles.
@@ -254,12 +256,19 @@ def rotate_galaxy(
     Returns:
         The rotated positions and velocities as a jnp.ndarray.
     """
-
-    I = moment_of_inertia_tensor(positions, masses, halfmass_radius)
-    R = rotation_matrix_from_inertia_tensor(I)
-    pos_rot = apply_init_rotation(positions, R)
-    vel_rot = apply_init_rotation(velocities, R)
-    pos_final = apply_rotation(pos_rot, alpha, beta, gamma)
-    vel_final = apply_rotation(vel_rot, alpha, beta, gamma)
+    if key == "IllustrisTNG":
+        I = moment_of_inertia_tensor(positions_stars, masses_stars, halfmass_radius)
+        R = rotation_matrix_from_inertia_tensor(I)
+        pos_rot = apply_init_rotation(positions, R)
+        vel_rot = apply_init_rotation(velocities, R)
+        pos_final = apply_rotation(pos_rot, alpha, beta, gamma)
+        vel_final = apply_rotation(vel_rot, alpha, beta, gamma)
+    elif key == "NIHAO":
+        pos_final = apply_rotation(positions, alpha, beta, gamma)
+        vel_final = apply_rotation(velocities, alpha, beta, gamma)
+    else:
+        raise ValueError(
+            f"Unknown key: {key} for the rotation. Supported keys are 'IllustrisTNG' and 'NIHAO'."
+        )
 
     return pos_final, vel_final
