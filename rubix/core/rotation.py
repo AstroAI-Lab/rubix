@@ -115,7 +115,7 @@ def get_galaxy_rotation(config: dict):
                 setattr(component, "coords", coords)
                 setattr(component, "velocity", velocities)
 
-        return rubixdata"
+        return rubixdata
         """
         logger.info("Rotating galaxy for simulation: " + config["simulation"]["name"])
         # Rotate gas

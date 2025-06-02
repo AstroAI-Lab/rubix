@@ -256,15 +256,17 @@ def rotate_galaxy(
     Returns:
         The rotated positions and velocities as a jnp.ndarray.
     """
-    if key == "ILlustrisTNG":
+    if key == "IllustrisTNG":
         I = moment_of_inertia_tensor(positions_stars, masses_stars, halfmass_radius)
         R = rotation_matrix_from_inertia_tensor(I)
         pos_rot = apply_init_rotation(positions, R)
         vel_rot = apply_init_rotation(velocities, R)
         pos_final = apply_rotation(pos_rot, alpha, beta, gamma)
         vel_final = apply_rotation(vel_rot, alpha, beta, gamma)
-    else:
+    elif key == "NIHAO":
         pos_final = apply_rotation(positions, alpha, beta, gamma)
         vel_final = apply_rotation(velocities, alpha, beta, gamma)
+    else:
+        raise ValueError(f"Unknown key: {key} for the rotation. Supported keys are 'IllustrisTNG' and 'NIHAO'.")
 
     return pos_final, vel_final
