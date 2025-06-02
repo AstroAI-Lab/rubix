@@ -31,10 +31,11 @@ from .data import (
 )
 from .dust import get_extinction
 from .ifu import (
-    get_calculate_datacube,
+    #get_calculate_datacube,
     get_calculate_spectra,
     get_doppler_shift_and_resampling,
     get_scale_spectrum_by_mass,
+    get_calculate_datacube_particlewise,
 )
 from .lsf import get_convolve_lsf
 from .noise import get_apply_noise
@@ -106,7 +107,10 @@ class RubixPipeline:
             self.user_config
         )
         apply_extinction = get_extinction(self.user_config)
-        calculate_datacube = get_calculate_datacube(self.user_config)
+        #calculate_datacube = get_calculate_datacube(self.user_config)
+        calculate_datacube_particlewise = get_calculate_datacube_particlewise(
+            self.user_config
+        )
         convolve_psf = get_convolve_psf(self.user_config)
         convolve_lsf = get_convolve_lsf(self.user_config)
         apply_noise = get_apply_noise(self.user_config)
@@ -120,7 +124,8 @@ class RubixPipeline:
             scale_spectrum_by_mass,
             doppler_shift_and_resampling,
             apply_extinction,
-            calculate_datacube,
+            #calculate_datacube,
+            calculate_datacube_particlewise,
             convolve_psf,
             convolve_lsf,
             apply_noise,
