@@ -186,7 +186,15 @@ def test_rotate_galaxy():
     gamma = 0.0
 
     rotated_positions, rotated_velocities = rotate_galaxy(
-        positions, velocities, positions, masses, halfmass_radius, alpha, beta, gamma, "IllustrisTNG"
+        positions,
+        velocities,
+        positions,
+        masses,
+        halfmass_radius,
+        alpha,
+        beta,
+        gamma,
+        "IllustrisTNG",
     )
 
     assert rotated_positions.shape == positions.shape

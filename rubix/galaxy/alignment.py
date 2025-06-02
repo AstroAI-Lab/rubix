@@ -267,6 +267,8 @@ def rotate_galaxy(
         pos_final = apply_rotation(positions, alpha, beta, gamma)
         vel_final = apply_rotation(velocities, alpha, beta, gamma)
     else:
-        raise ValueError(f"Unknown key: {key} for the rotation. Supported keys are 'IllustrisTNG' and 'NIHAO'.")
+        raise ValueError(
+            f"Unknown key: {key} for the rotation. Supported keys are 'IllustrisTNG' and 'NIHAO'."
+        )
 
     return pos_final, vel_final
