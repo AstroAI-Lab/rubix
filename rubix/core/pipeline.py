@@ -322,7 +322,8 @@ class RubixPipeline:
         # full_cube = partial_cubes.sum(axis=0)
 
         sharded_result = sharded_pipeline(inputdata)
-
+        
+        jax.block_until_ready(sharded_result)
         time_end = time.time()
         self.logger.info(
             "Pipeline run completed in %.2f seconds.", time_end - time_start
