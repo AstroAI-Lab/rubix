@@ -1,6 +1,5 @@
 """This class defines the aperture mask for the observation of a galaxy."""
 
-
 import jax.numpy as jnp
 import numpy as np
 from beartype import beartype as typechecker

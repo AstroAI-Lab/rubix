@@ -112,7 +112,7 @@ def retrieve_ssp_data_from_fsps(
         _wave, _fluxes = sp.get_spectrum(zmet=zmet, tage=tage, peraa=peraa)
         spectrum_collector.append(_fluxes)
     ssp_wave = np.array(_wave)
-    offset = (_wave[1] - _wave[0]) / 2.
+    offset = (_wave[1] - _wave[0]) / 2.0
     ssp_wave_centered = ssp_wave - offset
     ssp_flux = np.array(spectrum_collector)
 

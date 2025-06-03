@@ -32,10 +32,10 @@ from .data import (
 from .dust import get_extinction
 from .ifu import (
     get_calculate_datacube,
+    get_calculate_datacube_particlewise,
     get_calculate_spectra,
     get_doppler_shift_and_resampling,
     get_scale_spectrum_by_mass,
-    get_calculate_datacube_particlewise,
 )
 from .lsf import get_convolve_lsf
 from .noise import get_apply_noise
