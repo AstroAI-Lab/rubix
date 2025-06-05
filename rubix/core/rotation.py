@@ -1,5 +1,6 @@
 from beartype import beartype as typechecker
 from jaxtyping import jaxtyped
+import jax.numpy as jnp
 
 from rubix.galaxy.alignment import rotate_galaxy as rotate_galaxy_core
 from rubix.logger import get_logger
@@ -42,7 +43,7 @@ def get_galaxy_rotation(config: dict):
     # Check if type is provided
     if "type" in config["galaxy"]["rotation"]:
         # Check if type is valid: face-on or edge-on
-        if config["galaxy"]["rotation"]["type"] not in ["face-on", "edge-on"]:
+        if config["galaxy"]["rotation"]["type"] not in ["face-on", "edge-on", "matrix"]:
             raise ValueError("Invalid type provided in rotation information")
 
         # if type is face on, alpha = beta = gamma = 0
@@ -95,6 +96,15 @@ def get_galaxy_rotation(config: dict):
                 ), f"Velocities not found for {particle_type}. "
                 assert masses is not None, f"Masses not found for {particle_type}. "
 
+                if config["galaxy"]["rotation"]=="matrix":
+                    
+                    rot_np = jnp.load('./data/rotation_matrix.npy')
+                    rot_jax = jnp.array(rot_np)
+                    logger.info(f"Using rotation matrix from file: {rot_jax}.")
+                    rotation_matrix = rot_jax
+                else:
+                    rotation_matrix = None
+
                 # Rotate the galaxy
                 coords, velocities = rotate_galaxy_core(
                     positions=coords,
@@ -104,6 +114,7 @@ def get_galaxy_rotation(config: dict):
                     alpha=alpha,
                     beta=beta,
                     gamma=gamma,
+                    R=rotation_matrix,
                 )
 
                 # Update the inputs

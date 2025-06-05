@@ -73,7 +73,11 @@ class PynbodyHandler(BaseHandler):
         self.logger.info(f"Simulation snapshot loaded from halo {self.halo_id}")
         halo = self.get_halo_data(halo_id=self.halo_id)
         if halo is not None:
-            pynbody.analysis.angmom.faceon(halo)
+            pynbody.analysis.angmom.faceon(halo.s)
+            ang_mom_vec = pynbody.analysis.angmom.ang_mom_vec(halo.s)
+            rotation_matrix = pynbody.analysis.angmom.calc_sideon_matrix(ang_mom_vec)
+            np.save('./data/rotation_matrix.npy', rotation_matrix)
+            self.logger.info("Rotation matrix calculated and saved to '/notebooks/data/rotation_matrix.npy'.")
             self.sim = halo
 
         fields = self.pynbody_config["fields"]
