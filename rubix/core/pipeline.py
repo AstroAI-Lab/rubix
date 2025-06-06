@@ -163,6 +163,7 @@ class RubixPipeline:
             "Pipeline run completed in %.2f seconds.", time_end - time_start
         )
 
+        """
         # Propagate unit attributes from input to output.
         output.galaxy.redshift_unit = inputdata.galaxy.redshift_unit
         output.galaxy.center_unit = inputdata.galaxy.center_unit
@@ -184,7 +185,7 @@ class RubixPipeline:
             output.gas.sfr_unit = inputdata.gas.sfr_unit
             output.gas.electron_abundance_unit = inputdata.gas.electron_abundance_unit
             output.gas.spatial_bin_edges_unit = "kpc"
-
+        """
         return output
 
     def run_sharded(self, inputdata):
