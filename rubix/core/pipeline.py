@@ -327,5 +327,3 @@ class RubixPipeline:
         # final_cube = jnp.sum(partial_cubes, axis=0)
 
         return sharded_result
-
-    

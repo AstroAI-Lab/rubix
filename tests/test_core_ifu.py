@@ -11,7 +11,6 @@ from rubix.core.ifu import (
 )
 from rubix.core.ssp import get_ssp
 from rubix.spectra.ifu import resample_spectrum
-from rubix.core.data import reshape_array
 
 RTOL = 1e-4
 ATOL = 1e-6
