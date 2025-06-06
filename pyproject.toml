@@ -32,9 +32,7 @@ dependencies = [
     "pyaml",
     "jaxtyping",
     "equinox",
-    "jax[cpu]!=0.4.27",
-    "jax[cpu]!=0.4.36",
-    "jax[cpu]!=0.5.1",
+    "jax[cpu]>0.5.1",
     "interpax",
     "astroquery",
     "beartype",
@@ -51,8 +49,7 @@ tests = [
     "pytest-cov",
     "pytest-mock",
     "nbval",
-    "jax[cpu]!=0.4.27",
-    "jax[cpu]!=0.4.36",
+    "jax[cpu]>0.5.1",
     "pre-commit",
 ]
 docs = [
@@ -63,10 +60,8 @@ docs = [
     "sphinx_mdinclude",
     "sphinx_rtd_theme",
 ]
-
 cuda = [
-    "jax[cuda]!=0.4.27",
-    "jax[cuda]!=0.4.36",
+    "jax[cuda]>0.5.1",
     ]
 
 

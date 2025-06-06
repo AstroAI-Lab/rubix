@@ -6,7 +6,6 @@ from rubix.core.data import Galaxy, GasData, RubixData, StarsData, reshape_array
 from rubix.core.ifu import (
     get_calculate_spectra,
     get_doppler_shift_and_resampling,
-    get_resample_spectrum_pmap,
     get_resample_spectrum_vmap,
     get_scale_spectrum_by_mass,
 )
@@ -164,46 +163,6 @@ def test_resample_spectrum_vmap():
     assert not jnp.any(jnp.isnan(result_vmap))
 
 
-def test_resample_spectrum_pmap():
-    # For pmap we need to reshape, such that first axis is the device axis
-    initial_spectra = jnp.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
-    initial_wavelengths = jnp.array(
-        [[4500.0, 5500.0, 6500.0], [4500.0, 5500.0, 6500.0]]
-    )
-    initial_spectra = reshape_array(initial_spectra)
-    initial_wavelengths = reshape_array(initial_wavelengths)
-    resample_spectrum_pmap = get_resample_spectrum_pmap(target_wavelength)
-    result_pmap = resample_spectrum_pmap(initial_spectra, initial_wavelengths)
-
-    # Check how many GPUs are available, since this defines the shape of the result
-    if jax.device_count() > 1:
-        expected_result = jnp.array(
-            [
-                resample_spectrum(
-                    initial_spectra[0, 0], initial_wavelengths[0, 0], target_wavelength
-                ),
-                resample_spectrum(
-                    initial_spectra[1, 0], initial_wavelengths[1, 0], target_wavelength
-                ),
-            ]
-        )
-        expected_result = reshape_array(expected_result)
-
-    else:
-        expected_result = jnp.stack(
-            [
-                resample_spectrum(
-                    initial_spectra[0, 0], initial_wavelengths[0, 0], target_wavelength
-                ),
-                resample_spectrum(
-                    initial_spectra[0, 1], initial_wavelengths[0, 1], target_wavelength
-                ),
-            ]
-        )
-    assert jnp.allclose(result_pmap, expected_result)
-    assert not jnp.any(jnp.isnan(result_pmap))
-
-
 def test_calculate_spectra():
     # Use an actual RubixData instance
     mock_rubixdata = RubixData(
@@ -213,13 +172,13 @@ def test_calculate_spectra():
     )
 
     # Populate the RubixData object with mock data
-    mock_rubixdata.stars.coords = jnp.array([[1, 2, 3]])
-    mock_rubixdata.stars.velocity = jnp.array([[4.0, 5.0, 6.0]])
+    mock_rubixdata.stars.coords = jnp.array([1, 2, 3])
+    mock_rubixdata.stars.velocity = jnp.array([4.0, 5.0, 6.0])
     mock_rubixdata.stars.metallicity = jnp.array(
-        [[0.1]]
+        [0.1]
     )  # 2D array for vmap compatibility
-    mock_rubixdata.stars.mass = jnp.array([[1000]])  # 2D array for vmap compatibility
-    mock_rubixdata.stars.age = jnp.array([[4.5]])  # 2D array for vmap compatibility
+    mock_rubixdata.stars.mass = jnp.array([1000])  # 2D array for vmap compatibility
+    mock_rubixdata.stars.age = jnp.array([4.5])  # 2D array for vmap compatibility
     mock_rubixdata.galaxy.redshift = 0.1
     mock_rubixdata.galaxy.center = jnp.array([0, 0, 0])
     mock_rubixdata.galaxy.halfmassrad_stars = 1
@@ -228,7 +187,7 @@ def test_calculate_spectra():
     calculate_spectra = get_calculate_spectra(sample_config)
 
     # Mock expected spectra
-    expected_spectra_shape = (1, 1, 842)  # Adjust shape as per your data
+    expected_spectra_shape = (1, 842)  # Adjust shape as per your data
     expected_spectra = jnp.zeros(expected_spectra_shape)
 
     # Call the calculate_spectra function
@@ -261,7 +220,7 @@ def test_scale_spectrum_by_mass():
     )
 
     # Calculate expected spectra
-    expected_spectra = input.stars.spectra * jnp.expand_dims(input.stars.mass, axis=-1)
+    expected_spectra = input.stars.spectra * jnp.expand_dims(input.stars.mass, -1)
 
     # Call the function
     scale_spectrum_by_mass = get_scale_spectrum_by_mass(sample_config)

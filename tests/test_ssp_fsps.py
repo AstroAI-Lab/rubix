@@ -61,7 +61,7 @@ def test_retrieve_ssp_data_from_fsps():
         assert isinstance(result, SSPGrid)
         assert np.allclose(result.metallicity, np.log10(mock_sp_instance.zlegend))
         assert np.allclose(result.age, mock_sp_instance.log_age - 9.0)
-        assert np.allclose(result.wavelength, np.array([4000, 4100, 4200]))
+        assert np.allclose(result.wavelength, np.array([3950, 4050, 4150]))
         assert np.allclose(
             result.flux,
             np.array([[[1, 2, 3], [4, 5, 6], [7, 8, 9]]]),
@@ -84,7 +84,7 @@ def test_retrieve_ssp_data_from_fsps_with_kwargs():
         assert isinstance(result, SSPGrid)
         assert np.allclose(result.metallicity, np.log10(mock_sp_instance.zlegend))
         assert np.allclose(result.age, mock_sp_instance.log_age - 9.0)
-        assert np.allclose(result.wavelength, np.array([4000, 4100, 4200]))
+        assert np.allclose(result.wavelength, np.array([3950, 4050, 4150]))
         assert np.allclose(
             result.flux,
             np.array([[[1, 2, 3], [4, 5, 6], [7, 8, 9]]]),

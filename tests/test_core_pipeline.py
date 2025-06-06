@@ -4,6 +4,12 @@ from unittest.mock import MagicMock, patch
 import jax.numpy as jnp
 import pytest
 
+from rubix.core.data import (
+    Galaxy,
+    GasData,
+    RubixData,
+    StarsData,
+)
 from rubix.core.pipeline import RubixPipeline
 from rubix.spectra.ssp.grid import SSPGrid
 from rubix.telescope.base import BaseTelescope
@@ -112,8 +118,26 @@ def test_rubix_pipeline_gradient_not_implemented(setup_environment):
 
 
 def test_rubix_pipeline_run():
+    # Mock input data for the function
+    input_data = RubixData(
+        galaxy=Galaxy(
+            redshift=jnp.array([0.1]),
+            center=jnp.array([[0.0, 0.0, 0.0]]),
+            halfmassrad_stars=jnp.array([1.0]),
+        ),
+        stars=StarsData(
+            coords=jnp.array([[1.0, 2.0, 3.0], [3.0, 4.0, 5.0]]),
+            velocity=jnp.array([[5.0, 6.0, 7.0], [7.0, 8.0, 9.0]]),
+            metallicity=jnp.array([0.1, 0.2]),
+            mass=jnp.array([1000.0, 2000.0]),
+            age=jnp.array([4.5, 5.5]),
+            pixel_assignment=jnp.array([0, 1]),
+        ),
+        gas=GasData(velocity=None),
+    )
+
     pipeline = RubixPipeline(user_config=user_config)
-    output = pipeline.run()
+    output = pipeline.run(input_data)
 
     # Check if output is as expected
     assert hasattr(output.stars, "coords")
