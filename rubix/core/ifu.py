@@ -323,7 +323,6 @@ def get_calculate_datacube(config: dict) -> Callable:
     return calculate_datacube
 
 
-
 @jaxtyped(typechecker=typechecker)
 def get_calculate_datacube_particlewise(config: dict) -> Callable:
     """

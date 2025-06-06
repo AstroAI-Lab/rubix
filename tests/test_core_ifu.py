@@ -12,7 +12,6 @@ from rubix.core.ifu import (
 from rubix.core.ssp import get_ssp
 from rubix.spectra.ifu import resample_spectrum
 
-
 RTOL = 1e-4
 ATOL = 1e-6
 # Sample input data
@@ -164,7 +163,6 @@ def test_resample_spectrum_vmap():
     assert not jnp.any(jnp.isnan(result_vmap))
 
 
-
 def test_calculate_spectra():
     # Use an actual RubixData instance
     mock_rubixdata = RubixData(
@@ -241,6 +239,7 @@ def test_scale_spectrum_by_mass():
     assert not jnp.any(
         jnp.isnan(result.stars.spectra)
     ), "NaN values found in result spectra"
+
 
 """
 def test_doppler_shift_and_resampling():

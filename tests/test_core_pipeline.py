@@ -4,15 +4,15 @@ from unittest.mock import MagicMock, patch
 import jax.numpy as jnp
 import pytest
 
-from rubix.core.pipeline import RubixPipeline
-from rubix.spectra.ssp.grid import SSPGrid
-from rubix.telescope.base import BaseTelescope
 from rubix.core.data import (
     Galaxy,
     GasData,
     RubixData,
     StarsData,
 )
+from rubix.core.pipeline import RubixPipeline
+from rubix.spectra.ssp.grid import SSPGrid
+from rubix.telescope.base import BaseTelescope
 
 
 # Dummy data functions
@@ -122,14 +122,14 @@ def test_rubix_pipeline_run():
     input_data = RubixData(
         galaxy=Galaxy(
             redshift=jnp.array([0.1]),
-            center=jnp.array([[0., 0., 0.]]),
+            center=jnp.array([[0.0, 0.0, 0.0]]),
             halfmassrad_stars=jnp.array([1.0]),
         ),
         stars=StarsData(
-            coords=jnp.array([[1., 2., 3.], [3., 4., 5.]]),
-            velocity=jnp.array([[5., 6., 7.], [7., 8., 9.]]),
+            coords=jnp.array([[1.0, 2.0, 3.0], [3.0, 4.0, 5.0]]),
+            velocity=jnp.array([[5.0, 6.0, 7.0], [7.0, 8.0, 9.0]]),
             metallicity=jnp.array([0.1, 0.2]),
-            mass=jnp.array([1000., 2000.]),
+            mass=jnp.array([1000.0, 2000.0]),
             age=jnp.array([4.5, 5.5]),
             pixel_assignment=jnp.array([0, 1]),
         ),
