@@ -19,13 +19,13 @@ from .grid import SSPGrid
 # Setup a logger based on the config
 logger = get_logger()
 
-# HAS_FSPS = importlib.util.find_spec("fsps") is not None
-# if HAS_FSPS:
-#    import fsps
-# else:
-#    logger.warning(
-#        "python-fsps is not installed. Please install it to use this function. Install using pip install fsps and check the installation page: https://dfm.io/python-fsps/current/installation/ for more details. Especially, make sure to set all necessary environment variables."
-#    )
+HAS_FSPS = importlib.util.find_spec("fsps") is not None
+if HAS_FSPS:
+    import fsps
+else:
+    logger.warning(
+        "python-fsps is not installed. Please install it to use this function. Install using pip install fsps and check the installation page: https://dfm.io/python-fsps/current/installation/ for more details. Especially, make sure to set all necessary environment variables."
+    )
 
 
 @jaxtyped(typechecker=typechecker)

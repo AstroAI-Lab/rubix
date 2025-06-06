@@ -11,6 +11,7 @@ from rubix.core.ifu import (
 )
 from rubix.core.ssp import get_ssp
 from rubix.spectra.ifu import resample_spectrum
+from rubix.core.data import reshape_array
 
 RTOL = 1e-4
 ATOL = 1e-6
@@ -220,7 +221,7 @@ def test_scale_spectrum_by_mass():
     )
 
     # Calculate expected spectra
-    expected_spectra = input.stars.spectra * jnp.expand_dims(input.stars.mass, axis=-1)
+    expected_spectra = input.stars.spectra * jnp.expand_dims(input.stars.mass, -1)
 
     # Call the function
     scale_spectrum_by_mass = get_scale_spectrum_by_mass(sample_config)
@@ -241,7 +242,6 @@ def test_scale_spectrum_by_mass():
     ), "NaN values found in result spectra"
 
 
-"""
 def test_doppler_shift_and_resampling():
     # Obtain the function
     doppler_shift_and_resampling = get_doppler_shift_and_resampling(sample_config)
@@ -270,4 +270,3 @@ def test_doppler_shift_and_resampling():
     assert not jnp.any(
         jnp.isnan(result.stars.spectra)
     ), "NaN values found in result spectra"
-"""
