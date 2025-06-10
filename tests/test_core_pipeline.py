@@ -1,6 +1,7 @@
 import os  # noqa
 from unittest.mock import MagicMock, patch
 
+import jax
 import jax.numpy as jnp
 import pytest
 
@@ -184,3 +185,43 @@ def test_rubix_pipeline_run():
 
     # assert that the spectra does not contain any NaN values
     assert not jnp.isnan(spectrum).any()
+
+
+def test_rubix_pipeline_run_sharded():
+    # Use the number of devices to set up data that can be sharded
+    num_devices = len(jax.devices())
+    n_particles = num_devices if num_devices > 1 else 2  # At least two for sanity
+
+    # Mock input data
+    input_data = RubixData(
+        galaxy=Galaxy(
+            redshift=jnp.array([0.1]),
+            center=jnp.zeros((1, 3)),
+            halfmassrad_stars=jnp.array([1.0]),
+        ),
+        stars=StarsData(
+            coords=jnp.arange(n_particles * 3, dtype=jnp.float32).reshape(n_particles, 3),
+            velocity=jnp.arange(n_particles * 3, dtype=jnp.float32).reshape(n_particles, 3),
+            metallicity=jnp.linspace(0.01, 0.03, n_particles),
+            mass=jnp.ones(n_particles),
+            age=jnp.linspace(2.0, 10.0, n_particles),
+            pixel_assignment=jnp.arange(n_particles, dtype=jnp.int32),
+        ),
+        gas=GasData(velocity=None),
+    )
+
+    pipeline = RubixPipeline(user_config=user_config)
+    output_cube = pipeline.run_sharded(input_data)
+
+    # Output should be a jax array (the datacube)
+    assert isinstance(output_cube, jax.Array)
+    # Should have 3 dimensions (n_spaxels, n_spaxels, n_wave_tel)
+    assert output_cube.ndim == 3
+    # Should be non-negative and not NaN
+    assert jnp.all(output_cube >= 0)
+    assert not jnp.isnan(output_cube).any()
+    # The cube should have nonzero values (sanity check)
+    assert jnp.any(output_cube != 0)
+
+    print("run_sharded output shape:", output_cube.shape)
+    print("run_sharded output sum:", jnp.sum(output_cube))
