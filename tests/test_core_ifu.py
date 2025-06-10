@@ -5,12 +5,14 @@ import numpy as np
 from rubix.core.data import Galaxy, GasData, RubixData, StarsData, reshape_array
 from rubix.core.ifu import (
     get_calculate_spectra,
+    get_velocities_doppler_shift_vmap,
     get_doppler_shift_and_resampling,
     get_resample_spectrum_vmap,
     get_scale_spectrum_by_mass,
+    get_telescope,
 )
 from rubix.core.ssp import get_ssp
-from rubix.spectra.ifu import resample_spectrum
+from rubix.spectra.ifu import resample_spectrum, velocity_doppler_shift
 
 RTOL = 1e-4
 ATOL = 1e-6
@@ -241,6 +243,75 @@ def test_scale_spectrum_by_mass():
     ), "NaN values found in result spectra"
 
 
+def test_get_velocities_doppler_shift_vmap():
+    # 1) Setup a small SSP wavelength grid
+    ssp_wave = jnp.array([4000.0, 5000.0, 6000.0])
+
+    # 2) Build the vmap‐wrapped doppler function
+    doppler_fn = get_velocities_doppler_shift_vmap(ssp_wave, velocity_direction='x')
+
+    # ——— Zero‐velocity case ———
+    velocities_zero = jnp.zeros((4, 3))  # 4 particles, all zero velocity
+    out_zero = doppler_fn(velocities_zero)
+    # Compare to a direct call on the full batch:
+    expected_zero = velocity_doppler_shift(ssp_wave, velocities_zero, direction='x')
+    # shape & values should match, and every row must equal the original grid
+    assert out_zero.shape == expected_zero.shape
+    assert jnp.allclose(out_zero, expected_zero, rtol=RTOL, atol=ATOL)
+    assert jnp.allclose(out_zero, ssp_wave, rtol=RTOL, atol=ATOL)
+
+    # ——— Non‐zero velocities ———
+    velocities = jnp.array([
+        [1000.0,   0.0,   0.0],
+        [-1000.0,  0.0,   0.0],
+    ])
+    out = doppler_fn(velocities)
+
+    # Now compare to a single batch call
+    expected = velocity_doppler_shift(ssp_wave, velocities, direction='x')
+    assert out.shape == expected.shape, "Shape mismatch between vmap and direct call"
+    assert jnp.allclose(out, expected, rtol=RTOL, atol=ATOL), "Values diverge from direct call"
+    assert not jnp.any(jnp.isnan(out)), "Found NaNs in the doppler‐shifted output"
+
+"""
+def test_doppler_shift_and_resampling_end_to_end():
+    # 1) Build the pipeline function
+    doppler_resample_fn = get_doppler_shift_and_resampling(sample_config)
+
+    # 2) Assemble a RubixData with our sample inputs
+    rubixdata = RubixData(
+        galaxy=Galaxy(),
+        stars=StarsData(
+            velocity=sample_inputs["velocities"],
+            metallicity=sample_inputs["metallicity"],
+            mass=sample_inputs["mass"],
+            age=sample_inputs["age"],
+            spectra=sample_inputs["spectra"],
+        ),
+        gas=GasData(spectra=None),
+    )
+
+    # 3) Run it
+    result = doppler_resample_fn(rubixdata)
+
+    # 4) Expectations:
+    #    - stars.spectra now has shape (n_stars, n_wave_tel)
+    #    - no NaNs
+    #    - gas.spectra remains None
+    telescope = get_telescope(sample_config)
+    n_stars = sample_inputs["spectra"].shape[0]
+    n_wave_tel = telescope.wave_seq.shape[0]
+
+    assert hasattr(result.stars, "spectra")
+    assert result.stars.spectra.shape == (n_stars, n_wave_tel), (
+        f"Expected stars.spectra.shape = {(n_stars, n_wave_tel)}, "
+        f"got {result.stars.spectra.shape}"
+    )
+    assert not jnp.isnan(result.stars.spectra).any(), "Found NaNs in doppler-resampled spectra"
+    assert result.gas.spectra is None, "gas.spectra should remain None"
+
+
+
 def test_doppler_shift_and_resampling():
     # Obtain the function
     doppler_shift_and_resampling = get_doppler_shift_and_resampling(sample_config)
@@ -268,4 +339,6 @@ def test_doppler_shift_and_resampling():
     assert hasattr(result.stars, "spectra"), "Result does not have 'spectra'"
     assert not jnp.any(
         jnp.isnan(result.stars.spectra)
+   
     ), "NaN values found in result spectra"
+"""
