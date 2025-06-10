@@ -83,7 +83,6 @@ user_config = {
 }
 
 
-
 def test_rubix_pipeline_not_implemented(setup_environment):
     config = {"pipeline": {"name": "dummy"}}
     with pytest.raises(
@@ -117,6 +116,7 @@ def test_rubix_pipeline_gradient_not_implemented(setup_environment):
         ):
             pipeline.gradient()
 """
+
 
 def test_rubix_pipeline_run():
     # Mock input data for the function

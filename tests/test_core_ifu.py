@@ -5,11 +5,11 @@ import numpy as np
 from rubix.core.data import Galaxy, GasData, RubixData, StarsData, reshape_array
 from rubix.core.ifu import (
     get_calculate_spectra,
-    get_velocities_doppler_shift_vmap,
     get_doppler_shift_and_resampling,
     get_resample_spectrum_vmap,
     get_scale_spectrum_by_mass,
     get_telescope,
+    get_velocities_doppler_shift_vmap,
 )
 from rubix.core.ssp import get_ssp
 from rubix.spectra.ifu import resample_spectrum, velocity_doppler_shift
@@ -248,30 +248,35 @@ def test_get_velocities_doppler_shift_vmap():
     ssp_wave = jnp.array([4000.0, 5000.0, 6000.0])
 
     # 2) Build the vmap‐wrapped doppler function
-    doppler_fn = get_velocities_doppler_shift_vmap(ssp_wave, velocity_direction='x')
+    doppler_fn = get_velocities_doppler_shift_vmap(ssp_wave, velocity_direction="x")
 
     # ——— Zero‐velocity case ———
     velocities_zero = jnp.zeros((4, 3))  # 4 particles, all zero velocity
     out_zero = doppler_fn(velocities_zero)
     # Compare to a direct call on the full batch:
-    expected_zero = velocity_doppler_shift(ssp_wave, velocities_zero, direction='x')
+    expected_zero = velocity_doppler_shift(ssp_wave, velocities_zero, direction="x")
     # shape & values should match, and every row must equal the original grid
     assert out_zero.shape == expected_zero.shape
     assert jnp.allclose(out_zero, expected_zero, rtol=RTOL, atol=ATOL)
     assert jnp.allclose(out_zero, ssp_wave, rtol=RTOL, atol=ATOL)
 
     # ——— Non‐zero velocities ———
-    velocities = jnp.array([
-        [1000.0,   0.0,   0.0],
-        [-1000.0,  0.0,   0.0],
-    ])
+    velocities = jnp.array(
+        [
+            [1000.0, 0.0, 0.0],
+            [-1000.0, 0.0, 0.0],
+        ]
+    )
     out = doppler_fn(velocities)
 
     # Now compare to a single batch call
-    expected = velocity_doppler_shift(ssp_wave, velocities, direction='x')
+    expected = velocity_doppler_shift(ssp_wave, velocities, direction="x")
     assert out.shape == expected.shape, "Shape mismatch between vmap and direct call"
-    assert jnp.allclose(out, expected, rtol=RTOL, atol=ATOL), "Values diverge from direct call"
+    assert jnp.allclose(
+        out, expected, rtol=RTOL, atol=ATOL
+    ), "Values diverge from direct call"
     assert not jnp.any(jnp.isnan(out)), "Found NaNs in the doppler‐shifted output"
+
 
 """
 def test_doppler_shift_and_resampling_end_to_end():
@@ -339,6 +344,6 @@ def test_doppler_shift_and_resampling():
     assert hasattr(result.stars, "spectra"), "Result does not have 'spectra'"
     assert not jnp.any(
         jnp.isnan(result.stars.spectra)
-   
+
     ), "NaN values found in result spectra"
 """
