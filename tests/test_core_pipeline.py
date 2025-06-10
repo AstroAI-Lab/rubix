@@ -200,8 +200,12 @@ def test_rubix_pipeline_run_sharded():
             halfmassrad_stars=jnp.array([1.0]),
         ),
         stars=StarsData(
-            coords=jnp.arange(n_particles * 3, dtype=jnp.float32).reshape(n_particles, 3),
-            velocity=jnp.arange(n_particles * 3, dtype=jnp.float32).reshape(n_particles, 3),
+            coords=jnp.arange(n_particles * 3, dtype=jnp.float32).reshape(
+                n_particles, 3
+            ),
+            velocity=jnp.arange(n_particles * 3, dtype=jnp.float32).reshape(
+                n_particles, 3
+            ),
             metallicity=jnp.linspace(0.01, 0.03, n_particles),
             mass=jnp.ones(n_particles),
             age=jnp.linspace(2.0, 10.0, n_particles),
