@@ -6,6 +6,7 @@ import numpy as np
 import pynbody
 import yaml
 
+from rubix.cosmology import PLANCK15 as rubix_cosmo
 from rubix.units import Zsun
 from rubix.utils import SFTtoAge
 
@@ -129,6 +130,9 @@ class PynbodyHandler(BaseHandler):
         self.data["gas"]["metals"] = metals
         self.logger.info("Metals assigned to gas particles.")
         self.logger.info("Metals shape is: %s", self.data["gas"]["metals"].shape)
+
+        age_at_z0 = rubix_cosmo.age_at_z0()
+        self.data["stars"]["age"] = age_at_z0 * u.Gyr - self.data["stars"]["age"]
 
         self.logger.info(
             f"Simulation snapshot and halo data loaded successfully for classes: {load_classes}."
