@@ -1,16 +1,20 @@
 """Use python-fsps to retrieve a block of Simple Stellar Population (SSP) data
-adapted from https://github.com/ArgonneCPAC/dsps/blob/main/dsps/data_loaders/retrieve_fsps_data.py"""
+adapted from https://github.com/ArgonneCPAC/dsps/blob/main/dsps/data_loaders/retrieve_fsps_data.py
+"""
 
-import numpy as np
-from rubix.logger import get_logger
-from rubix import config as rubix_config
-from rubix.paths import TEMPLATE_PATH
-import h5py
-import os
 import importlib
-from .grid import SSPGrid
-from jaxtyping import Array, Float, jaxtyped
+import os
+
+import h5py
+import numpy as np
 from beartype import beartype as typechecker
+from jaxtyping import Array, Float, jaxtyped
+
+from rubix import config as rubix_config
+from rubix.logger import get_logger
+from rubix.paths import TEMPLATE_PATH
+
+from .grid import SSPGrid
 
 # Setup a logger based on the config
 logger = get_logger()

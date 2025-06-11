@@ -1,11 +1,13 @@
+from copy import deepcopy
+from pathlib import Path
+
+import jax.numpy as jnp
+import pytest
+from jax import jit, make_jaxpr
+from jax.tree_util import Partial
+
 from rubix.pipeline import linear_pipeline as lp
 from rubix.utils import read_yaml
-import pytest
-from pathlib import Path
-from copy import deepcopy
-import jax.numpy as jnp
-from jax import make_jaxpr, jit
-from jax.tree_util import Partial
 
 
 # helper stuff that we need

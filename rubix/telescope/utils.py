@@ -1,10 +1,11 @@
+from typing import List, Tuple, Union
+
 import jax.numpy as jnp
 import numpy as np
-from rubix.cosmology.base import BaseCosmology
-from typing import Tuple, List
-from jaxtyping import Float, Array, Bool, Int, jaxtyped
 from beartype import beartype as typechecker
-from typing import Union
+from jaxtyping import Array, Bool, Float, Int, jaxtyped
+
+from rubix.cosmology.base import BaseCosmology
 
 
 @jaxtyped(typechecker=typechecker)

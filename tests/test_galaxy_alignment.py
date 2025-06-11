@@ -1,15 +1,16 @@
-import pytest
-import numpy as np
-from rubix.galaxy.alignment import center_particles
-from rubix.galaxy.alignment import (
-    moment_of_inertia_tensor,
-    rotation_matrix_from_inertia_tensor,
-    apply_init_rotation,
-    euler_rotation_matrix,
-    apply_rotation,
-)
-from rubix.galaxy.alignment import rotate_galaxy
 import jax.numpy as jnp
+import numpy as np
+import pytest
+
+from rubix.galaxy.alignment import (
+    apply_init_rotation,
+    apply_rotation,
+    center_particles,
+    euler_rotation_matrix,
+    moment_of_inertia_tensor,
+    rotate_galaxy,
+    rotation_matrix_from_inertia_tensor,
+)
 
 
 class MockRubixData:

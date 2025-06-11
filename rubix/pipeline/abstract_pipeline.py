@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
-from .transformer import compiled_transformer, expression_transformer
+
 from jax import jit
+
+from .transformer import compiled_transformer, expression_transformer
 
 
 class AbstractPipeline(ABC):

@@ -1,7 +1,8 @@
 import jax.numpy as jnp
+from jax import vmap
 from jax.scipy.signal import convolve2d
 from jaxtyping import Array, Float
-from jax import vmap
+
 from .kernels import gaussian_kernel_2d
 
 
