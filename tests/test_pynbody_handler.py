@@ -109,10 +109,15 @@ def handler_with_mock_data(mock_simulation, mock_config):
             )
             return handler
     """
-    with patch("pynbody.load", return_value=mock_simulation), \
-        patch("pynbody.analysis.angmom.faceon", return_value=None), \
-        patch("pynbody.analysis.angmom.ang_mom_vec", return_value=np.array([0.0,0.0,1.0])), \
-        patch("pynbody.analysis.angmom.calc_sideon_matrix", return_value=np.eye(3)):
+    with (
+        patch("pynbody.load", return_value=mock_simulation),
+        patch("pynbody.analysis.angmom.faceon", return_value=None),
+        patch(
+            "pynbody.analysis.angmom.ang_mom_vec",
+            return_value=np.array([0.0, 0.0, 1.0]),
+        ),
+        patch("pynbody.analysis.angmom.calc_sideon_matrix", return_value=np.eye(3)),
+    ):
 
         handler = PynbodyHandler(
             path="mock_path",
@@ -122,8 +127,6 @@ def handler_with_mock_data(mock_simulation, mock_config):
             halo_id=1,
         )
         return handler
-
-    
 
 
 def test_pynbody_handler_initialization(handler_with_mock_data):

@@ -77,9 +77,7 @@ class PynbodyHandler(BaseHandler):
             ang_mom_vec = pynbody.analysis.angmom.ang_mom_vec(halo.s)
             rotation_matrix = pynbody.analysis.angmom.calc_sideon_matrix(ang_mom_vec)
             if not os.path.exists("./data"):
-                self.logger.info(
-                    "Rotation matrix calculated and not saved."
-                )
+                self.logger.info("Rotation matrix calculated and not saved.")
             else:
                 np.save("./data/rotation_matrix.npy", rotation_matrix)
                 self.logger.info(
