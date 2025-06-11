@@ -97,6 +97,7 @@ def mock_simulation():
 
 @pytest.fixture
 def handler_with_mock_data(mock_simulation, mock_config):
+    """
     with patch("pynbody.load", return_value=mock_simulation):
         with patch("pynbody.analysis.angmom.faceon", return_value=None):
             handler = PynbodyHandler(
@@ -107,6 +108,22 @@ def handler_with_mock_data(mock_simulation, mock_config):
                 halo_id=1,
             )
             return handler
+    """
+    with patch("pynbody.load", return_value=mock_simulation), \
+        patch("pynbody.analysis.angmom.faceon", return_value=None), \
+        patch("pynbody.analysis.angmom.ang_mom_vec", return_value=np.array([0.0,0.0,1.0])), \
+        patch("pynbody.analysis.angmom.calc_sideon_matrix", return_value=np.eye(3)):
+
+        handler = PynbodyHandler(
+            path="mock_path",
+            halo_path="mock_halo_path",
+            config=mock_config,
+            dist_z=mock_config["galaxy"]["dist_z"],
+            halo_id=1,
+        )
+        return handler
+
+    
 
 
 def test_pynbody_handler_initialization(handler_with_mock_data):
