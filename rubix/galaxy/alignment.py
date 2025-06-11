@@ -238,7 +238,7 @@ def rotate_galaxy(
     alpha: float,
     beta: float,
     gamma: float,
-    R=None, # type: Float[Array, "3 3"] = None
+    R=None,  # type: Float[Array, "3 3"] = None
 ) -> Tuple[Float[Array, "* 3"], Float[Array, "* 3"]]:
     """
     Orientate the galaxy by applying a rotation matrix to the positions of the particles.
