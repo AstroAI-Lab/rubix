@@ -174,7 +174,7 @@ rubix/spectra/ssp/templates/fsps.h5
 notebooks/frames
 notebooks/frames/*
 notebooks/nohup.out
-notebooks/data
+notebooks/data/*
 
 # don´t add .env files
 *.env
