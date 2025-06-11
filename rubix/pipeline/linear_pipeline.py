@@ -178,7 +178,6 @@ class LinearTransformerPipeline(apl.AbstractPipeline):
             ValueError
                 _description_
         """
-        print("Arguments: ", *args)
         if len(args) == 0:
             raise ValueError("Cannot apply the pipeline to an empty list of arguments")
 

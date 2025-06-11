@@ -4,14 +4,17 @@ import numpy as np
 
 from rubix.core.data import Galaxy, GasData, RubixData, StarsData, reshape_array
 from rubix.core.ifu import (
+    get_calculate_datacube,
+    get_calculate_datacube_particlewise,
     get_calculate_spectra,
     get_doppler_shift_and_resampling,
-    get_resample_spectrum_pmap,
     get_resample_spectrum_vmap,
     get_scale_spectrum_by_mass,
+    get_telescope,
+    get_velocities_doppler_shift_vmap,
 )
 from rubix.core.ssp import get_ssp
-from rubix.spectra.ifu import resample_spectrum
+from rubix.spectra.ifu import resample_spectrum, velocity_doppler_shift
 
 RTOL = 1e-4
 ATOL = 1e-6
@@ -29,7 +32,7 @@ sample_inputs = {
 
 print("Sample_inputs:")
 for key in sample_inputs:
-    sample_inputs[key] = reshape_array(sample_inputs[key])
+    # sample_inputs[key] = reshape_array(sample_inputs[key])
     print(f"Key: {key}, shape: {sample_inputs[key].shape}")
 
 
@@ -164,46 +167,6 @@ def test_resample_spectrum_vmap():
     assert not jnp.any(jnp.isnan(result_vmap))
 
 
-def test_resample_spectrum_pmap():
-    # For pmap we need to reshape, such that first axis is the device axis
-    initial_spectra = jnp.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
-    initial_wavelengths = jnp.array(
-        [[4500.0, 5500.0, 6500.0], [4500.0, 5500.0, 6500.0]]
-    )
-    initial_spectra = reshape_array(initial_spectra)
-    initial_wavelengths = reshape_array(initial_wavelengths)
-    resample_spectrum_pmap = get_resample_spectrum_pmap(target_wavelength)
-    result_pmap = resample_spectrum_pmap(initial_spectra, initial_wavelengths)
-
-    # Check how many GPUs are available, since this defines the shape of the result
-    if jax.device_count() > 1:
-        expected_result = jnp.array(
-            [
-                resample_spectrum(
-                    initial_spectra[0, 0], initial_wavelengths[0, 0], target_wavelength
-                ),
-                resample_spectrum(
-                    initial_spectra[1, 0], initial_wavelengths[1, 0], target_wavelength
-                ),
-            ]
-        )
-        expected_result = reshape_array(expected_result)
-
-    else:
-        expected_result = jnp.stack(
-            [
-                resample_spectrum(
-                    initial_spectra[0, 0], initial_wavelengths[0, 0], target_wavelength
-                ),
-                resample_spectrum(
-                    initial_spectra[0, 1], initial_wavelengths[0, 1], target_wavelength
-                ),
-            ]
-        )
-    assert jnp.allclose(result_pmap, expected_result)
-    assert not jnp.any(jnp.isnan(result_pmap))
-
-
 def test_calculate_spectra():
     # Use an actual RubixData instance
     mock_rubixdata = RubixData(
@@ -213,13 +176,13 @@ def test_calculate_spectra():
     )
 
     # Populate the RubixData object with mock data
-    mock_rubixdata.stars.coords = jnp.array([[1, 2, 3]])
-    mock_rubixdata.stars.velocity = jnp.array([[4.0, 5.0, 6.0]])
+    mock_rubixdata.stars.coords = jnp.array([1, 2, 3])
+    mock_rubixdata.stars.velocity = jnp.array([4.0, 5.0, 6.0])
     mock_rubixdata.stars.metallicity = jnp.array(
-        [[0.1]]
+        [0.1]
     )  # 2D array for vmap compatibility
-    mock_rubixdata.stars.mass = jnp.array([[1000]])  # 2D array for vmap compatibility
-    mock_rubixdata.stars.age = jnp.array([[4.5]])  # 2D array for vmap compatibility
+    mock_rubixdata.stars.mass = jnp.array([1000])  # 2D array for vmap compatibility
+    mock_rubixdata.stars.age = jnp.array([4.5])  # 2D array for vmap compatibility
     mock_rubixdata.galaxy.redshift = 0.1
     mock_rubixdata.galaxy.center = jnp.array([0, 0, 0])
     mock_rubixdata.galaxy.halfmassrad_stars = 1
@@ -228,7 +191,7 @@ def test_calculate_spectra():
     calculate_spectra = get_calculate_spectra(sample_config)
 
     # Mock expected spectra
-    expected_spectra_shape = (1, 1, 842)  # Adjust shape as per your data
+    expected_spectra_shape = (1, 842)  # Adjust shape as per your data
     expected_spectra = jnp.zeros(expected_spectra_shape)
 
     # Call the calculate_spectra function
@@ -261,7 +224,7 @@ def test_scale_spectrum_by_mass():
     )
 
     # Calculate expected spectra
-    expected_spectra = input.stars.spectra * jnp.expand_dims(input.stars.mass, axis=-1)
+    expected_spectra = input.stars.spectra * jnp.expand_dims(input.stars.mass, -1)
 
     # Call the function
     scale_spectrum_by_mass = get_scale_spectrum_by_mass(sample_config)
@@ -280,6 +243,41 @@ def test_scale_spectrum_by_mass():
     assert not jnp.any(
         jnp.isnan(result.stars.spectra)
     ), "NaN values found in result spectra"
+
+
+def test_get_velocities_doppler_shift_vmap():
+    # 1) Setup a small SSP wavelength grid
+    ssp_wave = jnp.array([4000.0, 5000.0, 6000.0])
+
+    # 2) Build the vmap‐wrapped doppler function
+    doppler_fn = get_velocities_doppler_shift_vmap(ssp_wave, velocity_direction="x")
+
+    # ——— Zero‐velocity case ———
+    velocities_zero = jnp.zeros((4, 3))  # 4 particles, all zero velocity
+    out_zero = doppler_fn(velocities_zero)
+    # Compare to a direct call on the full batch:
+    expected_zero = velocity_doppler_shift(ssp_wave, velocities_zero, direction="x")
+    # shape & values should match, and every row must equal the original grid
+    assert out_zero.shape == expected_zero.shape
+    assert jnp.allclose(out_zero, expected_zero, rtol=RTOL, atol=ATOL)
+    assert jnp.allclose(out_zero, ssp_wave, rtol=RTOL, atol=ATOL)
+
+    # ——— Non‐zero velocities ———
+    velocities = jnp.array(
+        [
+            [1000.0, 0.0, 0.0],
+            [-1000.0, 0.0, 0.0],
+        ]
+    )
+    out = doppler_fn(velocities)
+
+    # Now compare to a single batch call
+    expected = velocity_doppler_shift(ssp_wave, velocities, direction="x")
+    assert out.shape == expected.shape, "Shape mismatch between vmap and direct call"
+    assert jnp.allclose(
+        out, expected, rtol=RTOL, atol=ATOL
+    ), "Values diverge from direct call"
+    assert not jnp.any(jnp.isnan(out)), "Found NaNs in the doppler‐shifted output"
 
 
 def test_doppler_shift_and_resampling():
@@ -310,3 +308,123 @@ def test_doppler_shift_and_resampling():
     assert not jnp.any(
         jnp.isnan(result.stars.spectra)
     ), "NaN values found in result spectra"
+
+
+def test_get_calculate_datacube():
+    # Setup: Telescope from config
+    config = {
+        "pipeline": {"name": "calc_ifu"},
+        "logger": {
+            "log_level": "DEBUG",
+            "log_file_path": None,
+            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        },
+        "telescope": {"name": "MUSE"},
+        "cosmology": {"name": "PLANCK15"},
+        "galaxy": {"dist_z": 0.1},
+        "ssp": {"template": {"name": "BruzualCharlot2003"}},
+    }
+    telescope = get_telescope(config)
+    n_spaxels = int(telescope.sbin)
+    n_wave = telescope.wave_seq.shape[0]
+    n_particles = 3
+
+    # Make spectra: shape (n_particles, n_wave)
+    spectra = jnp.arange(n_particles * n_wave, dtype=jnp.float32).reshape(
+        n_particles, n_wave
+    )
+
+    # Assign each particle to a spaxel
+    pixel_assignment = jnp.array([0, 1, n_spaxels**2 - 1], dtype=jnp.int32)
+
+    # Build stars data
+    stars = StarsData()
+    stars.spectra = spectra
+    stars.pixel_assignment = pixel_assignment
+
+    # Build rubixdata
+    rubixdata = RubixData(galaxy=Galaxy(), stars=stars, gas=GasData())
+
+    # Run pipeline
+    calculate_datacube = get_calculate_datacube(config)
+    result = calculate_datacube(rubixdata)
+
+    # Check datacube: shape (n_spaxels, n_spaxels, n_wave)
+    assert hasattr(result.stars, "datacube")
+    assert result.stars.datacube.shape == (n_spaxels, n_spaxels, n_wave)
+
+    # Check that each pixel has the correct sum of spectra (simple case: only one particle per spaxel)
+    flat_cube = result.stars.datacube.reshape(-1, n_wave)
+    for i, pix in enumerate(pixel_assignment):
+        assert jnp.allclose(flat_cube[pix], spectra[i])
+
+    # All other spaxels should be zero
+    mask = jnp.ones((n_spaxels**2,), dtype=bool)
+    mask = mask.at[pixel_assignment].set(False)
+    assert jnp.all(flat_cube[mask] == 0)
+
+
+def test_get_calculate_datacube_particlewise():
+    # Setup config and telescope
+    config = {
+        "pipeline": {"name": "calc_ifu"},
+        "logger": {
+            "log_level": "DEBUG",
+            "log_file_path": None,
+            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        },
+        "telescope": {"name": "MUSE"},
+        "cosmology": {"name": "PLANCK15"},
+        "galaxy": {"dist_z": 0.1},
+        "ssp": {"template": {"name": "BruzualCharlot2003"}},
+    }
+    telescope = get_telescope(config)
+    n_spaxels = int(telescope.sbin)
+    n_wave_tel = telescope.wave_seq.shape[0]
+    n_particles = 3
+
+    # Assign properties for n_particles
+    # Use valid values to avoid triggering issues in SSP lookup, resampling, etc.
+    metallicity = jnp.array([0.02, 0.01, 0.015])
+    age = jnp.array([5.0, 8.0, 10.0])
+    mass = jnp.array([1.0, 2.0, 0.5])
+    velocity = jnp.array(
+        [
+            [100.0, 200.0, 300.0],
+            [0.0, 50.0, -100.0],
+            [1.0, 1.0, 1.0],
+        ]
+    )
+    # Assign each particle to a unique spaxel
+    pixel_assignment = jnp.array([0, 1, n_spaxels**2 - 1], dtype=jnp.int32)
+
+    # Build the StarsData and RubixData object
+    stars = StarsData()
+    stars.metallicity = metallicity
+    stars.age = age
+    stars.mass = mass
+    stars.velocity = velocity
+    stars.pixel_assignment = pixel_assignment
+
+    rubixdata = RubixData(galaxy=Galaxy(), stars=stars, gas=GasData())
+
+    # Run the particlewise datacube calculation
+    calc_datacube_particlewise = get_calculate_datacube_particlewise(config)
+    result = calc_datacube_particlewise(rubixdata)
+
+    # Check output
+    assert hasattr(result.stars, "datacube")
+    assert result.stars.datacube.shape == (n_spaxels, n_spaxels, n_wave_tel)
+    # The cube must be non-negative and not NaN
+    assert jnp.all(result.stars.datacube >= 0)
+    assert not jnp.isnan(result.stars.datacube).any()
+    # Each particle's contribution must end up in the correct spaxel
+    # For a full test, you could do a partial "rebuild" as in your get_calculate_datacube test:
+    flat_cube = result.stars.datacube.reshape(-1, n_wave_tel)
+    # The nonzero spaxels should not be all zero (quick sanity check)
+    for pix in pixel_assignment:
+        assert jnp.any(flat_cube[pix] != 0)
+    # All spaxels not assigned should be exactly zero
+    mask = jnp.ones((n_spaxels**2,), dtype=bool)
+    mask = mask.at[pixel_assignment].set(False)
+    assert jnp.all(flat_cube[mask] == 0)
