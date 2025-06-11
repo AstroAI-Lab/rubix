@@ -154,9 +154,11 @@ cython_debug/
 rubix/version.py
 notebooks/*.h5
 notebooks/output
+notebooks/frames
 
 rubix/**/*.ipynb
 
+rubix/spectra/ssp/templates/fsps.h5
 rubix/spectra/ssp/templates/*.gz
 rubix/spectra/ssp/templates/*fits.gz
 rubix/spectra/cue/cue/*
@@ -173,3 +175,4 @@ rubix/spectra/ssp/templates/fsps.h5
 
 notebooks/frames
 notebooks/frames/*
+notebooks/data/*
