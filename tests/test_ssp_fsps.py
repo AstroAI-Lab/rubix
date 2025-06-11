@@ -61,9 +61,8 @@ def test_retrieve_ssp_data_from_fsps():
         assert isinstance(result, SSPGrid)
         assert np.allclose(result.metallicity, np.log10(mock_sp_instance.zlegend))
         assert np.allclose(result.age, mock_sp_instance.log_age - 9.0)
-        offset = (mock_sp_instance.wave[1] - mock_sp_instance.wave[0]) / 2
         assert np.allclose(
-            result.wavelength, np.array([4000, 4100, 4200]) - offset
+            result.wavelength, np.array([4000, 4100, 4200]) - 50
         )  # because wavelengths are shifted by the calculated offset in the mock to be centered
         assert np.allclose(
             result.flux,
