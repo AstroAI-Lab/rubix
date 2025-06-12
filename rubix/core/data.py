@@ -420,9 +420,9 @@ def convert_to_rubix(config: Union[dict, str]):
 
     logger = get_logger(config.get("logger", None))
 
-    if os.path.exists(os.path.join(config["output_path"], "rubix_galaxy.h5")):
-        logger.info("Rubix galaxy file already exists, skipping conversion")
-        return config["output_path"]
+    #if os.path.exists(os.path.join(config["output_path"], "rubix_galaxy.h5")):
+    #    logger.info("Rubix galaxy file already exists, skipping conversion")
+    #    return config["output_path"]
 
     # If the simulationtype is IllustrisAPI, get data from IllustrisAPI
 

@@ -103,13 +103,18 @@ def get_galaxy_rotation(config: dict):
                 ), f"Velocities not found for {particle_type}. "
                 assert masses is not None, f"Masses not found for {particle_type}. "
 
-                if config["galaxy"]["rotation"] == "matrix":
-
+                if config["galaxy"]["rotation"]["type"] == "matrix":
+                    logger.debug(
+                        "Rotation type is matrix, loading rotation matrix from file."
+                    )
                     rot_np = jnp.load("./data/rotation_matrix.npy")
                     rot_jax = jnp.array(rot_np)
                     logger.info(f"Using rotation matrix from file: {rot_jax}.")
                     rotation_matrix = rot_jax
                 else:
+                    logger.debug(
+                        "No rotation matrix provided, using Euler angles for rotation."
+                    )
                     rotation_matrix = None
 
                 # Rotate the galaxy
