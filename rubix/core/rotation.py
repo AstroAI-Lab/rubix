@@ -54,10 +54,17 @@ def get_galaxy_rotation(config: dict):
             beta = 0.0
             gamma = 0.0
 
-        else:
+        elif config["galaxy"]["rotation"]["type"] == "edge-on":
             # type is edge-on
             logger.debug("Roataion Type found: edge-on")
             alpha = 90.0
+            beta = 0.0
+            gamma = 0.0
+    
+        elif config["galaxy"]["rotation"]["type"] == "matrix":
+            logger.debug("Roataion Type found: matrix")
+            # If type is matrix, then rotation matrix should be provided
+            alpha = 0.0
             beta = 0.0
             gamma = 0.0
 

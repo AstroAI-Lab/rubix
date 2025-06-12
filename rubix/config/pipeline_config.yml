@@ -90,6 +90,11 @@ calc_ifu_memory:
       depends_on: convolve_lsf
       args: []
       kwargs: {}
+    #convert_flux:
+    #  name: convert_flux
+    #  depends_on: apply_noise
+    #  args: []
+    #  kwargs: {}
 
 calc_dusty_ifu:
   Transformers:

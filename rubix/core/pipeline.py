@@ -26,7 +26,6 @@ from .data import (
     GasData,
     RubixData,
     StarsData,
-    get_reshape_data,
     get_rubix_data,
 )
 from .dust import get_extinction
@@ -37,6 +36,7 @@ from .ifu import (
     get_doppler_shift_and_resampling,
     get_scale_spectrum_by_mass,
 )
+#from .flux import get_converted_flux
 from .lsf import get_convolve_lsf
 from .noise import get_apply_noise
 from .psf import get_convolve_psf
@@ -101,7 +101,6 @@ class RubixPipeline:
         filter_particles = get_filter_particles(self.user_config)
         spaxel_assignment = get_spaxel_assignment(self.user_config)
         calculate_spectra = get_calculate_spectra(self.user_config)
-        # reshape_data = get_reshape_data(self.user_config)
         scale_spectrum_by_mass = get_scale_spectrum_by_mass(self.user_config)
         doppler_shift_and_resampling = get_doppler_shift_and_resampling(
             self.user_config
@@ -114,13 +113,13 @@ class RubixPipeline:
         convolve_psf = get_convolve_psf(self.user_config)
         convolve_lsf = get_convolve_lsf(self.user_config)
         apply_noise = get_apply_noise(self.user_config)
+        #convert_flux = get_converted_flux(self.user_config)
 
         functions = [
             rotate_galaxy,
             filter_particles,
             spaxel_assignment,
             calculate_spectra,
-            # reshape_data,
             scale_spectrum_by_mass,
             doppler_shift_and_resampling,
             apply_extinction,
@@ -129,6 +128,7 @@ class RubixPipeline:
             convolve_psf,
             convolve_lsf,
             apply_noise,
+            #convert_flux,
         ]
         return functions
 

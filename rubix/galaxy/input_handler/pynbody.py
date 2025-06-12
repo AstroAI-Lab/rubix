@@ -5,6 +5,7 @@ import astropy.units as u
 import numpy as np
 import pynbody
 import yaml
+import pickle
 
 from rubix.cosmology import PLANCK15 as rubix_cosmo
 from rubix.units import Zsun
@@ -15,7 +16,7 @@ from .base import BaseHandler
 
 class PynbodyHandler(BaseHandler):
     def __init__(
-        self, path, halo_path=None, logger=None, config=None, dist_z=None, halo_id=None
+        self, path, halo_path=None, component=None, component_file=None, logger=None, config=None, dist_z=None, halo_id=None
     ):
         """Initialize handler with paths to snapshot and halo files."""
         self.metallicity_unit = Zsun
@@ -23,6 +24,9 @@ class PynbodyHandler(BaseHandler):
         self.halo_path = halo_path
         self.halo_id = halo_id
         self.pynbody_config = config or self._load_config()
+        comp_cfg = self.pynbody_config.get("galaxy", {})
+        self.component      = component
+        self.component_file = component_file
         self.logger = logger or self._default_logger()
         super().__init__()
         self.dist_z = dist_z
@@ -74,6 +78,7 @@ class PynbodyHandler(BaseHandler):
         self.logger.info(f"Simulation snapshot loaded from halo {self.halo_id}")
         halo = self.get_halo_data(halo_id=self.halo_id)
         if halo is not None:
+            #pynbody.analysis.angmom.faceon(halo.s)
             pynbody.analysis.angmom.faceon(halo.s)
             ang_mom_vec = pynbody.analysis.angmom.ang_mom_vec(halo.s)
             rotation_matrix = pynbody.analysis.angmom.calc_sideon_matrix(ang_mom_vec)
@@ -83,6 +88,59 @@ class PynbodyHandler(BaseHandler):
             )
             self.sim = halo
 
+            self.logger.info(
+                f"Loaded halo data for halo ID {self.halo_id} with {len(halo.s)} particles."
+            )
+            self.logger.info(
+                f"Loading components from file: {self.component_file}."
+            )
+            self.logger.info(
+                f"Filtering components by: {self.component}."
+            )
+            # If a component is specified, load it and store from the input handler only the particles belonging to that file.
+            gsf_spliting = pickle.load(open(self.component_file, "rb"))
+            tags = gsf_spliting["tags"]              # e.g. ["classicalBulge","ThinDisc",…]
+            labels = gsf_spliting["label"]           # array of ints same length as iord
+            gmm_iords = gsf_spliting["iord"]         # array of star iords
+
+            # normalize config to a list (or empty list for no filter)
+            if self.component is None:
+                target_tags = []
+            elif isinstance(self.component, str):
+                target_tags = [self.component]
+            else:
+                target_tags = list(self.component)
+
+            # validate
+            valid = [t for t in target_tags if t in tags]
+            invalid = set(target_tags) - set(valid)
+            if invalid:
+                self.logger.warning(
+                    f"Ignoring unknown components: {sorted(invalid)}; valid tags are {tags}"
+                )
+
+            if valid:
+                self.logger.info(
+                    f"Filtering components by tags: {valid}."
+                )
+                # find all integer labels matching any requested tag
+                target_idxs = [tags.index(t) for t in valid]
+                # build mask: iord in any of those labels
+                snap_iords = np.asarray(halo.s["iord"])
+                sel_iords  = np.concatenate([gmm_iords[labels == idx] for idx in target_idxs])
+                mask       = np.isin(snap_iords, sel_iords)
+                halo.s     = halo.s[mask]
+                self.logger.info(
+                    f"Filtered to components {valid} "
+                    f"({mask.sum()} particles out of {len(snap_iords)} total)."
+                )
+            else:
+                self.logger.info("No component filtering; loading all stars.")
+
+            self.sim = halo
+
+
+
         fields = self.pynbody_config["fields"]
         load_classes = self.pynbody_config.get("load_classes", ["stars", "gas"])
         self.data = {}
@@ -90,10 +148,25 @@ class PynbodyHandler(BaseHandler):
 
         # Load data for stars and gas
         for cls in load_classes:
-            if cls in ["stars", "gas"]:
-                self.data[cls] = self.load_particle_data(
-                    getattr(self.sim, cls), fields[cls], units[cls], cls
-                )
+            #if cls in ["stars", "gas"]:
+            #    self.data[cls] = self.load_particle_data(
+            #        getattr(self.sim, cls), fields[cls], units[cls], cls
+            #    )
+            if cls == "stars":
+                # use the masked subhalo star‐Snap
+                sim_class = self.sim.s
+            elif cls == "gas":
+                # gas remains unfiltered
+                sim_class = self.sim.g   # or self.sim.gas
+            else:
+                continue
+
+            self.data[cls] = self.load_particle_data(
+                sim_class,
+                fields[cls],
+                units[cls],
+                cls
+            )
 
         # for cls in self.data:
         #    self.logger.info(f"Loaded {cls} data: {self.data[cls].keys()}")
@@ -152,6 +225,9 @@ class PynbodyHandler(BaseHandler):
                 # For NIHAO, temperature is directly available as "temp" (if requested).
                 data[field] = np.array(sim_class[sim_field]) * units.get(
                     field, u.dimensionless_unscaled
+                )
+                self.logger.debug(
+                    f"{len(data[field])} particles for {particle_type} loaded from '{sim_field}'"
                 )
             else:
                 self.logger.warning(

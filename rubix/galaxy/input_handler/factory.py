@@ -30,6 +30,10 @@ def get_input_handler(config: dict, logger=None) -> Union[BaseHandler, MagicMock
         simulation_args = config["simulation"]["args"]
         if "galaxy" in config and "dist_z" in config["galaxy"]:
             simulation_args["dist_z"] = config["galaxy"]["dist_z"]
+        if "galaxy" in config and "component" in config["galaxy"]:
+            simulation_args["component"] = config["galaxy"]["component"]
+        if "galaxy" in config and "component_file" in config["galaxy"]:
+            simulation_args["component_file"] = config["galaxy"]["component_file"]
         return PynbodyHandler(**simulation_args, logger=logger)
     else:
         raise ValueError(f"Simulation {config['simulation']} is not supported")
