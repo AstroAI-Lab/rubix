@@ -161,3 +161,16 @@ calc_dusty_ifu:
       depends_on: convolve_lsf
       args: []
       kwargs: {}
+
+calc_ifu_memory_test:
+  Transformers:
+    spaxel_assignment:
+      name: spaxel_assignment
+      depends_on: null
+      args: []
+      kwargs: {}
+    calculate_datacube_particlewise:
+      name: calculate_datacube_particlewise
+      depends_on: spaxel_assignment
+      args: []
+      kwargs: {}
