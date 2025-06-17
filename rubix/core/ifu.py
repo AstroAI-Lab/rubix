@@ -30,8 +30,8 @@ from .telescope import get_telescope
 @jaxtyped(typechecker=typechecker)
 def get_calculate_spectra(config: dict) -> Callable:
     """
-    This function is outdates, we do not recomend to use it for a large set of particles!
-    We recommend to use the function get_calculate_datacube_particlewise!
+    This function is outdated, we do not recommend using it for a large set of particles!
+    We recommend using the function get_calculate_datacube_particlewise!
     The function gets the lookup function that performs the lookup to the SSP model,
     and parallelizes the funciton across all GPUs.
 
