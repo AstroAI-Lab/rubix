@@ -1,20 +1,38 @@
+import dataclasses
 import time
+from functools import partial
+from types import SimpleNamespace
 from typing import Union
 
 import jax
 import jax.numpy as jnp
+
+# For shard_map and device mesh.
+import numpy as np
 from beartype import beartype as typechecker
-from jax import block_until_ready
+from jax import block_until_ready, lax
+from jax.experimental.pjit import pjit
+from jax.experimental.shard_map import shard_map
+from jax.sharding import Mesh, NamedSharding, PartitionSpec as P
+from jax.tree_util import tree_flatten, tree_map, tree_unflatten
 from jaxtyping import jaxtyped
 
 from rubix.logger import get_logger
 from rubix.pipeline import linear_pipeline as pipeline
 from rubix.utils import get_config, get_pipeline_config
 
-from .data import get_reshape_data, get_rubix_data
+from .data import (
+    Galaxy,
+    GasData,
+    RubixData,
+    StarsData,
+    get_reshape_data,
+    get_rubix_data,
+)
 from .dust import get_extinction
 from .ifu import (
     get_calculate_datacube,
+    get_calculate_datacube_particlewise,
     get_calculate_spectra,
     get_doppler_shift_and_resampling,
     get_scale_spectrum_by_mass,
@@ -31,23 +49,14 @@ class RubixPipeline:
     """
     RubixPipeline is responsible for setting up and running the data processing pipeline.
 
-    Args:
-        user_config (dict or str): Parsed user configuration for the pipeline.
-        pipeline_config (dict): Configuration for the pipeline.
-        logger(Logger) : Logger instance for logging messages.
-        ssp(object) : Stellar population synthesis model.
-        telescope(object) : Telescope configuration.
-        data (dict): Dictionary containing particle data.
-        func (callable): Compiled pipeline function to process data.
-
-    Example
-    --------
-    >>> from rubix.core.pipeline import RubixPipeline
-    >>> config = "path/to/config.yml"
-    >>> pipeline = RubixPipeline(config)
-    >>> output = pipeline.run()
-    >>> ssp_model = pipeline.ssp
-    >>> telescope = pipeline.telescope
+    Usage
+    -----
+    >>> pipe = RubixPipeline(config)
+    >>> inputdata = pipe.prepare_data()
+    >>> # To run without sharding:
+    >>> output = pipe.run(inputdata)
+    >>> # To run with sharding using jax.shard_map:
+    >>> final_datacube = pipe.run_sharded(inputdata, shard_size=100000)
     """
 
     def __init__(self, user_config: Union[dict, str]):
@@ -56,18 +65,16 @@ class RubixPipeline:
         self.logger = get_logger(self.user_config["logger"])
         self.ssp = get_ssp(self.user_config)
         self.telescope = get_telescope(self.user_config)
-        self.data = self._prepare_data()
         self.func = None
 
-    def _prepare_data(self):
+    def prepare_data(self):
         """
         Prepares and loads the data for the pipeline.
 
         Returns:
-            Dictionary containing particle data with keys:
-            'n_particles', 'coords', 'velocities', 'metallicity', 'mass', and 'age'.
+            Object containing particle data with attributes such as:
+            'coords', 'velocities', 'mass', 'age', and 'metallicity' under stars and gas.
         """
-        # Get the data
         self.logger.info("Getting rubix data...")
         rubixdata = get_rubix_data(self.user_config)
         star_count = (
@@ -77,17 +84,6 @@ class RubixPipeline:
         self.logger.info(
             f"Data loaded with {star_count} star particles and {gas_count} gas particles."
         )
-        # Setup the data dictionary
-        # TODO: This is a temporary solution, we need to figure out a better way to handle the data
-        # This works, because JAX can trace through the data dictionary
-        # Other option may be named tuples or data classes to have fixed keys
-
-        # self.logger.debug("Data: %s", rubixdata)
-        # self.logger.debug(
-        #    "Data Shape: %s",
-        #    {k: v.shape for k, v in rubixdata.items() if hasattr(v, "shape")},
-        # )
-
         return rubixdata
 
     @jaxtyped(typechecker=typechecker)
@@ -101,18 +97,20 @@ class RubixPipeline:
         self.logger.info("Setting up the pipeline...")
         self.logger.debug("Pipeline Configuration: %s", self.pipeline_config)
 
-        # TODO: maybe there is a nicer way to load the functions from the yaml config?
         rotate_galaxy = get_galaxy_rotation(self.user_config)
         filter_particles = get_filter_particles(self.user_config)
         spaxel_assignment = get_spaxel_assignment(self.user_config)
         calculate_spectra = get_calculate_spectra(self.user_config)
-        reshape_data = get_reshape_data(self.user_config)
+        # reshape_data = get_reshape_data(self.user_config)
         scale_spectrum_by_mass = get_scale_spectrum_by_mass(self.user_config)
         doppler_shift_and_resampling = get_doppler_shift_and_resampling(
             self.user_config
         )
         apply_extinction = get_extinction(self.user_config)
         calculate_datacube = get_calculate_datacube(self.user_config)
+        calculate_datacube_particlewise = get_calculate_datacube_particlewise(
+            self.user_config
+        )
         convolve_psf = get_convolve_psf(self.user_config)
         convolve_lsf = get_convolve_lsf(self.user_config)
         apply_noise = get_apply_noise(self.user_config)
@@ -122,87 +120,210 @@ class RubixPipeline:
             filter_particles,
             spaxel_assignment,
             calculate_spectra,
-            reshape_data,
+            # reshape_data,
             scale_spectrum_by_mass,
             doppler_shift_and_resampling,
             apply_extinction,
             calculate_datacube,
+            calculate_datacube_particlewise,
             convolve_psf,
             convolve_lsf,
             apply_noise,
         ]
-
         return functions
 
-    # TODO: currently returns dict, but later should return only the IFU cube
-    def run(self):
+    def run(self, inputdata):
         """
-        Runs the data processing pipeline.
+        Runs the data processing pipeline on the complete input data.
+
+        Parameters
+        ----------
+        inputdata : object
+            Data prepared from the `prepare_data` method.
 
         Returns
         -------
-        dict
-            Output of the pipeline after processing the input data.
+        object
+            Pipeline output (which includes the datacube and unit attributes).
         """
-        # Create the pipeline
         time_start = time.time()
         functions = self._get_pipeline_functions()
         self._pipeline = pipeline.LinearTransformerPipeline(
             self.pipeline_config, functions
         )
-
-        # Assembling the pipeline
         self.logger.info("Assembling the pipeline...")
         self._pipeline.assemble()
-
-        # Compiling the expressions
         self.logger.info("Compiling the expressions...")
         self.func = self._pipeline.compile_expression()
-
-        # Running the pipeline
         self.logger.info("Running the pipeline on the input data...")
-        output = self.func(self.data)
-
+        output = self.func(inputdata)
         block_until_ready(output)
         time_end = time.time()
         self.logger.info(
             "Pipeline run completed in %.2f seconds.", time_end - time_start
         )
 
-        output.galaxy.redshift_unit = self.data.galaxy.redshift_unit
-        output.galaxy.center_unit = self.data.galaxy.center_unit
-        output.galaxy.halfmassrad_stars_unit = self.data.galaxy.halfmassrad_stars_unit
+        """
+        # Propagate unit attributes from input to output.
+        output.galaxy.redshift_unit = inputdata.galaxy.redshift_unit
+        output.galaxy.center_unit = inputdata.galaxy.center_unit
+        output.galaxy.halfmassrad_stars_unit = inputdata.galaxy.halfmassrad_stars_unit
 
-        if output.stars.coords != None:
-            output.stars.coords_unit = self.data.stars.coords_unit
-            output.stars.velocity_unit = self.data.stars.velocity_unit
-            output.stars.mass_unit = self.data.stars.mass_unit
-            # output.stars.metallictiy_unit = self.data.stars.metallictiy_unit
-            output.stars.age_unit = self.data.stars.age_unit
+        if output.stars.coords is not None:
+            output.stars.coords_unit = inputdata.stars.coords_unit
+            output.stars.velocity_unit = inputdata.stars.velocity_unit
+            output.stars.mass_unit = inputdata.stars.mass_unit
+            output.stars.age_unit = inputdata.stars.age_unit
             output.stars.spatial_bin_edges_unit = "kpc"
-            # output.stars.wavelength_unit = rubix_config["ssp"]["units"]["wavelength"]
-            # output.stars.spectra_unit = rubix_config["ssp"]["units"]["flux"]
-            # output.stars.datacube_unit = rubix_config["ssp"]["units"]["flux"]
 
-        if output.gas.coords != None:
-            output.gas.coords_unit = self.data.gas.coords_unit
-            output.gas.velocity_unit = self.data.gas.velocity_unit
-            output.gas.mass_unit = self.data.gas.mass_unit
-            output.gas.density_unit = self.data.gas.density_unit
-            output.gas.internal_energy_unit = self.data.gas.internal_energy_unit
-            # output.gas.metallicity_unit = self.data.gas.metallicity_unit
-            output.gas.sfr_unit = self.data.gas.sfr_unit
-            output.gas.electron_abundance_unit = self.data.gas.electron_abundance_unit
+        if output.gas.coords is not None:
+            output.gas.coords_unit = inputdata.gas.coords_unit
+            output.gas.velocity_unit = inputdata.gas.velocity_unit
+            output.gas.mass_unit = inputdata.gas.mass_unit
+            output.gas.density_unit = inputdata.gas.density_unit
+            output.gas.internal_energy_unit = inputdata.gas.internal_energy_unit
+            output.gas.sfr_unit = inputdata.gas.sfr_unit
+            output.gas.electron_abundance_unit = inputdata.gas.electron_abundance_unit
             output.gas.spatial_bin_edges_unit = "kpc"
-            # output.gas.wavelength_unit = rubix_config["ssp"]["units"]["wavelength"]
-            # output.gas.spectra_unit = rubix_config["ssp"]["units"]["flux"]
-            # output.gas.datacube_unit = rubix_config["ssp"]["units"]["flux"]
-
+        """
         return output
 
-    # TODO: implement gradient calculation
-    def gradient(self):
+    def run_sharded(self, inputdata):
         """
-        This function will calculate the gradient of the pipeline, but is yet not implemented.
+        Runs the pipeline on sharded input data in parallel using jax.shard_map.
+        It splits the particle arrays (e.g. under stars and gas) into shards, runs
+        the compiled pipeline on each shard, and then combines the resulting datacubes.
+
+        This is the recomended method to run the pipeline in parallel at the moment!!!
+
+        Parameters
+        ----------
+        inputdata : object
+            Data prepared from the `prepare_data` method.
+        shard_size : int
+            Number of particles per shard.
+
+        Returns
+        -------
+        jax.numpy.ndarray
+            The final datacube combined from all shards.
         """
-        raise NotImplementedError("Gradient calculation is not implemented yet")
+        time_start = time.time()
+        # Assemble and compile the pipeline as before.
+        functions = self._get_pipeline_functions()
+        self._pipeline = pipeline.LinearTransformerPipeline(
+            self.pipeline_config, functions
+        )
+        self.logger.info("Assembling the pipeline...")
+        self._pipeline.assemble()
+        self.logger.info("Compiling the expressions...")
+        self.func = self._pipeline.compile_expression()
+
+        devices = jax.devices()
+        num_devices = len(devices)
+        self.logger.info("Number of devices: %d", num_devices)
+
+        mesh = Mesh(devices, axis_names=("data",))
+
+        # — sharding specs by rank —
+        replicate_0d = NamedSharding(mesh, P())  # for scalars
+        replicate_1d = NamedSharding(mesh, P(None))  # for 1-D arrays
+        shard_2d = NamedSharding(mesh, P("data", None))  # for (N, D)
+        shard_1d = NamedSharding(mesh, P("data"))  # for (N,)
+        replicate_3d = NamedSharding(mesh, P(None, None, None))  # for full cube
+
+        # — 1) allocate empty instances —
+        galaxy_spec = object.__new__(Galaxy)
+        stars_spec = object.__new__(StarsData)
+        gas_spec = object.__new__(GasData)
+        rubix_spec = object.__new__(RubixData)
+
+        # — 2) assign NamedSharding to each field —
+        # galaxy
+        galaxy_spec.redshift = replicate_0d
+        galaxy_spec.center = replicate_1d
+        galaxy_spec.halfmassrad_stars = replicate_0d
+
+        # stars
+        stars_spec.coords = shard_2d
+        stars_spec.velocity = shard_2d
+        stars_spec.mass = shard_1d
+        stars_spec.age = shard_1d
+        stars_spec.metallicity = shard_1d
+        stars_spec.pixel_assignment = shard_1d
+        stars_spec.spatial_bin_edges = NamedSharding(mesh, P(None, None))
+        stars_spec.mask = shard_1d
+        stars_spec.spectra = shard_2d
+        stars_spec.datacube = replicate_3d
+
+        # gas  (same idea)
+        gas_spec.coords = shard_2d
+        gas_spec.velocity = shard_2d
+        gas_spec.mass = shard_1d
+        gas_spec.density = shard_1d
+        gas_spec.internal_energy = shard_1d
+        gas_spec.metallicity = shard_1d
+        gas_spec.metals = shard_1d
+        gas_spec.sfr = shard_1d
+        gas_spec.electron_abundance = shard_1d
+        gas_spec.pixel_assignment = shard_1d
+        gas_spec.spatial_bin_edges = NamedSharding(mesh, P(None, None))
+        gas_spec.mask = shard_1d
+        gas_spec.spectra = shard_2d
+        gas_spec.datacube = replicate_3d
+
+        # — link them up —
+        rubix_spec.galaxy = galaxy_spec
+        rubix_spec.stars = stars_spec
+        rubix_spec.gas = gas_spec
+
+        # 1) Make a pytree of PartitionSpec
+        partition_spec_tree = tree_map(
+            lambda s: s.spec if isinstance(s, NamedSharding) else None, rubix_spec
+        )
+
+        # if the particle number is not modulo the device number, we have to padd a few empty particles
+        # to make it work
+        # this is a bit of a hack, but it works
+        n = inputdata.stars.coords.shape[0]
+        pad = (num_devices - (n % num_devices)) % num_devices
+
+        if pad:
+            # pad along the first axis
+            inputdata.stars.coords = jnp.pad(inputdata.stars.coords, ((0, pad), (0, 0)))
+            inputdata.stars.velocity = jnp.pad(
+                inputdata.stars.velocity, ((0, pad), (0, 0))
+            )
+            inputdata.stars.mass = jnp.pad(inputdata.stars.mass, ((0, pad)))
+            inputdata.stars.age = jnp.pad(inputdata.stars.age, ((0, pad)))
+            inputdata.stars.metallicity = jnp.pad(
+                inputdata.stars.metallicity, ((0, pad))
+            )
+
+        inputdata = jax.device_put(inputdata, rubix_spec)
+
+        # create the sharded data
+        def _shard_pipeline(sharded_rubixdata):
+            out_local = self.func(sharded_rubixdata)
+            local_cube = out_local.stars.datacube  # shape (25,25,5994)
+            # in‐XLA all‐reduce across the "data" axis:
+            summed_cube = lax.psum(local_cube, axis_name="data")
+            return summed_cube  # replicated on each device
+
+        sharded_pipeline = shard_map(
+            _shard_pipeline,  # the function to compile
+            mesh=mesh,  # the mesh to use
+            in_specs=(partition_spec_tree,),
+            out_specs=replicate_3d.spec,
+            check_rep=False,
+        )
+
+        sharded_result = sharded_pipeline(inputdata)
+
+        time_end = time.time()
+        self.logger.info(
+            "Pipeline run completed in %.2f seconds.", time_end - time_start
+        )
+        # final_cube = jnp.sum(partial_cubes, axis=0)
+
+        return sharded_result

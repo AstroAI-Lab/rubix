@@ -31,7 +31,7 @@ def convert_luminoisty_to_flux(
     Returns:
         The flux of the object in units erg/s/cm^2/Angstrom as observed by the telescope (array-like).
     """
-    CONST = CONSTANTS.get("LSOL_TO_ERG") / CONSTANTS.get("MPC_TO_CM") ** 2
+    CONST = float(CONSTANTS.get("LSOL_TO_ERG")) / float(CONSTANTS.get("MPC_TO_CM")) ** 2
     FACTOR = (
         CONST
         / (4 * jnp.pi * observation_lum_dist**2)
