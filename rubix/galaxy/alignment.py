@@ -233,7 +233,8 @@ def apply_rotation(
 def rotate_galaxy(
     positions: Float[Array, "* 3"],
     velocities: Float[Array, "* 3"],
-    masses: Float[Array, "..."],
+    positions_stars: Float[Array, "..."],
+    masses_stars: Float[Array, "..."],
     halfmass_radius: Union[Float[Array, "..."], float],
     alpha: float,
     beta: float,
@@ -255,6 +256,7 @@ def rotate_galaxy(
     Returns:
         The rotated positions and velocities as a jnp.ndarray.
     """
+
     if R is None:
         I = moment_of_inertia_tensor(positions, masses, halfmass_radius)
         R = rotation_matrix_from_inertia_tensor(I)

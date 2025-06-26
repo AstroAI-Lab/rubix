@@ -197,7 +197,7 @@ def _velocity_doppler_shift_single(
 def velocity_doppler_shift(
     wavelength: Float[Array, "..."],
     velocity: Float[Array, " * 3"],
-    direction: str = "y",
+    direction: str = config["ifu"]["doppler"]["velocity_direction"],
     SPEED_OF_LIGHT: float = config["constants"]["SPEED_OF_LIGHT"],
 ) -> Float[Array, "..."]:
     """
@@ -212,6 +212,10 @@ def velocity_doppler_shift(
     Returns:
         The Doppler shifted wavelength in Angstrom (array-like).
     """
+    while velocity.shape[0] == 1:
+        velocity = jnp.squeeze(velocity, axis=0)
+    # if velocity.shape[0] == 1:
+    #    velocity = jnp.squeeze(velocity, axis=0)
     # Vmap the function to handle multiple velocities with the same wavelength
     return jax.vmap(
         lambda v: _velocity_doppler_shift_single(

@@ -68,16 +68,15 @@ def get_calculate_spectra(config: dict) -> Callable:
         return lookup_interpolation(metallicity, age)
 
     @jaxtyped(typechecker=typechecker)
-    def calculate_spectra(rubixdata: RubixData) -> RubixData:
+    def calculate_spectra(rubixdata: object) -> object:
         logger.info("Calculating IFU cube...")
         logger.debug(
             f"Input shapes: Metallicity: {len(rubixdata.stars.metallicity)}, Age: {len(rubixdata.stars.age)}"
         )
+
         # Ensure metallicity and age are arrays and reshape them to be at least 1-dimensional
-        # age_data = jax.device_get(rubixdata.stars.age)
-        age_data = rubixdata.stars.age
-        # metallicity_data = jax.device_get(rubixdata.stars.metallicity)
-        metallicity_data = rubixdata.stars.metallicity
+        age_data = jax.device_get(rubixdata.stars.age)
+        metallicity_data = jax.device_get(rubixdata.stars.metallicity)
         # Ensure they are not scalars or empty; convert to 1D arrays if necessary
         age = jnp.atleast_1d(age_data)
         metallicity = jnp.atleast_1d(metallicity_data)
@@ -90,6 +89,7 @@ def get_calculate_spectra(config: dict) -> Callable:
         logger.debug(f"Calculation Finished! Spectra shape: {spectra.shape}")
         spectra_jax = jnp.array(spectra)
         # spectra_jax = jnp.expand_dims(spectra_jax, axis=0)
+
         rubixdata.stars.spectra = spectra_jax
         # setattr(rubixdata.gas, "spectra", spectra)
         # jax.debug.print("Calculate Spectra: Spectra {}", spectra)
@@ -249,8 +249,7 @@ def get_doppler_shift_and_resampling(config: dict) -> Callable:
             doppler_shifted_ssp_wave = doppler_shift(particle.velocity)
             logger.info(f"Doppler shifting and resampling spectra...")
             logger.debug(f"Doppler Shifted SSP Wave: {doppler_shifted_ssp_wave.shape}")
-            logger.debug(f"Telescope Wave Seq: {telescope_wavelength.shape}")
-
+            logger.debug(f"Telescope Wave Seq: {telescope.wave_seq.shape}")
             # Function to resample the spectrum to the telescope wavelength grid
             # resample_spectrum_pmap = get_resample_spectrum_pmap(telescope_wavelength)
             # spectrum_resampled = resample_spectrum_pmap(

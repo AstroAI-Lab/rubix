@@ -49,14 +49,26 @@ class RubixPipeline:
     """
     RubixPipeline is responsible for setting up and running the data processing pipeline.
 
-    Usage
-    -----
+    Args:
+        user_config (dict or str): Parsed user configuration for the pipeline.
+        pipeline_config (dict): Configuration for the pipeline.
+        logger(Logger) : Logger instance for logging messages.
+        ssp(object) : Stellar population synthesis model.
+        telescope(object) : Telescope configuration.
+        data (dict): Dictionary containing particle data.
+        func (callable): Compiled pipeline function to process data.
+
+    Example
+    --------
+    >>> from rubix.core.pipeline import RubixPipeline
+    >>> config = "path/to/config.yml"
     >>> pipe = RubixPipeline(config)
     >>> inputdata = pipe.prepare_data()
-    >>> # To run without sharding:
     >>> output = pipe.run(inputdata)
     >>> # To run with sharding using jax.shard_map:
     >>> final_datacube = pipe.run_sharded(inputdata, shard_size=100000)
+    >>> ssp_model = pipeline.ssp
+    >>> telescope = pipeline.telescope
     """
 
     def __init__(self, user_config: Union[dict, str]):
@@ -157,12 +169,13 @@ class RubixPipeline:
         self.func = self._pipeline.compile_expression()
         self.logger.info("Running the pipeline on the input data...")
         output = self.func(inputdata)
+
         block_until_ready(output)
         time_end = time.time()
         self.logger.info(
             "Pipeline run completed in %.2f seconds.", time_end - time_start
         )
-
+        
         """
         # Propagate unit attributes from input to output.
         output.galaxy.redshift_unit = inputdata.galaxy.redshift_unit
@@ -175,6 +188,7 @@ class RubixPipeline:
             output.stars.mass_unit = inputdata.stars.mass_unit
             output.stars.age_unit = inputdata.stars.age_unit
             output.stars.spatial_bin_edges_unit = "kpc"
+
 
         if output.gas.coords is not None:
             output.gas.coords_unit = inputdata.gas.coords_unit
@@ -327,3 +341,86 @@ class RubixPipeline:
         # final_cube = jnp.sum(partial_cubes, axis=0)
 
         return sharded_result
+      
+          def gradient(self, rubixdata, targetdata):
+        """
+        This function will calculate the gradient of the pipeline.
+        """
+        return jax.grad(self.loss, argnums=0)(rubixdata, targetdata)
+
+    def loss(self, rubixdata, targetdata):
+        """
+        Calculate the mean squared error loss.
+
+        Args:
+            data (array-like): The predicted data.
+            target (array-like): The target data.
+
+        Returns:
+            The mean squared error loss.
+        """
+        output = self.run(rubixdata)
+        loss_value = jnp.sum((output.stars.datacube - targetdata.stars.datacube) ** 2)
+        return loss_value
+
+    def loss_only_wrt_age(self, age, base_data, target):
+        """
+        A "wrapped" loss function that:
+        1) Creates a modified rubixdata with the new 'age'
+        2) Runs the pipeline
+        3) Returns MSE
+        """
+        # 1) Copy your data (so we don't mutate the original)
+        data_modified = deepcopy(base_data)
+        # 2) Replace the age
+        data_modified.stars.age = age
+
+        # 3) Run the pipeline
+        output = self.run(data_modified)
+
+        # 4) Compute loss
+        loss = jnp.sum((output.stars.datacube - target.stars.datacube) ** 2)
+
+        return loss
+
+    def loss_only_wrt_metallicity(self, metallicity, base_data, target):
+        """
+        A "wrapped" loss function that:
+        1) Creates a modified rubixdata with the new 'metallicity'
+        2) Runs the pipeline
+        3) Returns MSE
+        """
+        # 1) Copy your data (so we don't mutate the original)
+        data_modified = deepcopy(base_data)
+        # 2) Replace the age
+        data_modified.stars.metallicity = metallicity
+
+        # 3) Run the pipeline
+        output = self.run(data_modified)
+
+        # 4) Compute loss
+        loss = jnp.sum((output.stars.datacube - target.stars.datacube) ** 2)
+
+        return loss
+
+    def loss_only_wrt_age_metallicity(self, age, metallicity, base_data, target):
+        """
+        A "wrapped" loss function that:
+        1) Creates a modified rubixdata with the new 'age' and 'metallicity'
+        2) Runs the pipeline
+        3) Returns MSE
+        """
+        # 1) Copy your data (so we don't mutate the original)
+        data_modified = deepcopy(base_data)
+        # 2) Replace the age
+        data_modified.stars.age = age
+        data_modified.stars.metallicity = metallicity
+
+        # 3) Run the pipeline
+        output = self.run(data_modified)
+
+        # 4) Compute loss
+        loss = jnp.sum((output.stars.datacube - target.stars.datacube) ** 2)
+
+        return loss
+
