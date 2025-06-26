@@ -1,7 +1,8 @@
-import pytest
-from rubix.galaxy import BaseHandler
 import h5py
+import pytest
+
 from rubix import config
+from rubix.galaxy import BaseHandler
 
 
 class ConcreteInputHandler(BaseHandler):

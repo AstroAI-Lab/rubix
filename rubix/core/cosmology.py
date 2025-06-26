@@ -1,8 +1,8 @@
+from beartype import beartype as typechecker
+from jaxtyping import jaxtyped
+
 from rubix.cosmology import RubixCosmology
 from rubix.logger import get_logger
-
-from jaxtyping import jaxtyped
-from beartype import beartype as typechecker
 
 
 @jaxtyped(typechecker=typechecker)

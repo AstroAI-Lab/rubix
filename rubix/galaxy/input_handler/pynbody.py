@@ -6,6 +6,7 @@ import numpy as np
 import pynbody
 import yaml
 
+from rubix.cosmology import PLANCK15 as rubix_cosmo
 from rubix.units import Zsun
 from rubix.utils import SFTtoAge
 
@@ -73,7 +74,16 @@ class PynbodyHandler(BaseHandler):
         self.logger.info(f"Simulation snapshot loaded from halo {self.halo_id}")
         halo = self.get_halo_data(halo_id=self.halo_id)
         if halo is not None:
-            pynbody.analysis.angmom.faceon(halo)
+            pynbody.analysis.angmom.faceon(halo.s)
+            ang_mom_vec = pynbody.analysis.angmom.ang_mom_vec(halo.s)
+            rotation_matrix = pynbody.analysis.angmom.calc_sideon_matrix(ang_mom_vec)
+            if not os.path.exists("./data"):
+                self.logger.info("Rotation matrix calculated and not saved.")
+            else:
+                np.save("./data/rotation_matrix.npy", rotation_matrix)
+                self.logger.info(
+                    "Rotation matrix calculated and saved to '/notebooks/data/rotation_matrix.npy'."
+                )
             self.sim = halo
 
         fields = self.pynbody_config["fields"]
@@ -89,6 +99,16 @@ class PynbodyHandler(BaseHandler):
                 )
 
         # Combine HI and OxMassFrac into a two-column metals field for gas
+        # for cls in self.data:
+        #    self.logger.info(f"Loaded {cls} data: {self.data[cls].keys()}")
+        #    self.logger.info("Assigning metals to gas particles........")
+
+        # Combine HI and OxMassFrac into a two-column metals field for gas
+        #    self.data["gas"]["metals"] = np.column_stack((self.data["gas"]["HI"],
+        #                                                self.data["gas"]["OxMassFrac"]))
+        #    self.logger.info("Metals assigned to gas particles........")
+        #    self.logger.info("Metals shape is: ", self.data["gas"]["metals"].shape)
+
         hi_data = self.load_particle_data(
             getattr(self.sim, "gas"),
             {"HI": "HI"},
@@ -115,7 +135,9 @@ class PynbodyHandler(BaseHandler):
         self.logger.info("Metals assigned to gas particles.")
         self.logger.info("Metals shape is: %s", self.data["gas"]["metals"].shape)
 
-        self.data["stars"]["age"] = 14.14019767 * u.Gyr - self.data["stars"]["age"]
+
+        age_at_z0 = rubix_cosmo.age_at_z0()
+        self.data["stars"]["age"] = age_at_z0 * u.Gyr - self.data["stars"]["age"]
 
         self.logger.info(
             f"Simulation snapshot and halo data loaded successfully for classes: {load_classes}."

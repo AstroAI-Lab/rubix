@@ -3,12 +3,14 @@ from typing import Callable, Union
 import jax
 import jax.numpy as jnp
 from beartype import beartype as typechecker
+from jax import lax
 from jaxtyping import Array, Float, jaxtyped
 
 from rubix import config as rubix_config
 from rubix.core.data import GasData, StarsData
 from rubix.logger import get_logger
 from rubix.spectra.ifu import (
+    _velocity_doppler_shift_single,
     calculate_cube,
     cosmological_doppler_shift,
     resample_spectrum,
@@ -28,6 +30,8 @@ from .telescope import get_telescope
 @jaxtyped(typechecker=typechecker)
 def get_calculate_spectra(config: dict) -> Callable:
     """
+    This function is outdated, we do not recommend using it for a large set of particles!
+    We recommend using the function get_calculate_datacube_particlewise!
     The function gets the lookup function that performs the lookup to the SSP model,
     and parallelizes the funciton across all GPUs.
 
@@ -55,9 +59,13 @@ def get_calculate_spectra(config: dict) -> Callable:
     >>> rubixdata.stars.spectra
     """
     logger = get_logger(config.get("logger", None))
-    lookup_interpolation_pmap = get_lookup_interpolation_pmap(config)
+    # lookup_interpolation_pmap = get_lookup_interpolation_pmap(config)
     # lookup_interpolation_vmap = get_lookup_interpolation_vmap(config)
     lookup_interpolation = get_lookup_interpolation(config)
+
+    def lookup_interpolation_laxmap(age_metallicity):
+        age, metallicity = age_metallicity
+        return lookup_interpolation(metallicity, age)
 
     @jaxtyped(typechecker=typechecker)
     def calculate_spectra(rubixdata: object) -> object:
@@ -73,13 +81,15 @@ def get_calculate_spectra(config: dict) -> Callable:
         age = jnp.atleast_1d(age_data)
         metallicity = jnp.atleast_1d(metallicity_data)
 
-        spectra = lookup_interpolation_pmap(
-            # rubixdata.stars.metallicity, rubixdata.stars.age
+        spectra = lookup_interpolation(
             metallicity,
             age,
-        )  # * inputs["mass"]
+        )
+
         logger.debug(f"Calculation Finished! Spectra shape: {spectra.shape}")
         spectra_jax = jnp.array(spectra)
+        # spectra_jax = jnp.expand_dims(spectra_jax, axis=0)
+
         rubixdata.stars.spectra = spectra_jax
         # setattr(rubixdata.gas, "spectra", spectra)
         # jax.debug.print("Calculate Spectra: Spectra {}", spectra)
@@ -91,6 +101,8 @@ def get_calculate_spectra(config: dict) -> Callable:
 @jaxtyped(typechecker=typechecker)
 def get_scale_spectrum_by_mass(config: dict) -> Callable:
     """
+    This function is outdates, we do not recomend to use it for a large set of particles!
+    We recommend to use the function get_calculate_datacube_particlewise!
     The spectra of the stellar particles are scaled by the mass of the stars.
 
     Args:
@@ -128,6 +140,8 @@ def get_scale_spectrum_by_mass(config: dict) -> Callable:
 @jaxtyped(typechecker=typechecker)
 def get_resample_spectrum_vmap(target_wavelength) -> Callable:
     """
+    This function is outdates, we do not recomend to use it for a large set of particles!
+    We recommend to use the function get_calculate_datacube_particlewise!
     The spectra of the stars are resampled to the telescope wavelength grid.
 
     Args:
@@ -148,27 +162,13 @@ def get_resample_spectrum_vmap(target_wavelength) -> Callable:
     return jax.vmap(resample_spectrum_vmap, in_axes=(0, 0))
 
 
-# Parallelize the vectorized function across devices
-@jaxtyped(typechecker=typechecker)
-def get_resample_spectrum_pmap(target_wavelength) -> Callable:
-    """
-    Pmap the function that resamples the spectra of the stars to the telescope wavelength grid.
-
-    Args:
-        target_wavelength (jax.Array): The telescope wavelength grid
-
-    Returns:
-        The function that resamples the spectra to the telescope wavelength grid.
-    """
-    vmapped_resample_spectrum = get_resample_spectrum_vmap(target_wavelength)
-    return jax.pmap(vmapped_resample_spectrum)
-
-
 @jaxtyped(typechecker=typechecker)
 def get_velocities_doppler_shift_vmap(
     ssp_wave: Float[Array, "..."], velocity_direction: str
 ) -> Callable:
     """
+    This function is outdates, we do not recomend to use it for a large set of particles!
+    We recommend to use teh function get_calculate_datacube_particlewise!
     The function doppler shifts the wavelength based on the velocity of the stars.
 
     Args:
@@ -179,17 +179,27 @@ def get_velocities_doppler_shift_vmap(
         The function that doppler shifts the wavelength based on the velocity of the stars.
     """
 
-    def func(velocity):
+    # def func(velocity):
+    #    return velocity_doppler_shift(
+    #        wavelength=ssp_wave, velocity=velocity, direction=velocity_direction
+    #    )
+
+    # return jax.vmap(func, in_axes=0)
+    def doppler_fn(velocities):
         return velocity_doppler_shift(
-            wavelength=ssp_wave, velocity=velocity, direction=velocity_direction
+            wavelength=ssp_wave,
+            velocity=velocities,
+            direction=velocity_direction,
         )
 
-    return jax.vmap(func, in_axes=0)
+    return doppler_fn
 
 
 @jaxtyped(typechecker=typechecker)
 def get_doppler_shift_and_resampling(config: dict) -> Callable:
     """
+    This function is outdates, we do not recomend to use it for a large set of particles!
+    We recommend to use the function get_calculate_datacube_particlewise!
     The function doppler shifts the wavelength based on the velocity of the stars and resamples the spectra to the telescope wavelength grid.
 
     Args:
@@ -231,57 +241,30 @@ def get_doppler_shift_and_resampling(config: dict) -> Callable:
     doppler_shift = get_velocities_doppler_shift_vmap(ssp_wave, velocity_direction)
 
     @jaxtyped(typechecker=typechecker)
-    def doppler_shift_and_resampling(rubixdata: object) -> object:
-        if rubixdata.stars.spectra is not None:
-            # Doppler shift the SSP Wavelengths based on the velocity of the stars
-            doppler_shifted_ssp_wave = doppler_shift(rubixdata.stars.velocity)
-            logger.info("Doppler shifting and resampling stellar spectra...")
+    def process_particle(
+        particle: Union[StarsData, GasData],
+    ) -> Union[Float[Array, "..."], None]:
+        if particle.spectra is not None:
+            # Doppler shift based on the velocity of the particle
+            doppler_shifted_ssp_wave = doppler_shift(particle.velocity)
+            logger.info(f"Doppler shifting and resampling spectra...")
             logger.debug(f"Doppler Shifted SSP Wave: {doppler_shifted_ssp_wave.shape}")
             logger.debug(f"Telescope Wave Seq: {telescope.wave_seq.shape}")
             # Function to resample the spectrum to the telescope wavelength grid
-            resample_spectrum_pmap = get_resample_spectrum_pmap(telescope_wavelength)
-            # jax.debug.print("doppler shifted ssp wave {}", doppler_shifted_ssp_wave)
-            # jax.debug.print("Spectra before resampling {}", inputs["spectra"])
-            # if (
-            #    rubixdata.stars.spectra.shape[0] == 1
-            #    and rubixdata.stars.spectra.shape[1] == 1
-            # ):
-            #    rubixdata.stars.spectra = jnp.squeeze(rubixdata.stars.spectra, axis=0)
-            # if (
-            #     rubixdata.stars.spectra.shape[0] == 1
-            #    and rubixdata.stars.spectra.shape[1] == 1
-            # ):
-            #    rubixdata.stars.spectra = jnp.squeeze(rubixdata.stars.spectra, axis=0)
-            while (
-                rubixdata.stars.spectra.shape[0] == 1
-                and rubixdata.stars.spectra.shape[1] == 1
-            ):
-                rubixdata.stars.spectra = jnp.squeeze(rubixdata.stars.spectra, axis=0)
-            # if doppler_shifted_ssp_wave.shape[0] == 1:
-            #    doppler_shifted_ssp_wave = jnp.squeeze(doppler_shifted_ssp_wave, axis=0)
-            # print(f"Shape of spectra...............: {rubixdata.stars.spectra.shape}")
-            # print(
-            #    f"Shape of doppler_shifted_ssp_wave..................: {doppler_shifted_ssp_wave.shape}"
+            # resample_spectrum_pmap = get_resample_spectrum_pmap(telescope_wavelength)
+            # spectrum_resampled = resample_spectrum_pmap(
+            #    particle.spectra, doppler_shifted_ssp_wave
             # )
+            resample_fn = get_resample_spectrum_vmap(telescope_wavelength)
+            spectrum_resampled = resample_fn(particle.spectra, doppler_shifted_ssp_wave)
+            return spectrum_resampled
+        return particle.spectra
 
-            spectrum_resampled = resample_spectrum_pmap(
-                rubixdata.stars.spectra, doppler_shifted_ssp_wave
-            )
-            # rubixdata.stars.spectra = spectrum_resampled
-            setattr(rubixdata.stars, "spectra", spectrum_resampled)
-            # jax.debug.print("doppler shift and resampl: Spectra {}", inputs["spectra"])
-
-        if rubixdata.gas.spectra is not None:
-            # Doppler shift the SSP Wavelengths based on the velocity of the gas particles
-            doppler_shifted_ssp_wave = doppler_shift(rubixdata.gas.velocity)
-            logger.info("Doppler shifting and resampling gas spectra...")
-            logger.debug(f"Doppler Shifted SSP Wave: {doppler_shifted_ssp_wave.shape}")
-            logger.debug(f"Telescope Wave Seq: {telescope.wave_seq.shape}")
-            # Function to resample the spectrum to the telescope wavelength grid
-            resample_spectrum_pmap = get_resample_spectrum_pmap(telescope_wavelenght)
-            spectrum_resampled = resample_spectrum_pmap(
-                rubixdata.gas.spectra, doppler_shifted_ssp_wave
-            )
+    @jaxtyped(typechecker=typechecker)
+    def doppler_shift_and_resampling(rubixdata: RubixData) -> RubixData:
+        for particle_name in ["stars", "gas"]:
+            particle = getattr(rubixdata, particle_name)
+            particle.spectra = process_particle(particle)
 
         return rubixdata
 
@@ -291,6 +274,8 @@ def get_doppler_shift_and_resampling(config: dict) -> Callable:
 @jaxtyped(typechecker=typechecker)
 def get_calculate_datacube(config: dict) -> Callable:
     """
+    This function is outdates, we do not recomend to use it for a large set of particles!
+    We recommend to use the function get_calculate_datacube_particlewise!
     The function returns the function that calculates the datacube of the stars.
 
     Args:
@@ -313,18 +298,20 @@ def get_calculate_datacube(config: dict) -> Callable:
     num_spaxels = int(telescope.sbin)
 
     # Bind the num_spaxels to the function
-    calculate_cube_fn = jax.tree_util.Partial(calculate_cube, num_spaxels=num_spaxels)
-    calculate_cube_pmap = jax.pmap(calculate_cube_fn)
+    # calculate_cube_fn = jax.tree_util.Partial(calculate_cube, num_spaxels=num_spaxels)
+    # calculate_cube_pmap = jax.pmap(calculate_cube_fn)
 
     @jaxtyped(typechecker=typechecker)
     def calculate_datacube(rubixdata: RubixData) -> RubixData:
         logger.info("Calculating Data Cube...")
-        logger.debug(f"pixel assignment: {rubixdata.stars.pixel_assignment.shape}")
-        ifu_cubes = calculate_cube_pmap(
-            spectra=rubixdata.stars.spectra,
-            spaxel_index=rubixdata.stars.pixel_assignment,
+        # ifu_cubes = calculate_cube_fn(
+        #    spectra=rubixdata.stars.spectra,
+        #    spaxel_index=rubixdata.stars.pixel_assignment,
+        # )
+        datacube = calculate_cube(
+            rubixdata.stars.spectra, rubixdata.stars.pixel_assignment, num_spaxels
         )
-        datacube = jnp.sum(ifu_cubes, axis=0)
+        # datacube = jnp.sum(ifu_cubes, axis=0)
         logger.debug(f"Datacube Shape: {datacube.shape}")
         # logger.debug(f"This is the datacube: {datacube}")
         datacube_jax = jnp.array(datacube)
@@ -333,3 +320,86 @@ def get_calculate_datacube(config: dict) -> Callable:
         return rubixdata
 
     return calculate_datacube
+
+
+@jaxtyped(typechecker=typechecker)
+def get_calculate_datacube_particlewise(config: dict) -> Callable:
+    """
+    Returns a function that builds the IFU cube by, for each star:
+      1) looking up SSP
+      2) scaling by mass
+      3) Doppler‐shifting
+      4) resampling
+      5) accumulating into the shared datacube
+
+    Args
+    """
+    logger = get_logger(config.get("logger", None))
+    telescope = get_telescope(config)
+    ns = int(telescope.sbin)
+    nseg = ns * ns
+    target_wave = telescope.wave_seq  # (n_wave_tel,)
+
+    # prepare SSP lookup
+    lookup_ssp = get_lookup_interpolation(config)
+
+    # prepare Doppler machinery
+    velocity_direction = rubix_config["ifu"]["doppler"]["velocity_direction"]
+    z_obs = config["galaxy"]["dist_z"]
+    ssp_model = get_ssp(config)
+    ssp_wave0 = cosmological_doppler_shift(
+        z=z_obs, wavelength=ssp_model.wavelength
+    )  # (n_wave_ssp,)
+
+    @jaxtyped(typechecker=typechecker)
+    def calculate_datacube_particlewise(rubixdata: RubixData) -> RubixData:
+        logger.info("Calculating Data Cube (combined per‐particle)…")
+
+        stars = rubixdata.stars
+        ages = stars.age  # (n_stars,)
+        metallicity = stars.metallicity  # (n_stars,)
+        masses = stars.mass  # (n_stars,)
+        velocities = stars.velocity  # (n_stars,)
+        pix_idx = stars.pixel_assignment  # (n_stars,)
+        nstar = ages.shape[0]
+
+        # init flat cube: (nseg, n_wave_tel)
+        init_cube = jnp.zeros((nseg, target_wave.shape[-1]))
+
+        def body(cube, i):
+            age_i = ages[i]  # scalar
+            Z_i = metallicity[i]  # scalar
+            m_i = masses[i]  # scalar
+            v_i = velocities[i]  # scalar or vector
+            pix_i = pix_idx[i].astype(jnp.int32)
+
+            # 1) SSP lookup
+            spec_ssp = lookup_ssp(Z_i, age_i)  # (n_wave_ssp,)
+            # 2) scale by mass
+            spec_mass = spec_ssp * m_i  # (n_wave_ssp,)
+            # 3) Doppler‐shift wavelengths
+            shifted_wave = _velocity_doppler_shift_single(
+                wavelength=ssp_wave0,
+                velocity=v_i,
+                direction=velocity_direction,
+            )  # (n_wave_ssp,)
+            # 4) resample onto telescope grid
+            spec_tel = resample_spectrum(
+                initial_spectrum=spec_mass,
+                initial_wavelength=shifted_wave,
+                target_wavelength=target_wave,
+            )  # (n_wave_tel,)
+
+            # 5) accumulate
+            cube = cube.at[pix_i].add(spec_tel)
+            return cube, None
+
+        cube_flat, _ = lax.scan(body, init_cube, jnp.arange(nstar, dtype=jnp.int32))
+
+        cube_3d = cube_flat.reshape(ns, ns, -1)
+        setattr(rubixdata.stars, "datacube", cube_3d)
+        logger.debug(f"Datacube shape: {cube_3d.shape}")
+        return rubixdata
+
+    # return jax.jit(calculate_datacube_particlewise)
+    return calculate_datacube_particlewise

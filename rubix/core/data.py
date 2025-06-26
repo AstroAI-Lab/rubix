@@ -62,7 +62,7 @@ from rubix.utils import load_galaxy_data, read_yaml
 
 
 # Registering the dataclass with JAX for automatic tree traversal
-@jaxtyped(typechecker=typechecker)
+# @jaxtyped(typechecker=typechecker)
 @partial(jax.tree_util.register_pytree_node_class)
 @dataclass
 class Galaxy:
@@ -79,18 +79,18 @@ class Galaxy:
     center: Optional[Union[jnp.ndarray, float]] = None
     halfmassrad_stars: Optional[Union[jnp.ndarray, float]] = None
 
-    def __repr__(self):
-        representationString = ["Galaxy:"]
-        for k, v in self.__dict__.items():
-            if not k.endswith("_unit"):
-                if v is not None:
-                    attrString = f"{k}: shape = {v.shape}, dtype = {v.dtype}"
-                    if hasattr(self, k + "_unit") and getattr(self, k + "_unit") != "":
-                        attrString += f", unit = {getattr(self, k + '_unit')}"
-                    representationString.append(attrString)
-                else:
-                    representationString.append(f"{k}: None")
-        return "\n\t".join(representationString)
+    # def __repr__(self):
+    #    representationString = ["Galaxy:"]
+    #    for k, v in self.__dict__.items():
+    #        if not k.endswith("_unit"):
+    #            if v is not None:
+    #                 attrString = f"{k}: shape = {v.shape}, dtype = {v.dtype}"
+    #                if hasattr(self, k + "_unit") and getattr(self, k + "_unit") != "":
+    #                    attrString += f", unit = {getattr(self, k + '_unit')}"
+    #                representationString.append(attrString)
+    #            else:
+    #                representationString.append(f"{k}: None")
+    #    return "\n\t".join(representationString)
 
     def tree_flatten(self):
         """
@@ -120,7 +120,7 @@ class Galaxy:
         return cls(*children)
 
 
-@jaxtyped(typechecker=typechecker)
+# @jaxtyped(typechecker=typechecker)
 @partial(jax.tree_util.register_pytree_node_class)
 @dataclass
 class StarsData:
@@ -152,18 +152,18 @@ class StarsData:
     spectra: Optional[jnp.ndarray] = None
     datacube: Optional[jnp.ndarray] = None
 
-    def __repr__(self):
-        representationString = ["StarsData:"]
-        for k, v in self.__dict__.items():
-            if not k.endswith("_unit"):
-                if v is not None:
-                    attrString = f"{k}: shape = {v.shape}, dtype = {v.dtype}"
-                    if hasattr(self, k + "_unit") and getattr(self, k + "_unit") != "":
-                        attrString += f", unit = {getattr(self, k + '_unit')}"
-                    representationString.append(attrString)
-                else:
-                    representationString.append(f"{k}: None")
-        return "\n\t".join(representationString)
+    # def __repr__(self):
+    #    representationString = ["StarsData:"]
+    #    for k, v in self.__dict__.items():
+    #        if not k.endswith("_unit"):
+    #            if v is not None:
+    #                attrString = f"{k}: shape = {v.shape}, dtype = {v.dtype}"
+    #                if hasattr(self, k + "_unit") and getattr(self, k + "_unit") != "":
+    #                    attrString += f", unit = {getattr(self, k + '_unit')}"
+    #                representationString.append(attrString)
+    #            else:
+    #                representationString.append(f"{k}: None")
+    #    return "\n\t".join(representationString)
 
     def tree_flatten(self):
         """
@@ -204,7 +204,7 @@ class StarsData:
         return cls(*children)
 
 
-@jaxtyped(typechecker=typechecker)
+# @jaxtyped(typechecker=typechecker)
 @partial(jax.tree_util.register_pytree_node_class)
 @dataclass
 class GasData:
@@ -242,18 +242,18 @@ class GasData:
     spectra: Optional[jnp.ndarray] = None
     datacube: Optional[jnp.ndarray] = None
 
-    def __repr__(self):
-        representationString = ["GasData:"]
-        for k, v in self.__dict__.items():
-            if not k.endswith("_unit"):
-                if v is not None:
-                    attrString = f"{k}: shape = {v.shape}, dtype = {v.dtype}"
-                    if hasattr(self, k + "_unit") and getattr(self, k + "_unit") != "":
-                        attrString += f", unit = {getattr(self, k + '_unit')}"
-                    representationString.append(attrString)
-                else:
-                    representationString.append(f"{k}: None")
-        return "\n\t".join(representationString)
+    # def __repr__(self):
+    #    representationString = ["GasData:"]
+    #    for k, v in self.__dict__.items():
+    #        if not k.endswith("_unit"):
+    #            if v is not None:
+    #                attrString = f"{k}: shape = {v.shape}, dtype = {v.dtype}"
+    #                if hasattr(self, k + "_unit") and getattr(self, k + "_unit") != "":
+    #                    attrString += f", unit = {getattr(self, k + '_unit')}"
+    #                representationString.append(attrString)
+    #            else:
+    #                representationString.append(f"{k}: None")
+    #    return "\n\t".join(representationString)
 
     def tree_flatten(self):
         """
@@ -298,7 +298,7 @@ class GasData:
         return cls(*children)
 
 
-@jaxtyped(typechecker=typechecker)
+# @jaxtyped(typechecker=typechecker)
 @partial(jax.tree_util.register_pytree_node_class)
 @dataclass
 class RubixData:
@@ -315,11 +315,11 @@ class RubixData:
     stars: Optional[StarsData] = None
     gas: Optional[GasData] = None
 
-    def __repr__(self):
-        representationString = ["RubixData:"]
-        for k, v in self.__dict__.items():
-            representationString.append("\n\t".join(f"{k}: {v}".split("\n")))
-        return "\n\t".join(representationString)
+    # def __repr__(self):
+    #    representationString = ["RubixData:"]
+    #    for k, v in self.__dict__.items():
+    #        representationString.append("\n\t".join(f"{k}: {v}".split("\n")))
+    #    return "\n\t".join(representationString)
 
     # def __post_init__(self):
     #    if self.stars is not None:
@@ -432,8 +432,10 @@ def convert_to_rubix(config: Union[dict, str]):
             logger.info("Loading data from IllustrisAPI")
             api = IllustrisAPI(**config["data"]["args"], logger=logger)
             api.load_galaxy(**config["data"]["load_galaxy_args"])
+        # else:
+        #    raise ValueError(f"Unknown data source: {config['data']['name']}.")
 
-            # Load the saved data into the input handler
+        # Load the saved data into the input handler
     logger.info("Loading data into input handler")
     input_handler = get_input_handler(config, logger=logger)
     input_handler.to_rubix(output_path=config["output_path"])
