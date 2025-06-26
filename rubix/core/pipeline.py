@@ -175,7 +175,7 @@ class RubixPipeline:
         self.logger.info(
             "Pipeline run completed in %.2f seconds.", time_end - time_start
         )
-        
+
         """
         # Propagate unit attributes from input to output.
         output.galaxy.redshift_unit = inputdata.galaxy.redshift_unit
@@ -341,7 +341,7 @@ class RubixPipeline:
         # final_cube = jnp.sum(partial_cubes, axis=0)
 
         return sharded_result
-      
+
           def gradient(self, rubixdata, targetdata):
         """
         This function will calculate the gradient of the pipeline.
@@ -423,4 +423,3 @@ class RubixPipeline:
         loss = jnp.sum((output.stars.datacube - target.stars.datacube) ** 2)
 
         return loss
-
