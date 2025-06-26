@@ -163,30 +163,21 @@ def test_apply_rotation():
 
     # Verify that the result matches the expected rotated positions
     assert (
-        #result_rotated_positions.all() == expected_rotated_positions.all()
+        # result_rotated_positions.all() == expected_rotated_positions.all()
         jnp.allclose(result_rotated_positions, expected_rotated_positions)
     ), f"Test failed. Expected other rotated positions {expected_rotated_positions}, got {result_rotated_positions}."
-    
 
 
 def test_rotate_galaxy():
     # Example gas positions, velocities, and masses
-    positions = jnp.array([[1.0, 0.0, 0.0],
-                           [0.0, 1.0, 0.0],
-                           [0.0, 0.0, 1.0]])
-    velocities = jnp.array([[0.0, 1.0, 0.0],
-                            [0.0, 0.0, 1.0],
-                            [1.0, 0.0, 0.0]])
+    positions = jnp.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
+    velocities = jnp.array([[0.0, 1.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]])
     masses = jnp.array([1.0, 1.0, 1.0])
     halfmass_radius = jnp.array([2.0])
 
     # Expected outputs after 90° rotation around x-axis
-    expected_rotated_positions = jnp.array([[1, 0, 0],
-                                            [0, 0, -1],
-                                            [0, 1, 0]])
-    expected_rotated_velocities = jnp.array([[0, 0, -1],
-                                             [0, 1, 0],
-                                             [1, 0, 0]])
+    expected_rotated_positions = jnp.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]])
+    expected_rotated_velocities = jnp.array([[0, 0, -1], [0, 1, 0], [1, 0, 0]])
 
     alpha = 90.0
     beta = 0.0
@@ -196,20 +187,21 @@ def test_rotate_galaxy():
     rotated_positions, rotated_velocities = rotate_galaxy(
         positions,
         velocities,
-        jnp.zeros_like(positions), # Dummy star positions
+        jnp.zeros_like(positions),  # Dummy star positions
         masses,
         halfmass_radius,
         alpha,
         beta,
-        gamma
+        gamma,
     )
 
     assert rotated_positions.shape == positions.shape
     assert rotated_velocities.shape == velocities.shape
 
     # Use jnp.allclose instead of `.all()` which returns a scalar
-    assert jnp.allclose(rotated_positions, expected_rotated_positions), \
-        f"Test failed. Expected positions {expected_rotated_positions}, got {rotated_positions}"
+    assert jnp.allclose(
+        rotated_positions, expected_rotated_positions
+    ), f"Test failed. Expected positions {expected_rotated_positions}, got {rotated_positions}"
 
-    #assert jnp.allclose(rotated_velocities, expected_rotated_velocities), \
+    # assert jnp.allclose(rotated_velocities, expected_rotated_velocities), \
     #    f"Test failed. Expected velocities {expected_rotated_velocities}, got {rotated_velocities}"
