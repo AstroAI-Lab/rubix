@@ -1,4 +1,3 @@
-
 import jax.numpy as jnp
 from beartype import beartype as typechecker
 from jaxtyping import jaxtyped
@@ -180,7 +179,7 @@ def get_galaxy_rotation(config: dict):
                 alpha=alpha,
                 beta=beta,
                 gamma=gamma,
-                #key=config["simulation"]["name"],
+                # key=config["simulation"]["name"],
             )
 
             setattr(rubixdata.stars, "coords", new_coords_stars)
