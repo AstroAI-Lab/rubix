@@ -214,9 +214,11 @@ ssp:
       # more information on how those models are synthesized: https://github.com/cconroy20/fsps
       # and https://dfm.io/python-fsps/current/
       format: "fsps" # Format of the template
-      source: "load_from_file" # note: for fsps we use the source entry to specify if fsps should be run (rerun_from_scratch)
-      # which silently also saves the output to disk in h5 format under the "file_name" given
-      # or if we load from a pre-existing file in h5 format specified by "file_name".
+      source: "load_from_file" # the source can be "load_from_file" or "rerun_from_scratch"
+      # "load_from_file" is the default and loads the template from a pre-existing file in h5 format specified by "file_name"
+      # if that file is not found, it will automatically run fsps and save the output to disk in h5 format under the "file_name" given.
+      # "rerun_from_scratch" # note: this is just meant for the case in which you really want to rerun your template library.
+      # You should be aware that fsps templates will silently be overwritten by this. Use with caution.
       file_name: "fsps.h5" # File name of the template, stored in templates directory
       # Define the Fields in the template and their units
       # This is used to convert them to the required units

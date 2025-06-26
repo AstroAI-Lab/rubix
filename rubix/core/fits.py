@@ -25,6 +25,7 @@ def store_fits(config, data, filepath):
     logger_config = config.get("logger", None)
     logger = get_logger(logger_config)
 
+    """
     if "cube_type" not in config["data"]["args"]:
         datacube = data.stars.datacube
         parttype = "stars"
@@ -34,6 +35,8 @@ def store_fits(config, data, filepath):
     elif config["data"]["args"]["cube_type"] == "gas":
         datacube = data.gas.datacube
         parttype = "gas"
+    """
+    datacube = data
 
     telescope = get_telescope(config)
 
@@ -41,7 +44,15 @@ def store_fits(config, data, filepath):
     hdr["SIMPLE"] = "T /conforms to FITS standard"
     hdr["PIPELINE"] = config["pipeline"]["name"]
     hdr["DIST_z"] = config["galaxy"]["dist_z"]
-    hdr["ROTATION"] = config["galaxy"]["rotation"]["type"]
+    if (
+        config["galaxy"]["rotation"]["type"] == "face-on"
+        or config["galaxy"]["rotation"]["type"] == "edge-on"
+    ):
+        hdr["ROTATION"] = config["galaxy"]["rotation"]["type"]
+    else:
+        hdr["ROT_a"] = config["galaxy"]["rotation"]["alpha"]
+        hdr["ROT_b"] = config["galaxy"]["rotation"]["beta"]
+        hdr["ROT_c"] = config["galaxy"]["rotation"]["gamma"]
     hdr["SIM"] = config["simulation"]["name"]
 
     # For Illustris and NIHAO
@@ -66,7 +77,7 @@ def store_fits(config, data, filepath):
     hdr1 = fits.Header()
     hdr1["EXTNAME"] = "DATA"
     hdr1["OBJECT"] = object_name
-    hdr1["BUNIT"] = "erg/(s*cm^2*A)"  # flux unit per Angstrom
+    hdr1["BUNIT"] = "10**-20 erg/(s*cm^2*A)"  # flux unit per Angstrom
     hdr1["CRPIX1"] = (datacube.shape[0] - 1) / 2
     hdr1["CRPIX2"] = (datacube.shape[1] - 1) / 2
     hdr1["CD1_1"] = telescope.spatial_res / 3600  # convert arcsec to deg
@@ -92,7 +103,7 @@ def store_fits(config, data, filepath):
 
     output_filename = (
         f"{filepath}{config['simulation']['name']}_id{galaxy_id}_snap{snapshot}_"
-        f"{parttype}_subset{config['data']['subset']['use_subset']}.fits"
+        f"subset{config['data']['subset']['use_subset']}.fits"
     )
 
     os.makedirs(os.path.dirname(output_filename), exist_ok=True)

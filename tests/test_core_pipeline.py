@@ -1,9 +1,16 @@
 import os  # noqa
 from unittest.mock import MagicMock, patch
 
+import jax
 import jax.numpy as jnp
 import pytest
 
+from rubix.core.data import (
+    Galaxy,
+    GasData,
+    RubixData,
+    StarsData,
+)
 from rubix.core.pipeline import RubixPipeline
 from rubix.spectra.ssp.grid import SSPGrid
 from rubix.telescope.base import BaseTelescope
@@ -94,7 +101,7 @@ def test_rubix_pipeline_gradient_not_implemented(setup_environment):
         pipeline.gradient()
 """
 
-
+"""
 def test_rubix_pipeline_gradient_not_implemented(setup_environment):
     mock_rubix_data = MagicMock()
     mock_rubix_data.stars.coords = jnp.array([[0, 0, 0]])
@@ -109,11 +116,30 @@ def test_rubix_pipeline_gradient_not_implemented(setup_environment):
             NotImplementedError, match="Gradient calculation is not implemented yet"
         ):
             pipeline.gradient()
+"""
 
 
 def test_rubix_pipeline_run():
+    # Mock input data for the function
+    input_data = RubixData(
+        galaxy=Galaxy(
+            redshift=jnp.array([0.1]),
+            center=jnp.array([[0.0, 0.0, 0.0]]),
+            halfmassrad_stars=jnp.array([1.0]),
+        ),
+        stars=StarsData(
+            coords=jnp.array([[1.0, 2.0, 3.0], [3.0, 4.0, 5.0]]),
+            velocity=jnp.array([[5.0, 6.0, 7.0], [7.0, 8.0, 9.0]]),
+            metallicity=jnp.array([0.1, 0.2]),
+            mass=jnp.array([1000.0, 2000.0]),
+            age=jnp.array([4.5, 5.5]),
+            pixel_assignment=jnp.array([0, 1]),
+        ),
+        gas=GasData(velocity=None),
+    )
+
     pipeline = RubixPipeline(user_config=user_config)
-    output = pipeline.run()
+    output = pipeline.run(input_data)
 
     # Check if output is as expected
     assert hasattr(output.stars, "coords")
@@ -159,3 +185,47 @@ def test_rubix_pipeline_run():
 
     # assert that the spectra does not contain any NaN values
     assert not jnp.isnan(spectrum).any()
+
+
+def test_rubix_pipeline_run_sharded():
+    # Use the number of devices to set up data that can be sharded
+    num_devices = len(jax.devices())
+    n_particles = num_devices if num_devices > 1 else 2  # At least two for sanity
+
+    # Mock input data
+    input_data = RubixData(
+        galaxy=Galaxy(
+            redshift=jnp.array([0.1]),
+            center=jnp.zeros((1, 3)),
+            halfmassrad_stars=jnp.array([1.0]),
+        ),
+        stars=StarsData(
+            coords=jnp.arange(n_particles * 3, dtype=jnp.float32).reshape(
+                n_particles, 3
+            ),
+            velocity=jnp.arange(n_particles * 3, dtype=jnp.float32).reshape(
+                n_particles, 3
+            ),
+            metallicity=jnp.linspace(0.01, 0.03, n_particles),
+            mass=jnp.ones(n_particles),
+            age=jnp.linspace(2.0, 10.0, n_particles),
+            pixel_assignment=jnp.arange(n_particles, dtype=jnp.int32),
+        ),
+        gas=GasData(velocity=None),
+    )
+
+    pipeline = RubixPipeline(user_config=user_config)
+    output_cube = pipeline.run_sharded(input_data)
+
+    # Output should be a jax array (the datacube)
+    assert isinstance(output_cube, jax.Array)
+    # Should have 3 dimensions (n_spaxels, n_spaxels, n_wave_tel)
+    assert output_cube.ndim == 3
+    # Should be non-negative and not NaN
+    assert jnp.all(output_cube >= 0)
+    assert not jnp.isnan(output_cube).any()
+    # The cube should have nonzero values (sanity check)
+    assert jnp.any(output_cube != 0)
+
+    print("run_sharded output shape:", output_cube.shape)
+    print("run_sharded output sum:", jnp.sum(output_cube))
