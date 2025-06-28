@@ -86,7 +86,7 @@ def get_galaxy_rotation(config: dict):
                 coords = component.coords
                 velocities = component.velocity
                 stars_coords = rubixdata.stars.coords
-                masses_stars = rubixdata.stars.masses
+                masses_stars = rubixdata.stars.mass
                 halfmass_radius = rubixdata.galaxy.halfmassrad_stars
 
                 assert (
@@ -95,7 +95,7 @@ def get_galaxy_rotation(config: dict):
                 assert (
                     velocities is not None
                 ), f"Velocities not found for {particle_type}. "
-                assert masses is not None, f"Masses not found for {particle_type}. "
+                assert masses_stars is not None, f"Masses not found for {particle_type}. "
 
                 if config["galaxy"]["rotation"] == "matrix":
 
@@ -111,7 +111,7 @@ def get_galaxy_rotation(config: dict):
                     positions=coords,
                     velocities=velocities,
                     positions_stars=stars_coords,
-                    masses=masses_stars,
+                    masses_stars=masses_stars,
                     halfmass_radius=halfmass_radius,
                     alpha=alpha,
                     beta=beta,
@@ -124,6 +124,9 @@ def get_galaxy_rotation(config: dict):
                 # rubixdata.stars.velocity = velocities
                 setattr(component, "coords", coords)
                 setattr(component, "velocity", velocities)
+                logger.info(
+                    f"Rotated {particle_type} galaxy with alpha={alpha}, beta={beta}, gamma={gamma}"
+                )
 
         return rubixdata
 
