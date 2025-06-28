@@ -356,3 +356,195 @@ def apply_spaxel_extinction(
     extincted_ssp_template_fluxes = rubixdata.stars.spectra * extinction
 
     return extincted_ssp_template_fluxes
+
+
+def apply_spaxel_extinction_factor(
+    config: dict,
+    rubixdata: RubixData,
+    wavelength: Float[Array, "n_wave"],
+    n_spaxels: int,
+    spaxel_area: Float[Array, "..."],
+) -> Float[Array, "1 n_star n_wave"]:
+    r"""
+    Calculate the extinction for each star in the spaxel and apply dust extinction to it's associated SSP.
+
+    The dust column density is calculated by effectively integrating the dust mass along the z-axis and dividing by pixel area.
+    This is done by first sorting the RubixData by spaxel index and within each spaxel segment the gas cells are sorted by their z position.
+    Then we calculate the column density of the dust as a function of distance.
+
+    The dust column density is then interpolated to the z positions of the stars.
+    The extinction is calculated using the dust column density and the dust-to-gas ratio.
+    The extinction is then applied to the SSP fluxes using an Av/Rv dependent extinction model. Default is chosen as Cardelli89.
+
+    Parameters
+    ----------
+    config : dict
+        The configuration dictionary.
+    rubixdata : RubixData
+        The RubixData object containing the spaxel data.
+    wavelength : Float[Array, "n_wave"]
+        The wavelength of the SSP template fluxes.
+    n_spaxels : int
+        The number of spaxels.
+    spaxel_area : Float[Array, "..."]
+        The area of a spaxel.
+
+    Returns
+    -------
+
+    Float[Array, "n_star, n_wave"]
+        The SSP template fluxes after applying the dust extinction.
+
+    Notes
+    -----
+        .. math::
+        \Sigma(z) = \sum_{i=0}^{n} \rho_i \Delta z_i
+
+        where:
+        - :math:`\Sigma(z)` is the column density at position :math:`z`
+        - :math:`\rho_i` is the gas density of the i-th cell
+        - :math:`\Delta z_i` is the difference between consecutive z positions
+
+        This function makes some approximations that should be valid for densly populated gas cells, i.e.
+        the gas cells are much smaller than a spaxel size. The behaviour of this function might be improved by
+        rasterizing the gas cells first onto a regular grid.
+
+    """
+
+    logger = get_logger(config.get("logger", None))
+    logger.info("Applying dust extinction to the spaxel data using vmap...")
+
+    ext_model = config["ssp"]["dust"]["extinction_model"]
+    Rv = config["ssp"]["dust"]["Rv"]
+
+    # Dynamically choose the extinction model based on the string name
+    if ext_model not in RV_MODELS:
+        raise ValueError(
+            f"Extinction model '{ext_model}' is not available. Choose from {RV_MODELS}."
+        )
+
+    ext_model_class = Rv_model_dict[ext_model]
+    ext = ext_model_class(Rv=Rv)
+
+    # sort the arrays by pixel assignment and z position
+    gas_sorted_idx = jnp.lexsort(
+        (rubixdata.gas.coords[:, 2], rubixdata.gas.pixel_assignment)
+    )
+    stars_sorted_idx = jnp.lexsort(
+        (rubixdata.stars.coords[:, 2], rubixdata.stars.pixel_assignment)
+    )
+
+    # determine the segment boundaries
+    spaxel_IDs = jnp.arange(n_spaxels)
+    # we use searchsorted to get the segment boundaries for the gas and stars arrays and we concatenate the length of the sorted arrays to get the last segment boundary.
+    gas_segment_boundaries = jnp.concatenate(
+        [
+            jnp.searchsorted(
+                rubixdata.gas.pixel_assignment[gas_sorted_idx],
+                spaxel_IDs,
+                side="left",
+            ),
+            jnp.array([len(gas_sorted_idx)]),
+        ]
+    )
+    stars_segment_boundaries = jnp.concatenate(
+        [
+            jnp.searchsorted(
+                rubixdata.stars.pixel_assignment[stars_sorted_idx],
+                spaxel_IDs,
+                side="left",
+            ),
+            jnp.array([len(stars_sorted_idx)]),
+        ]
+    )
+    # Notes for performance for searchsorted:
+    # The method argument controls the algorithm used to compute the insertion indices.
+    #
+    # 'scan' (the default) tends to be more performant on CPU, particularly when a is very large.
+    # 'scan_unrolled' is more performant on GPU at the expense of additional compile time.
+    # 'sort' is often more performant on accelerator backends like GPU and TPU, particularly when v is very large.
+    # 'compare_all' tends to be the most performant when a is very small.
+
+    # calculate the oxygen abundance, i.e. number fraction of oxygen and hydrogen and with that the dust-to-gas ratio
+    # with this we can calculate the dust mass
+    # we need to correct by factor of 16 for the difference in atomic mass
+    log_OH = 12 + jnp.log10(
+        rubixdata.gas.metals[:, 4] / (16 * rubixdata.gas.metals[:, 0])
+    )
+    dust_to_gas_ratio = calculate_dust_to_gas_ratio(
+        log_OH,
+        rubix_config["ssp"]["dust"]["dust_to_gas_model"],
+        rubix_config["ssp"]["dust"]["Xco"],
+    )
+    dust_mass = rubixdata.gas.mass * dust_to_gas_ratio
+
+    dust_grain_density = config["ssp"]["dust"]["dust_grain_density"]
+    extinction = (
+        calculate_extinction(dust_mass[gas_sorted_idx], dust_grain_density)
+        / spaxel_area
+    )
+
+    # Preallocate arrays
+    Av_array = jnp.zeros_like(rubixdata.stars.mass)
+
+    def body_fn(carry, idx):
+        Av_array = carry
+        gas_start, gas_end = (
+            gas_segment_boundaries[idx],
+            gas_segment_boundaries[idx + 1],
+        )
+        star_start, star_end = (
+            stars_segment_boundaries[idx],
+            stars_segment_boundaries[idx + 1],
+        )
+
+        # Create masks for the current segment
+        gas_mask = (jnp.arange(gas_sorted_idx.shape[0]) >= gas_start) & (
+            jnp.arange(gas_sorted_idx.shape[0]) < gas_end
+        )
+        star_mask = (jnp.arange(stars_sorted_idx.shape[0]) >= star_start) & (
+            jnp.arange(stars_sorted_idx.shape[0]) < star_end
+        )
+        # create one mask for the gas positions to move non-segment positions to effectively infinity.
+        gas_mask2 = jnp.where(gas_mask, 1, 1e30)
+
+        cumulative_dust_mass = jnp.cumsum(extinction * gas_mask) * gas_mask
+
+        # resort the arrays as jnp.interp requires sorted arrays and our approach of using masks to select the segment is not compatible with this requirement.
+        xp_arr = rubixdata.gas.coords[:, 2][gas_sorted_idx] * gas_mask2
+        fp_arr = cumulative_dust_mass
+
+        xp_arr, fp_arr = jax.lax.sort_key_val(xp_arr, fp_arr)
+
+        interpolated_column_density = (
+            jnp.interp(
+                rubixdata.stars.coords[:, 2][stars_sorted_idx],
+                xp_arr,
+                fp_arr,
+                left="extrapolate",
+            )
+            * star_mask
+        )
+
+        # calculate the extinction for each star
+        Av_array += interpolated_column_density
+
+        return Av_array, None
+
+    Av_array, _ = jax.lax.scan(body_fn, Av_array, spaxel_IDs)
+
+    # get the extinguished SSP flux for different amounts of dust
+    # Vectorize the extinction calculation using vmap
+    extinguish_vmap = jax.vmap(ext.extinguish, in_axes=(None, 0))
+    # note, we need to pass wavelength in microns here to the extinction model.
+    # in Rubix the wavelength is in Angstroms, so we divide by 1e4 to get microns.
+    extinction = extinguish_vmap(wavelength / 1e4, Av_array)
+
+    # undo the sorting of the stars
+    undo_sort = jnp.argsort(stars_sorted_idx)
+    extinction = extinction[undo_sort]
+
+    # Apply the extinction to the SSP fluxes
+    #extincted_ssp_template_fluxes = rubixdata.stars.spectra * extinction
+
+    return extinction

@@ -91,6 +91,44 @@ calc_ifu_memory:
       args: []
       kwargs: {}
 
+calc_ifu_dusty_memory:
+  Transformers:
+    rotate_galaxy:
+      name: rotate_galaxy
+      depends_on: null
+      args: []
+      kwargs: {}
+    filter_particles:
+      name: filter_particles
+      depends_on: rotate_galaxy
+      args: []
+      kwargs: {}
+    spaxel_assignment:
+      name: spaxel_assignment
+      depends_on: filter_particles
+      args: []
+      kwargs: {}
+    calculate_dusty_datacube_particlewise:
+      name: calculate_dusty_datacube_particlewise
+      depends_on: spaxel_assignment
+      args: []
+      kwargs: {}
+    convolve_psf:
+      name: convolve_psf
+      depends_on: calculate_dusty_datacube_particlewise
+      args: []
+      kwargs: {}
+    convolve_lsf:
+      name: convolve_lsf
+      depends_on: convolve_psf
+      args: []
+      kwargs: {}
+    apply_noise:
+      name: apply_noise
+      depends_on: convolve_lsf
+      args: []
+      kwargs: {}
+
 calc_dusty_ifu:
   Transformers:
     rotate_galaxy:

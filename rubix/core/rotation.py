@@ -85,7 +85,8 @@ def get_galaxy_rotation(config: dict):
                 # Get the inputs
                 coords = component.coords
                 velocities = component.velocity
-                masses = component.mass
+                stars_coords = rubixdata.stars.coords
+                masses_stars = rubixdata.stars.masses
                 halfmass_radius = rubixdata.galaxy.halfmassrad_stars
 
                 assert (
@@ -109,7 +110,8 @@ def get_galaxy_rotation(config: dict):
                 coords, velocities = rotate_galaxy_core(
                     positions=coords,
                     velocities=velocities,
-                    masses=masses,
+                    positions_stars=stars_coords,
+                    masses=masses_stars,
                     halfmass_radius=halfmass_radius,
                     alpha=alpha,
                     beta=beta,

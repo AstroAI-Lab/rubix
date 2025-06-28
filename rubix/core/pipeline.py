@@ -33,6 +33,7 @@ from .dust import get_extinction
 from .ifu import (
     get_calculate_datacube,
     get_calculate_datacube_particlewise,
+    get_calculate_dusty_datacube_particlewise,
     get_calculate_spectra,
     get_doppler_shift_and_resampling,
     get_scale_spectrum_by_mass,
@@ -111,6 +112,9 @@ class RubixPipeline:
         calculate_datacube_particlewise = get_calculate_datacube_particlewise(
             self.user_config
         )
+        calculate_dusty_datacube_particlewise = get_calculate_dusty_datacube_particlewise(
+            self.user_config
+        )
         convolve_psf = get_convolve_psf(self.user_config)
         convolve_lsf = get_convolve_lsf(self.user_config)
         apply_noise = get_apply_noise(self.user_config)
@@ -126,6 +130,7 @@ class RubixPipeline:
             apply_extinction,
             calculate_datacube,
             calculate_datacube_particlewise,
+            calculate_dusty_datacube_particlewise,
             convolve_psf,
             convolve_lsf,
             apply_noise,
@@ -228,6 +233,7 @@ class RubixPipeline:
         # — sharding specs by rank —
         replicate_0d = NamedSharding(mesh, P())  # for scalars
         replicate_1d = NamedSharding(mesh, P(None))  # for 1-D arrays
+        replicate_2d = NamedSharding(mesh, P(None, None))  # for 2-D arrays
         shard_2d = NamedSharding(mesh, P("data", None))  # for (N, D)
         shard_1d = NamedSharding(mesh, P("data"))  # for (N,)
         replicate_3d = NamedSharding(mesh, P(None, None, None))  # for full cube
@@ -257,19 +263,19 @@ class RubixPipeline:
         stars_spec.datacube = replicate_3d
 
         # gas  (same idea)
-        gas_spec.coords = shard_2d
-        gas_spec.velocity = shard_2d
-        gas_spec.mass = shard_1d
-        gas_spec.density = shard_1d
-        gas_spec.internal_energy = shard_1d
-        gas_spec.metallicity = shard_1d
-        gas_spec.metals = shard_1d
-        gas_spec.sfr = shard_1d
-        gas_spec.electron_abundance = shard_1d
-        gas_spec.pixel_assignment = shard_1d
+        gas_spec.coords = replicate_2d
+        gas_spec.velocity = replicate_2d
+        gas_spec.mass = replicate_1d
+        gas_spec.density = replicate_1d
+        gas_spec.internal_energy = replicate_1d
+        gas_spec.metallicity = replicate_1d
+        gas_spec.metals = replicate_1d
+        gas_spec.sfr = replicate_1d
+        gas_spec.electron_abundance = replicate_1d
+        gas_spec.pixel_assignment = replicate_1d
         gas_spec.spatial_bin_edges = NamedSharding(mesh, P(None, None))
-        gas_spec.mask = shard_1d
-        gas_spec.spectra = shard_2d
+        gas_spec.mask = replicate_1d
+        gas_spec.spectra = replicate_1d
         gas_spec.datacube = replicate_3d
 
         # — link them up —
