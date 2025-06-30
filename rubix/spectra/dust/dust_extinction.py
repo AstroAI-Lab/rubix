@@ -545,6 +545,6 @@ def apply_spaxel_extinction_factor(
     extinction = extinction[undo_sort]
 
     # Apply the extinction to the SSP fluxes
-    #extincted_ssp_template_fluxes = rubixdata.stars.spectra * extinction
+    # extincted_ssp_template_fluxes = rubixdata.stars.spectra * extinction
 
     return extinction

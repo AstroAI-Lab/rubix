@@ -95,7 +95,9 @@ def get_galaxy_rotation(config: dict):
                 assert (
                     velocities is not None
                 ), f"Velocities not found for {particle_type}. "
-                assert masses_stars is not None, f"Masses not found for {particle_type}. "
+                assert (
+                    masses_stars is not None
+                ), f"Masses not found for {particle_type}. "
 
                 if config["galaxy"]["rotation"] == "matrix":
 

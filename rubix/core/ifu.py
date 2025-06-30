@@ -7,11 +7,10 @@ from jax import lax
 from jaxtyping import Array, Float, jaxtyped
 
 from rubix import config as rubix_config
-from rubix.core.data import GasData, StarsData
 from rubix.core.cosmology import get_cosmology
-from rubix.spectra.dust.dust_extinction import apply_spaxel_extinction_factor
-from rubix.telescope.utils import calculate_spatial_bin_edges
+from rubix.core.data import GasData, StarsData
 from rubix.logger import get_logger
+from rubix.spectra.dust.dust_extinction import apply_spaxel_extinction_factor
 from rubix.spectra.ifu import (
     _velocity_doppler_shift_single,
     calculate_cube,
@@ -19,6 +18,7 @@ from rubix.spectra.ifu import (
     resample_spectrum,
     velocity_doppler_shift,
 )
+from rubix.telescope.utils import calculate_spatial_bin_edges
 
 from .data import RubixData
 from .ssp import (
@@ -471,7 +471,7 @@ def get_calculate_dusty_datacube_particlewise(config: dict) -> Callable:
         pix_idx = stars.pixel_assignment  # (n_stars,)
         nstar = ages.shape[0]
 
-        extinction =apply_spaxel_extinction_factor(
+        extinction = apply_spaxel_extinction_factor(
             config, rubixdata, target_wave, n_spaxels, spaxel_area
         )
 
@@ -502,7 +502,7 @@ def get_calculate_dusty_datacube_particlewise(config: dict) -> Callable:
                 target_wavelength=target_wave,
             )  # (n_wave_tel,)
 
-            spec_ext = spec_tel * extinction[i] 
+            spec_ext = spec_tel * extinction[i]
 
             # 5) accumulate
             cube = cube.at[pix_i].add(spec_ext)

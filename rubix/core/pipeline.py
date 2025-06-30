@@ -112,8 +112,8 @@ class RubixPipeline:
         calculate_datacube_particlewise = get_calculate_datacube_particlewise(
             self.user_config
         )
-        calculate_dusty_datacube_particlewise = get_calculate_dusty_datacube_particlewise(
-            self.user_config
+        calculate_dusty_datacube_particlewise = (
+            get_calculate_dusty_datacube_particlewise(self.user_config)
         )
         convolve_psf = get_convolve_psf(self.user_config)
         convolve_lsf = get_convolve_lsf(self.user_config)
