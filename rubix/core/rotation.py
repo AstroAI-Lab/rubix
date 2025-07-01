@@ -12,6 +12,10 @@ from .data import RubixData
 def get_galaxy_rotation(config: dict):
     """
     Get the function to rotate the galaxy based on the configuration.
+    Note, if keywords `face-on` or `edge-on` are used, we orientate the galaxy face-on or edge-on with respect to the angular momentum of the stars.
+    In this case the `alpha` angle will be set to 0 or 90 degrees respectively.
+
+    If one wants to use a custom rotation matrix, one can specify the rotation matrix in the config under `galaxy.rotation.matrix`.
 
     Args:
         config (dict): Configuration dictionary.
