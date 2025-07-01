@@ -77,7 +77,7 @@ def get_galaxy_rotation(config: dict):
     def rotate_galaxy(rubixdata: RubixData) -> RubixData:
         logger.info(f"Rotating galaxy with alpha={alpha}, beta={beta}, gamma={gamma}")
 
-        for particle_type in ["stars", "gas"]:
+        for particle_type in ["gas", "stars"]:
             if particle_type in config["data"]["args"]["particle_type"]:
                 # Get the component (either stars or gas)
                 component = getattr(rubixdata, particle_type)

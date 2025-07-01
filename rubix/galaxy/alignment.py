@@ -252,6 +252,7 @@ def rotate_galaxy(
         alpha (float): Rotation around the x-axis in degrees
         beta (float): Rotation around the y-axis in degrees
         gamma (float): Rotation around the z-axis in degrees
+        R (jnp.ndarray, optional): The rotation matrix. If None, it will be calculated from the moment of inertia tensor.
 
     Returns:
         The rotated positions and velocities as a jnp.ndarray.
