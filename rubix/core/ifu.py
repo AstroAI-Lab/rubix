@@ -333,7 +333,21 @@ def get_calculate_datacube_particlewise(config: dict) -> Callable:
       4) resampling
       5) accumulating into the shared datacube
 
-    Args
+    This function is recommended for large sets of particles, as it processes each particle individually
+    and accumulates the results into a shared datacube.
+
+    Args:
+        config (dict): The configuration dictionary
+    Returns:
+        The function that calculates the datacube of the stars particlewise.
+
+    Example
+    -------
+    >>> from rubix.core.ifu import get_calculate_datacube_particlewise
+    >>> calculate_datacube_particlewise = get_calculate_datacube_particlewise(config)
+    >>> rubixdata = calculate_datacube_particlewise(rubixdata)
+    >>> # Access the datacube of the stars
+    >>> rubixdata.stars.datacube
     """
     logger = get_logger(config.get("logger", None))
     telescope = get_telescope(config)
