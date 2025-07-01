@@ -26,4 +26,7 @@ Note that if `JAX` is not yet installed, only the CPU version of `JAX` will be i
 as a dependency. For a GPU-compatible installation of `JAX`, please refer to the
 [JAX installation guide](https://jax.readthedocs.io/en/latest/installation.html).
 
+To habe support of the FSPS stellar population library, you need to install the
+`fsps` package. This can be done following the instruction [here](https://python-fsps.readthedocs.io/en/latest/installation/)
+
 Get started with this simple example notebooks/rubix_pipeline_single_function.ipynb.
