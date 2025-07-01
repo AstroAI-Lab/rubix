@@ -12,13 +12,19 @@ improvements over state-of-the-art codes. For further details see the publicatio
 
 Currently the following functionalities are provided:
 
-- Generate mock IFU flux cubes for stars from IllustrisTNG50
+- Generate mock IFU flux cubes for stars from IllustrisTNG and NIHAO
 
 - Generate mock photometric images for stars for different filter curves
 
-- Use different stellar population synthesis models
+- Use different stellar population synthesis models (FSPS, Bruzual & Charlot, MaStar)
 
 - Use MUSE as telescope instrument (and some other instruments)
+
+- Simple dust attenuation model
+
+- Computation on CPUs or GPUs
+
+- Calculate the gradient with respect to the physical properties of the input particles through the whole pipeline 
 
 
 Currently the code is under development and is not yet all functionality is available.
@@ -30,9 +36,7 @@ We are working on adding more features and improving the code, espectially we wo
 
 - Adding gas emission lines and gas continuum
 
-- Adding dust attenuation
-
-- Adding support for gradient calculation
+- Support for sampling from distribution functions as input
 
 If you are interested in contributing to the code or have ideas for further features, please contact us via a github issue or via email.
 If you use the code in your research, please cite the following paper: :ref:`publications`
@@ -58,14 +62,17 @@ Notebooks
 
    notebooks/create_rubix_data.ipynb
    notebooks/pipeline_demo.ipynb
-   notebooks/rubix_pipeline_single_function.ipynb
+   notebooks/rubix_pipeline_single_function_shard_map_fits.ipynb
    notebooks/rubix_pipeline_stepwise.ipynb
+   notebooks/rubix_pipeline_sharded_gradient.ipynb
+   notebooks/dust_extinction.ipynb
+   notebooks/filter_curves.ipynb
    notebooks/cosmology.ipynb
    notebooks/telescope.ipynb
    notebooks/spaxel_assignment.ipynb
    notebooks/ssp_template.ipynb
    notebooks/psf.ipynb
-   notebooks/filter_curves.ipynb
+   
 
 Code base documentation
 =======================

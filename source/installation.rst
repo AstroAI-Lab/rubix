@@ -16,6 +16,7 @@ git clone https://github.com/ufuk-cakir/rubix
 cd rubix
 pip install -e .
 ```
+
 Having done so, the test suit can be run unsing `pytest`:
 
 ```
@@ -29,4 +30,4 @@ as a dependency. For a GPU-compatible installation of `JAX`, please refer to the
 To habe support of the FSPS stellar population library, you need to install the
 `fsps` package. This can be done following the instruction [here](https://python-fsps.readthedocs.io/en/latest/installation/)
 
-Get started with this simple example notebooks/rubix_pipeline_single_function.ipynb.
+Get started with this simple example notebooks/rubix_pipeline_single_function_shard_map_fits.ipynb.
