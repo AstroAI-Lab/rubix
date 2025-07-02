@@ -256,6 +256,12 @@ def rotate_galaxy(
     Returns:
         The rotated positions and velocities as a jnp.ndarray.
     """
+    # we have to distinguis between IllustrisTNG and NIHAO.
+    # The nihao galaxies are already oriented face-on in the pynbody input handler.
+    # The IllustrisTNG galaxies are not oriented face-on, so we have to calculate the moment of inertia tensor
+    # and apply the rotation matrix to the positions and velocities.
+    # After that the simulations can be treated in the same way.
+    # Then the user specific rotation is applied to the positions and velocities.
     if key == "IllustrisTNG":
         I = moment_of_inertia_tensor(positions_stars, masses_stars, halfmass_radius)
         R = rotation_matrix_from_inertia_tensor(I)
