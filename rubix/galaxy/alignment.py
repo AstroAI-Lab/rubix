@@ -260,14 +260,10 @@ def rotate_galaxy(
     if R is None:
         I = moment_of_inertia_tensor(positions_stars, masses_stars, halfmass_radius)
         R = rotation_matrix_from_inertia_tensor(I)
-        pos_rot = apply_init_rotation(positions, R)
-        vel_rot = apply_init_rotation(velocities, R)
-        pos_final = apply_rotation(pos_rot, alpha, beta, gamma)
-        vel_final = apply_rotation(vel_rot, alpha, beta, gamma)
-    else:
-        pos_rot = apply_init_rotation(positions, R)
-        vel_rot = apply_init_rotation(velocities, R)
-        pos_final = apply_rotation(pos_rot, alpha, beta, gamma)
-        vel_final = apply_rotation(vel_rot, alpha, beta, gamma)
+        
+    pos_rot = apply_init_rotation(positions, R)
+    vel_rot = apply_init_rotation(velocities, R)
+    pos_final = apply_rotation(pos_rot, alpha, beta, gamma)
+    vel_final = apply_rotation(vel_rot, alpha, beta, gamma)
 
     return pos_final, vel_final
