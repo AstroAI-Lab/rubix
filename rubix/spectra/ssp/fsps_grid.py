@@ -112,9 +112,16 @@ def retrieve_ssp_data_from_fsps(
         _wave, _fluxes = sp.get_spectrum(zmet=zmet, tage=tage, peraa=peraa)
         spectrum_collector.append(_fluxes)
     ssp_wave = np.array(_wave)
+    # Adjust the wavelength grid to the bin centers:
+    # The offset is calculated as half the difference between _wave[1] and _wave[0],
+    # which dynamically depends on the input spectrum. For example, if the difference is 3 Å,
+    # the offset would be 1.5 Å. To test that the centering is correct, we can look at the
+    # position of the Halpha line at 6563 Å.
+    offset = (_wave[1] - _wave[0]) / 2.0
+    ssp_wave_centered = ssp_wave - offset
     ssp_flux = np.array(spectrum_collector)
 
-    grid = SSPGrid(ssp_lg_age_gyr, ssp_lgmet, ssp_wave, ssp_flux)
+    grid = SSPGrid(ssp_lg_age_gyr, ssp_lgmet, ssp_wave_centered, ssp_flux)
     grid.__class__.__name__ = config["name"]
     return grid
 
