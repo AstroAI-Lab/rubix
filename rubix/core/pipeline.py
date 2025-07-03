@@ -86,9 +86,7 @@ class RubixPipeline:
             f"Data loaded with {star_count} star particles and {gas_count} gas particles."
         )
         t2 = time.time()
-        self.logger.info(
-            "Data preparation completed in %.2f seconds.", t2 - t1
-        )
+        self.logger.info("Data preparation completed in %.2f seconds.", t2 - t1)
         return rubixdata
 
     @jaxtyped(typechecker=typechecker)
@@ -327,9 +325,7 @@ class RubixPipeline:
         sharded_result = sharded_pipeline(inputdata)
 
         time_end = time.time()
-        self.logger.info(
-            "Sharding completed in %.2f seconds.", time_mid - time_start
-        )
+        self.logger.info("Sharding completed in %.2f seconds.", time_mid - time_start)
         self.logger.info(
             "Sharded pipeline run completed in %.2f seconds.", time_end - time_mid
         )
