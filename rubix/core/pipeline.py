@@ -75,6 +75,7 @@ class RubixPipeline:
             Object containing particle data with attributes such as:
             'coords', 'velocities', 'mass', 'age', and 'metallicity' under stars and gas.
         """
+        t1 = time.time()
         self.logger.info("Getting rubix data...")
         rubixdata = get_rubix_data(self.user_config)
         star_count = (
@@ -83,6 +84,10 @@ class RubixPipeline:
         gas_count = len(rubixdata.gas.coords) if rubixdata.gas.coords is not None else 0
         self.logger.info(
             f"Data loaded with {star_count} star particles and {gas_count} gas particles."
+        )
+        t2 = time.time()
+        self.logger.info(
+            "Data preparation completed in %.2f seconds.", t2 - t1
         )
         return rubixdata
 
@@ -318,11 +323,19 @@ class RubixPipeline:
             check_rep=False,
         )
 
+        time_mid = time.time()
         sharded_result = sharded_pipeline(inputdata)
 
         time_end = time.time()
         self.logger.info(
-            "Pipeline run completed in %.2f seconds.", time_end - time_start
+            "Sharding completed in %.2f seconds.", time_mid - time_start
+        )
+        self.logger.info(
+            "Sharded pipeline run completed in %.2f seconds.", time_end - time_mid
+        )
+        self.logger.info(
+            "Total time for sharded pipeline run: %.2f seconds.",
+            time_end - time_start,
         )
         # final_cube = jnp.sum(partial_cubes, axis=0)
 
