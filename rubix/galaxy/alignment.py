@@ -239,7 +239,7 @@ def rotate_galaxy(
     alpha: float,
     beta: float,
     gamma: float,
-    R=None,  # type: Float[Array, "3 3"] = None
+    key: str,
 ) -> Tuple[Float[Array, "* 3"], Float[Array, "* 3"]]:
     """
     Orientate the galaxy by applying a rotation matrix to the positions of the particles.
@@ -252,21 +252,30 @@ def rotate_galaxy(
         alpha (float): Rotation around the x-axis in degrees
         beta (float): Rotation around the y-axis in degrees
         gamma (float): Rotation around the z-axis in degrees
+        key (str): The key to the particle data, e.g. "IllustrisTNG" or "NIHAO"
 
     Returns:
         The rotated positions and velocities as a jnp.ndarray.
     """
-    if R is None:
-        I = moment_of_inertia_tensor(positions, masses, halfmass_radius)
+    # we have to distinguis between IllustrisTNG and NIHAO.
+    # The nihao galaxies are already oriented face-on in the pynbody input handler.
+    # The IllustrisTNG galaxies are not oriented face-on, so we have to calculate the moment of inertia tensor
+    # and apply the rotation matrix to the positions and velocities.
+    # After that the simulations can be treated in the same way.
+    # Then the user specific rotation is applied to the positions and velocities.
+    if key == "IllustrisTNG":
+        I = moment_of_inertia_tensor(positions_stars, masses_stars, halfmass_radius)
         R = rotation_matrix_from_inertia_tensor(I)
         pos_rot = apply_init_rotation(positions, R)
         vel_rot = apply_init_rotation(velocities, R)
         pos_final = apply_rotation(pos_rot, alpha, beta, gamma)
         vel_final = apply_rotation(vel_rot, alpha, beta, gamma)
+    elif key == "NIHAO":
+        pos_final = apply_rotation(positions, alpha, beta, gamma)
+        vel_final = apply_rotation(velocities, alpha, beta, gamma)
     else:
-        pos_rot = apply_init_rotation(positions, R)
-        vel_rot = apply_init_rotation(velocities, R)
-        pos_final = apply_rotation(pos_rot, alpha, beta, gamma)
-        vel_final = apply_rotation(vel_rot, alpha, beta, gamma)
+        raise ValueError(
+            f"Unknown key: {key} for the rotation. Supported keys are 'IllustrisTNG' and 'NIHAO'."
+        )
 
     return pos_final, vel_final
