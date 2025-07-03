@@ -9,9 +9,19 @@ MUSE:
   aperture_type: "square"
   pixel_type: "square"
 
-MUSE_NFM:
-  fov: 7.5
-  spatial_res: 0.05
+MUSE_WFM:
+  fov: 60.0
+  spatial_res: 0.2
+  wave_range: [4700.15, 9351.4]
+  wave_res: 1.25
+  lsf_fwhm: 2.51
+  signal_to_noise: null
+  aperture_type: "square"
+  pixel_type: "square"
+
+MUSE_ultraWFM:
+  fov: 180.0
+  spatial_res: 0.2
   wave_range: [4700.15, 9351.4]
   wave_res: 1.25
   lsf_fwhm: 2.51
