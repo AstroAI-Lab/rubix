@@ -233,7 +233,8 @@ def apply_rotation(
 def rotate_galaxy(
     positions: Float[Array, "* 3"],
     velocities: Float[Array, "* 3"],
-    masses: Float[Array, "..."],
+    positions_stars: Float[Array, "..."],
+    masses_stars: Float[Array, "..."],
     halfmass_radius: Union[Float[Array, "..."], float],
     alpha: float,
     beta: float,
