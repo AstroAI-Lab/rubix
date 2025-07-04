@@ -77,7 +77,7 @@ The key features of `RUBIX` are:
 **Forward modeling**: `RUBIX` transforms particle-based simulation data into realistic mock IFU observations through:
 1. Stellar particle assignment to spatial pixels based on user-defined field of view
 2. Age and metallicity-dependent spectral synthesis using stellar population models, i.e. FSPS [@Conroy2009]
-3. Dust extinction calculation from gas particle distributions (multiple dust laws availible (Cardelli89, Gordon23, Calzetti00))
+3. Dust extinction calculation from gas particle distributions (multiple dust laws availible [@Cardelli1989;@Gordon2023;@Calzetti2000])
 4. Instrumental effects application (LSF, PSF, noise, spectral resolution)
 5. Output generation in standard astronomical formats (FITS)
 
@@ -89,7 +89,7 @@ The key features of `RUBIX` are:
 
 # Research applications
 
-So far we are using the forward modeling mode to generate large-scale mock surveys for the GECKOS survey [@Fraser-McKlevie]. We are also working on the inverse modeling mode and do parameter inference studies using gradient-based optimization. Further plans are generating machine learning training data for spectral analysis pipelines.
+So far we are using the forward modeling mode to generate large-scale mock surveys for the GECKOS survey [Fraser-McKelvie2024]. We are also working on the inverse modeling mode and do parameter inference studies using gradient-based optimization. Further plans are generating machine learning training data for spectral analysis pipelines.
 
 # Usage example
 
