@@ -10,6 +10,14 @@
 [![codecov](https://codecov.io/gh/ufuk-cakir/rubix/branch/main/graph/badge.svg)](https://codecov.io/gh/ufuk-cakir/rubix)
 [![All Contributors](https://img.shields.io/github/all-contributors/ufuk-cakir/rubix?color=ee8449&style=flat-square)](#contributors)
 
+RUBIX is a versatile Integral Field Unit (IFU) tool designed for astrophysical simulations. It transforms cosmological hydrodynamical simulation outputs into realistic mock IFU cubes, enabling both forward and inverse modeling. Built on JAX, RUBIX leverages GPU acceleration and automatic differentiation, allowing users to perform gradient-based optimization for inverse modeling alongside traditional forward modeling.
+
+Key features include:
+- **Mock IFU Cube Generation:** Convert simulation data into realistic IFU cubes.
+- **GPU-Accelerated Computations:** Built on JAX for high-performance GPU support.
+- **Gradient-Based Inverse Modeling:** Utilize gradients for efficient inverse modeling techniques.
+- **Flexible and Extensible:** Designed to easily integrate with existing pipelines and astrophysical analysis tools.
+
 ## Installation
 
 The Python package `rubix` can be downloades from git and can be installed:
