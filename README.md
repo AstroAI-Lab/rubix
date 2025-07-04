@@ -54,7 +54,7 @@ Sphinx Documentation of all the functions is currently available under [this lin
 
 ## Contribution
 
-Contributions to `rubix` are welcome and greatly appreciated!  
+Contributions to `rubix` are welcome and greatly appreciated!
 Whether you're fixing bugs, improving documentation, or suggesting new features, your help is valuable to us.
 
 
@@ -62,8 +62,8 @@ Whether you're fixing bugs, improving documentation, or suggesting new features,
 
 If you find a bug or think of an enhancement, please open an issue on GitHub. For example, you might write an issue like:
 
-- **Title:** Fix incorrect galaxy rotation calculation  
-- **Description:**  
+- **Title:** Fix incorrect galaxy rotation calculation
+- **Description:**
   The galaxy rotation function (rotate_galaxy) does not properly convert angle inputs, causing unexpected behavior when non-scalar JAX arrays are passed. Please investigate and fix this conversion so that it accepts a Python float.
 
 ### 2. Create a branch for your issue
