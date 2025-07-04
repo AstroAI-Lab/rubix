@@ -1,4 +1,6 @@
-# Welcome to rubix
+![Rubix Logo](./logo_rubix.png)
+
+# Welcome to RUBIX
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/ufuk-cakir/rubix/ci.yml?branch=main)](https://github.com/ufuk-cakir/rubix/actions/workflows/ci.yml)
@@ -11,7 +13,7 @@
 The Python package `rubix` can be downloades from git and can be installed:
 
 ```
-git clone https://github.com/ufuk-cakir/rubix
+git clone https://github.com/AstroAI-Lab/rubix.git
 cd rubix
 pip install .
 ```
@@ -22,7 +24,7 @@ If you want to contribute to the development of `rubix`, we recommend
 the following editable installation from this repository:
 
 ```
-git clone https://github.com/ufuk-cakir/rubix
+git clone https://github.com/AstroAI-Lab/rubix.git
 cd rubix
 python -m pip install --editable .[tests]
 ```
@@ -40,8 +42,39 @@ please refer to [here](https://github.com/google/jax?tab=readme-ov-file#installa
 ## Documentation
 Sphinx Documentation of all the functions is currently available under [this link](https://astro-rubix.web.app/).
 
-## Configuration Generator Tool
-A tool to interactively generate a user configuration is available under [this link](https://cakir-ufuk.de/docs/getting-started/configuration/).
+## Contribution
+
+Contributions to `rubix` are welcome and greatly appreciated!  
+Whether you're fixing bugs, improving documentation, or suggesting new features, your help is valuable to us.
+
+
+### 1. File your issue
+
+If you find a bug or think of an enhancement, please open an issue on GitHub. For example, you might write an issue like:
+
+- **Title:** Fix incorrect galaxy rotation calculation  
+- **Description:**  
+  The galaxy rotation function (rotate_galaxy) does not properly convert angle inputs, causing unexpected behavior when non-scalar JAX arrays are passed. Please investigate and fix this conversion so that it accepts a Python float.
+
+### 2. Create a branch for your issue
+
+After creating the issue, create a new branch from `main` following a clear naming convention. For example:
+
+```bash
+git checkout -b fix/rotate-galaxy-angle
+```
+
+Work on your changes in this branch. Make sure to write tests and update documentation if necessary.
+
+### 3. Submit a pull request
+
+Once your changes pass all tests locally and the branch is up to date with `main`, create a pull request (PR) on GitHub. Describe the problem, your approach, and link the original issue so that the issue is automatically closed upon merge.
+
+### 4. Merge and get recognition
+
+After your PR is reviewed and merged into `main`, your contributions will be recognized automatically. Thanks to our All Contributors setup, a bot or a maintainer will add you to the contributors list in the README file. You'll then appear in the All Contributors section below.
+
+Thank you for helping improve `rubix`!
 
 ## Acknowledgments
 
