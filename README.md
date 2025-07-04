@@ -1,6 +1,7 @@
 <p align="center">
   <img src="./logo_rubix.png" alt="Rubix Logo" width="30%">
 </p>
+
 # Welcome to RUBIX
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
