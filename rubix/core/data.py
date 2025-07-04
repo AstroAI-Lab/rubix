@@ -94,7 +94,6 @@ class StarsData:
     spectra: Optional[jnp.ndarray] = None
     datacube: Optional[jnp.ndarray] = None
 
-
     def tree_flatten(self):
         """
         Flattens the Stars object into a tuple of children and auxiliary data
@@ -172,7 +171,6 @@ class GasData:
     spectra: Optional[jnp.ndarray] = None
     datacube: Optional[jnp.ndarray] = None
 
-    
     def tree_flatten(self):
         """
         Flattens the Gas object into a tuple of children and auxiliary data
@@ -232,7 +230,6 @@ class RubixData:
     galaxy: Optional[Galaxy] = None
     stars: Optional[StarsData] = None
     gas: Optional[GasData] = None
-
 
     def tree_flatten(self):
         """

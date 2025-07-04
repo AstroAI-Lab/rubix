@@ -135,7 +135,6 @@ class RubixPipeline:
         ]
         return functions
 
-
     def run_sharded(self, inputdata):
         """
         Runs the pipeline on sharded input data in parallel using jax.shard_map.
