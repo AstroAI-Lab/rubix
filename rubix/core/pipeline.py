@@ -135,61 +135,6 @@ class RubixPipeline:
         ]
         return functions
 
-    def run(self, inputdata):
-        """
-        Runs the data processing pipeline on the complete input data.
-
-        Parameters
-        ----------
-        inputdata : object
-            Data prepared from the `prepare_data` method.
-
-        Returns
-        -------
-        object
-            Pipeline output (which includes the datacube and unit attributes).
-        """
-        time_start = time.time()
-        functions = self._get_pipeline_functions()
-        self._pipeline = pipeline.LinearTransformerPipeline(
-            self.pipeline_config, functions
-        )
-        self.logger.info("Assembling the pipeline...")
-        self._pipeline.assemble()
-        self.logger.info("Compiling the expressions...")
-        self.func = self._pipeline.compile_expression()
-        self.logger.info("Running the pipeline on the input data...")
-        output = self.func(inputdata)
-        block_until_ready(output)
-        time_end = time.time()
-        self.logger.info(
-            "Pipeline run completed in %.2f seconds.", time_end - time_start
-        )
-
-        """
-        # Propagate unit attributes from input to output.
-        output.galaxy.redshift_unit = inputdata.galaxy.redshift_unit
-        output.galaxy.center_unit = inputdata.galaxy.center_unit
-        output.galaxy.halfmassrad_stars_unit = inputdata.galaxy.halfmassrad_stars_unit
-
-        if output.stars.coords is not None:
-            output.stars.coords_unit = inputdata.stars.coords_unit
-            output.stars.velocity_unit = inputdata.stars.velocity_unit
-            output.stars.mass_unit = inputdata.stars.mass_unit
-            output.stars.age_unit = inputdata.stars.age_unit
-            output.stars.spatial_bin_edges_unit = "kpc"
-
-        if output.gas.coords is not None:
-            output.gas.coords_unit = inputdata.gas.coords_unit
-            output.gas.velocity_unit = inputdata.gas.velocity_unit
-            output.gas.mass_unit = inputdata.gas.mass_unit
-            output.gas.density_unit = inputdata.gas.density_unit
-            output.gas.internal_energy_unit = inputdata.gas.internal_energy_unit
-            output.gas.sfr_unit = inputdata.gas.sfr_unit
-            output.gas.electron_abundance_unit = inputdata.gas.electron_abundance_unit
-            output.gas.spatial_bin_edges_unit = "kpc"
-        """
-        return output
 
     def run_sharded(self, inputdata):
         """

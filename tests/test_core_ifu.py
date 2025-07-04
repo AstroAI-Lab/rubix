@@ -32,7 +32,6 @@ sample_inputs = {
 
 print("Sample_inputs:")
 for key in sample_inputs:
-    # sample_inputs[key] = reshape_array(sample_inputs[key])
     print(f"Key: {key}, shape: {sample_inputs[key].shape}")
 
 
