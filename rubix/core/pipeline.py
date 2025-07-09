@@ -31,7 +31,6 @@ from .data import (
 )
 from .dust import get_extinction
 from .ifu import (
-    get_calculate_datacube,
     get_calculate_datacube_particlewise,
     get_calculate_spectra,
     get_doppler_shift_and_resampling,
@@ -177,6 +176,7 @@ class RubixPipeline:
         replicate_1d = NamedSharding(mesh, P(None))  # for 1-D arrays
         shard_2d = NamedSharding(mesh, P("data", None))  # for (N, D)
         shard_1d = NamedSharding(mesh, P("data"))  # for (N,)
+        shard_bins = NamedSharding(mesh, P(None, None))
         replicate_3d = NamedSharding(mesh, P(None, None, None))  # for full cube
 
         # — 1) allocate empty instances —
@@ -198,7 +198,7 @@ class RubixPipeline:
         stars_spec.age = shard_1d
         stars_spec.metallicity = shard_1d
         stars_spec.pixel_assignment = shard_1d
-        stars_spec.spatial_bin_edges = NamedSharding(mesh, P(None, None))
+        stars_spec.spatial_bin_edges = shard_bins
         stars_spec.mask = shard_1d
         stars_spec.spectra = shard_2d
         stars_spec.datacube = replicate_3d
@@ -214,7 +214,7 @@ class RubixPipeline:
         gas_spec.sfr = shard_1d
         gas_spec.electron_abundance = shard_1d
         gas_spec.pixel_assignment = shard_1d
-        gas_spec.spatial_bin_edges = NamedSharding(mesh, P(None, None))
+        gas_spec.spatial_bin_edges = shard_bins
         gas_spec.mask = shard_1d
         gas_spec.spectra = shard_2d
         gas_spec.datacube = replicate_3d

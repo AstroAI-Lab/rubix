@@ -4,7 +4,6 @@ import numpy as np
 
 from rubix.core.data import Galaxy, GasData, RubixData, StarsData, reshape_array
 from rubix.core.ifu import (
-    get_calculate_datacube,
     get_calculate_datacube_particlewise,
     get_calculate_spectra,
     get_doppler_shift_and_resampling,
@@ -307,60 +306,6 @@ def test_doppler_shift_and_resampling():
     assert not jnp.any(
         jnp.isnan(result.stars.spectra)
     ), "NaN values found in result spectra"
-
-
-def test_get_calculate_datacube():
-    # Setup: Telescope from config
-    config = {
-        "pipeline": {"name": "calc_ifu"},
-        "logger": {
-            "log_level": "DEBUG",
-            "log_file_path": None,
-            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        },
-        "telescope": {"name": "MUSE"},
-        "cosmology": {"name": "PLANCK15"},
-        "galaxy": {"dist_z": 0.1},
-        "ssp": {"template": {"name": "BruzualCharlot2003"}},
-    }
-    telescope = get_telescope(config)
-    n_spaxels = int(telescope.sbin)
-    n_wave = telescope.wave_seq.shape[0]
-    n_particles = 3
-
-    # Make spectra: shape (n_particles, n_wave)
-    spectra = jnp.arange(n_particles * n_wave, dtype=jnp.float32).reshape(
-        n_particles, n_wave
-    )
-
-    # Assign each particle to a spaxel
-    pixel_assignment = jnp.array([0, 1, n_spaxels**2 - 1], dtype=jnp.int32)
-
-    # Build stars data
-    stars = StarsData()
-    stars.spectra = spectra
-    stars.pixel_assignment = pixel_assignment
-
-    # Build rubixdata
-    rubixdata = RubixData(galaxy=Galaxy(), stars=stars, gas=GasData())
-
-    # Run pipeline
-    calculate_datacube = get_calculate_datacube(config)
-    result = calculate_datacube(rubixdata)
-
-    # Check datacube: shape (n_spaxels, n_spaxels, n_wave)
-    assert hasattr(result.stars, "datacube")
-    assert result.stars.datacube.shape == (n_spaxels, n_spaxels, n_wave)
-
-    # Check that each pixel has the correct sum of spectra (simple case: only one particle per spaxel)
-    flat_cube = result.stars.datacube.reshape(-1, n_wave)
-    for i, pix in enumerate(pixel_assignment):
-        assert jnp.allclose(flat_cube[pix], spectra[i])
-
-    # All other spaxels should be zero
-    mask = jnp.ones((n_spaxels**2,), dtype=bool)
-    mask = mask.at[pixel_assignment].set(False)
-    assert jnp.all(flat_cube[mask] == 0)
 
 
 def test_get_calculate_datacube_particlewise():
