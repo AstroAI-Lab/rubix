@@ -19,7 +19,7 @@ from jaxtyping import jaxtyped
 
 from rubix.logger import get_logger
 from rubix.pipeline import linear_pipeline as pipeline
-from rubix.utils import get_config, get_pipeline_config
+from rubix.utils import _pad_particles, get_config, get_pipeline_config
 
 from .data import (
     Galaxy,
@@ -229,23 +229,15 @@ class RubixPipeline:
             lambda s: s.spec if isinstance(s, NamedSharding) else None, rubix_spec
         )
 
-        # if the particle number is not modulo the device number, we have to padd a few empty particles
+        # if the particle number is not modulo the device number, we have to pad a few empty particles
         # to make it work
-        # this is a bit of a hack, but it works
-        n = inputdata.stars.coords.shape[0]
         pad = (num_devices - (n % num_devices)) % num_devices
-
         if pad:
-            # pad along the first axis
-            inputdata.stars.coords = jnp.pad(inputdata.stars.coords, ((0, pad), (0, 0)))
-            inputdata.stars.velocity = jnp.pad(
-                inputdata.stars.velocity, ((0, pad), (0, 0))
+            self.logger.info(
+                "Padding particles to make the number of particles divisible by the number of devices (%d).",
+                num_devices,
             )
-            inputdata.stars.mass = jnp.pad(inputdata.stars.mass, ((0, pad)))
-            inputdata.stars.age = jnp.pad(inputdata.stars.age, ((0, pad)))
-            inputdata.stars.metallicity = jnp.pad(
-                inputdata.stars.metallicity, ((0, pad))
-            )
+            inputdata = _pad_particles(inputdata, pad)
 
         inputdata = jax.device_put(inputdata, rubix_spec)
 
