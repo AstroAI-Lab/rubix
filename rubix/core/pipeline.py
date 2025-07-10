@@ -30,7 +30,7 @@ from .data import (
     get_rubix_data,
 )
 from .dust import get_extinction
-from .ifu import get_calculate_datacube_particlewise
+from .ifu import get_calculate_datacube_optimized, get_calculate_datacube_vectorized
 from .lsf import get_convolve_lsf
 from .noise import get_apply_noise
 from .psf import get_convolve_psf
@@ -99,9 +99,11 @@ class RubixPipeline:
         spaxel_assignment = get_spaxel_assignment(self.user_config)
         # reshape_data = get_reshape_data(self.user_config)
         apply_extinction = get_extinction(self.user_config)
-        calculate_datacube_particlewise = get_calculate_datacube_particlewise(
-            self.user_config
-        )
+
+        # Use vectorized datacube calculation for better GPU performance
+        calculate_datacube = get_calculate_datacube_vectorized(self.user_config)
+        # calculate_datacube = get_calculate_datacube_optimized(self.user_config)
+
         convolve_psf = get_convolve_psf(self.user_config)
         convolve_lsf = get_convolve_lsf(self.user_config)
         apply_noise = get_apply_noise(self.user_config)
@@ -112,7 +114,7 @@ class RubixPipeline:
             spaxel_assignment,
             # reshape_data,
             apply_extinction,
-            calculate_datacube_particlewise,
+            calculate_datacube,  # Now using vectorized version
             convolve_psf,
             convolve_lsf,
             apply_noise,

@@ -1,6 +1,7 @@
 from typing import Callable
 
 import jax
+import jax.numpy as jnp
 from beartype import beartype as typechecker
 from jaxtyping import jaxtyped
 
@@ -66,6 +67,48 @@ def get_lookup_interpolation(config: dict) -> Callable:
 
 
 @jaxtyped(typechecker=typechecker)
+def get_vectorized_ssp_lookup(config: dict) -> Callable:
+    """
+    Returns a vectorized SSP lookup function that can process all particles at once.
+
+    Args:
+        config (dict): Configuration dictionary.
+
+    Returns:
+        Vectorized lookup function for the SSP template.
+    """
+    lookup = get_lookup_interpolation(config)
+    # Vectorize over both metallicity and age arrays
+    lookup_vmap = jax.vmap(lookup, in_axes=(0, 0))
+    return lookup_vmap
+
+
+@jaxtyped(typechecker=typechecker)
+def get_preloaded_ssp_data(config: dict) -> dict:
+    """
+    Preloads SSP data onto GPU for efficient access.
+
+    Args:
+        config (dict): Configuration dictionary.
+
+    Returns:
+        Dictionary containing preloaded SSP data.
+    """
+    ssp = get_ssp(config)
+
+    # Move SSP data to GPU
+    ssp_data = {
+        "wavelength": jnp.array(ssp.wavelength),
+        "metallicity_grid": jnp.array(ssp.metallicity),
+        "age_grid": jnp.array(ssp.log_age),
+        "spectra_grid": jnp.array(ssp.spectra),  # Shape: (n_met, n_age, n_wave)
+    }
+
+    return ssp_data
+
+
+# Keep existing functions for backward compatibility
+@jaxtyped(typechecker=typechecker)
 def get_lookup_interpolation_vmap(config: dict) -> Callable:
     """
     This function loads the SSP template defined in the configuration and returns the lookup function for the template,
@@ -77,10 +120,7 @@ def get_lookup_interpolation_vmap(config: dict) -> Callable:
     Returns:
         vmapped lookup function for the SSP template.
     """
-    lookup = get_lookup_interpolation(config)
-    lookup_vmap = jax.vmap(lookup, in_axes=(0, 0))
-
-    return lookup_vmap
+    return get_vectorized_ssp_lookup(config)
 
 
 @jaxtyped(typechecker=typechecker)

@@ -15,14 +15,14 @@ calc_ifu:
       depends_on: filter_particles
       args: []
       kwargs: {}
-    calculate_datacube_particlewise:
-      name: calculate_datacube_particlewise
+    calculate_datacube_vectorized:
+      name: calculate_datacube_vectorized # or calculate_datacube_optimized
       depends_on: spaxel_assignment
       args: []
       kwargs: {}
     convolve_psf:
       name: convolve_psf
-      depends_on: calculate_datacube_particlewise
+      depends_on: calculate_datacube_vectorized # or calculate_datacube_optimized
       args: []
       kwargs: {}
     convolve_lsf:
