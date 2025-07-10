@@ -30,12 +30,7 @@ from .data import (
     get_rubix_data,
 )
 from .dust import get_extinction
-from .ifu import (
-    get_calculate_datacube_particlewise,
-    get_calculate_spectra,
-    get_doppler_shift_and_resampling,
-    get_scale_spectrum_by_mass,
-)
+from .ifu import get_calculate_datacube_particlewise
 from .lsf import get_convolve_lsf
 from .noise import get_apply_noise
 from .psf import get_convolve_psf
@@ -102,14 +97,8 @@ class RubixPipeline:
         rotate_galaxy = get_galaxy_rotation(self.user_config)
         filter_particles = get_filter_particles(self.user_config)
         spaxel_assignment = get_spaxel_assignment(self.user_config)
-        calculate_spectra = get_calculate_spectra(self.user_config)
         # reshape_data = get_reshape_data(self.user_config)
-        scale_spectrum_by_mass = get_scale_spectrum_by_mass(self.user_config)
-        doppler_shift_and_resampling = get_doppler_shift_and_resampling(
-            self.user_config
-        )
         apply_extinction = get_extinction(self.user_config)
-        calculate_datacube = get_calculate_datacube(self.user_config)
         calculate_datacube_particlewise = get_calculate_datacube_particlewise(
             self.user_config
         )
@@ -121,12 +110,8 @@ class RubixPipeline:
             rotate_galaxy,
             filter_particles,
             spaxel_assignment,
-            calculate_spectra,
             # reshape_data,
-            scale_spectrum_by_mass,
-            doppler_shift_and_resampling,
             apply_extinction,
-            calculate_datacube,
             calculate_datacube_particlewise,
             convolve_psf,
             convolve_lsf,
@@ -231,6 +216,7 @@ class RubixPipeline:
 
         # if the particle number is not modulo the device number, we have to pad a few empty particles
         # to make it work
+        n = inputdata.stars.coords.shape[0]
         pad = (num_devices - (n % num_devices)) % num_devices
         if pad:
             self.logger.info(

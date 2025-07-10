@@ -11,19 +11,12 @@ from rubix.core.data import GasData, StarsData
 from rubix.logger import get_logger
 from rubix.spectra.ifu import (
     _velocity_doppler_shift_single,
-    calculate_cube,
     cosmological_doppler_shift,
     resample_spectrum,
-    velocity_doppler_shift,
 )
 
 from .data import RubixData
-from .ssp import (
-    get_lookup_interpolation,
-    get_lookup_interpolation_pmap,
-    get_lookup_interpolation_vmap,
-    get_ssp,
-)
+from .ssp import get_lookup_interpolation, get_ssp
 from .telescope import get_telescope
 
 
