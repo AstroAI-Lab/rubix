@@ -56,10 +56,18 @@ def get_extinction(config: dict) -> Callable:
         """Apply the dust extinction to the spaxel data."""
         logger.info("Applying dust extinction to the spaxel data...")
 
-        rubixdata.stars.spectra = apply_spaxel_extinction(
+        # Skip if no gas data
+        if rubixdata.gas is None or rubixdata.gas.coords is None:
+            logger.warning("No gas data available, skipping dust extinction.")
+            return rubixdata
+
+        # Apply extinction using the new streamlined function
+        extincted_spectra = apply_spaxel_extinction(
             config, rubixdata, wavelength, n_spaxels, spaxel_area
         )
 
-        return rubixdata
+        # Update stars with extincted spectra using immutable operation
+        updated_stars = rubixdata.stars.replace(spectra=extincted_spectra)
+        return rubixdata.replace(stars=updated_stars)
 
     return calculate_extinction

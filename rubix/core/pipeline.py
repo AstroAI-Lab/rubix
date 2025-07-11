@@ -4,8 +4,10 @@ from functools import partial
 from types import SimpleNamespace
 from typing import Union
 
+import equinox as eqx
 import jax
 import jax.numpy as jnp
+import jax.tree_util as jtu
 
 # For shard_map and device mesh.
 import numpy as np
@@ -19,14 +21,14 @@ from jaxtyping import jaxtyped
 
 from rubix.logger import get_logger
 from rubix.pipeline import linear_pipeline as pipeline
-from rubix.utils import _pad_particles, get_config, get_pipeline_config
+from rubix.utils import get_config, get_pipeline_config
 
 from .data import (
     Galaxy,
     GasData,
     RubixData,
     StarsData,
-    get_reshape_data,
+    _pad_particles_equinox,
     get_rubix_data,
 )
 from .dust import get_extinction
@@ -72,10 +74,17 @@ class RubixPipeline:
         t1 = time.time()
         self.logger.info("Getting rubix data...")
         rubixdata = get_rubix_data(self.user_config)
+
+        # Safely get star count
         star_count = (
             len(rubixdata.stars.coords) if rubixdata.stars.coords is not None else 0
         )
-        gas_count = len(rubixdata.gas.coords) if rubixdata.gas.coords is not None else 0
+
+        # Safely get gas count - check if gas exists first
+        gas_count = 0
+        if rubixdata.gas is not None and rubixdata.gas.coords is not None:
+            gas_count = len(rubixdata.gas.coords)
+
         self.logger.info(
             f"Data loaded with {star_count} star particles and {gas_count} gas particles."
         )
@@ -86,7 +95,7 @@ class RubixPipeline:
     @jaxtyped(typechecker=typechecker)
     def _get_pipeline_functions(self) -> list:
         """
-        Sets up the pipeline functions.
+        Sets up the pipeline functions that all work with immutable Equinox data.
 
         Returns:
             List of functions to be used in the pipeline.
@@ -123,26 +132,35 @@ class RubixPipeline:
 
     def run_sharded(self, inputdata):
         """
-        Runs the pipeline on sharded input data in parallel using jax.shard_map.
-        It splits the particle arrays (e.g. under stars and gas) into shards, runs
-        the compiled pipeline on each shard, and then combines the resulting datacubes.
-
-        This is the recomended method to run the pipeline in parallel at the moment!!!
-
-        Parameters
-        ----------
-        inputdata : object
-            Data prepared from the `prepare_data` method.
-        shard_size : int
-            Number of particles per shard.
-
-        Returns
-        -------
-        jax.numpy.ndarray
-            The final datacube combined from all shards.
+        Runs the pipeline on sharded input data using Equinox modules.
+        This method uses JAX's shard_map to distribute the computation across multiple devices.
+        Args:
+            inputdata (RubixData): The input data containing particle information.
+        Returns:
+            Sharded datacube result after processing through the pipeline.
+        Raises:
+            ValueError: If the input data is not of type RubixData.
         """
         time_start = time.time()
-        # Assemble and compile the pipeline as before.
+
+        # Check if we have enough particles for efficient sharding
+        if inputdata.stars.coords is not None:
+            n_particles = inputdata.stars.coords.shape[0]
+            devices = jax.devices()
+            num_devices = len(devices)
+
+            # Rule of thumb: need at least 10 particles per device for efficient sharding
+            min_particles_per_device = 10
+            if n_particles < num_devices * min_particles_per_device:
+                self.logger.warning(
+                    f"Only {n_particles} particles for {num_devices} devices "
+                    f"(minimum recommended: {num_devices * min_particles_per_device}). "
+                    f"Falling back to non-sharded execution for better efficiency."
+                )
+                return self.run(inputdata)
+
+        # Continue with sharded execution
+        # Assemble and compile the pipeline
         functions = self._get_pipeline_functions()
         self._pipeline = pipeline.LinearTransformerPipeline(
             self.pipeline_config, functions
@@ -158,90 +176,59 @@ class RubixPipeline:
 
         mesh = Mesh(devices, axis_names=("data",))
 
-        # — sharding specs by rank —
-        replicate_0d = NamedSharding(mesh, P())  # for scalars
-        replicate_1d = NamedSharding(mesh, P(None))  # for 1-D arrays
-        shard_2d = NamedSharding(mesh, P("data", None))  # for (N, D)
-        shard_1d = NamedSharding(mesh, P("data"))  # for (N,)
-        shard_bins = NamedSharding(mesh, P(None, None))
-        replicate_3d = NamedSharding(mesh, P(None, None, None))  # for full cube
+        # Create sharding specs using JAX tree_map
+        def create_sharding_for_array(arr):
+            """Create appropriate sharding based on array shape"""
+            if arr is None:
+                return None
 
-        # — 1) allocate empty instances —
-        galaxy_spec = object.__new__(Galaxy)
-        stars_spec = object.__new__(StarsData)
-        gas_spec = object.__new__(GasData)
-        rubix_spec = object.__new__(RubixData)
+            if arr.ndim == 0:  # scalar
+                return NamedSharding(mesh, P())
+            elif arr.ndim == 1:  # 1D array
+                return NamedSharding(mesh, P("data"))
+            elif arr.ndim == 2:  # 2D array
+                return NamedSharding(mesh, P("data", None))
+            elif arr.ndim == 3:  # 3D array (datacube)
+                return NamedSharding(mesh, P(None, None, None))
+            else:
+                return NamedSharding(mesh, P("data"))
 
-        # — 2) assign NamedSharding to each field —
-        # galaxy
-        galaxy_spec.redshift = replicate_0d
-        galaxy_spec.center = replicate_1d
-        galaxy_spec.halfmassrad_stars = replicate_0d
-
-        # stars
-        stars_spec.coords = shard_2d
-        stars_spec.velocity = shard_2d
-        stars_spec.mass = shard_1d
-        stars_spec.age = shard_1d
-        stars_spec.metallicity = shard_1d
-        stars_spec.pixel_assignment = shard_1d
-        stars_spec.spatial_bin_edges = shard_bins
-        stars_spec.mask = shard_1d
-        stars_spec.spectra = shard_2d
-        stars_spec.datacube = replicate_3d
-
-        # gas  (same idea)
-        gas_spec.coords = shard_2d
-        gas_spec.velocity = shard_2d
-        gas_spec.mass = shard_1d
-        gas_spec.density = shard_1d
-        gas_spec.internal_energy = shard_1d
-        gas_spec.metallicity = shard_1d
-        gas_spec.metals = shard_1d
-        gas_spec.sfr = shard_1d
-        gas_spec.electron_abundance = shard_1d
-        gas_spec.pixel_assignment = shard_1d
-        gas_spec.spatial_bin_edges = shard_bins
-        gas_spec.mask = shard_1d
-        gas_spec.spectra = shard_2d
-        gas_spec.datacube = replicate_3d
-
-        # — link them up —
-        rubix_spec.galaxy = galaxy_spec
-        rubix_spec.stars = stars_spec
-        rubix_spec.gas = gas_spec
-
-        # 1) Make a pytree of PartitionSpec
-        partition_spec_tree = tree_map(
-            lambda s: s.spec if isinstance(s, NamedSharding) else None, rubix_spec
+        # Create sharding specification using JAX tree_map
+        sharding_spec = jtu.tree_map(
+            create_sharding_for_array, inputdata, is_leaf=lambda x: x is None
         )
 
-        # if the particle number is not modulo the device number, we have to pad a few empty particles
-        # to make it work
-        n = inputdata.stars.coords.shape[0]
-        pad = (num_devices - (n % num_devices)) % num_devices
-        if pad:
-            self.logger.info(
-                "Padding particles to make the number of particles divisible by the number of devices (%d).",
-                num_devices,
-            )
-            inputdata = _pad_particles(inputdata, pad)
+        # Extract PartitionSpec for shard_map
+        partition_spec_tree = jtu.tree_map(
+            lambda s: s.spec if isinstance(s, NamedSharding) else None,
+            sharding_spec,
+            is_leaf=lambda x: x is None,
+        )
 
-        inputdata = jax.device_put(inputdata, rubix_spec)
+        # Pad particles if needed - check for star coords existence
+        if inputdata.stars.coords is not None:
+            n = inputdata.stars.coords.shape[0]
+            pad = (num_devices - (n % num_devices)) % num_devices
+            if pad:
+                self.logger.info("Padding particles for %d devices...", num_devices)
+                inputdata = _pad_particles_equinox(inputdata, pad)  # Use new function
 
-        # create the sharded data
+        # Place data on devices
+        inputdata = jax.device_put(inputdata, sharding_spec)
+
+        # Create sharded pipeline
         def _shard_pipeline(sharded_rubixdata):
             out_local = self.func(sharded_rubixdata)
-            local_cube = out_local.stars.datacube  # shape (25,25,5994)
-            # in‐XLA all‐reduce across the "data" axis:
+            local_cube = out_local.stars.datacube
+            # All-reduce across the "data" axis
             summed_cube = lax.psum(local_cube, axis_name="data")
-            return summed_cube  # replicated on each device
+            return summed_cube
 
         sharded_pipeline = shard_map(
-            _shard_pipeline,  # the function to compile
-            mesh=mesh,  # the mesh to use
+            _shard_pipeline,
+            mesh=mesh,
             in_specs=(partition_spec_tree,),
-            out_specs=replicate_3d.spec,
+            out_specs=NamedSharding(mesh, P(None, None, None)).spec,
             check_rep=False,
         )
 
@@ -253,10 +240,54 @@ class RubixPipeline:
         self.logger.info(
             "Sharded pipeline run completed in %.2f seconds.", time_end - time_mid
         )
-        self.logger.info(
-            "Total time for sharded pipeline run: %.2f seconds.",
-            time_end - time_start,
-        )
-        # final_cube = jnp.sum(partial_cubes, axis=0)
 
         return sharded_result
+
+    @jaxtyped(typechecker=typechecker)
+    def run(self, inputdata):
+        """
+        Runs the pipeline on input data without sharding (single device execution).
+        This is more efficient for small datasets or when you want to use a single device.
+
+        Args:
+            inputdata (RubixData): The input data containing particle information.
+        Returns:
+            RubixData: Complete processed data after running through the pipeline.
+        """
+        time_start = time.time()
+
+        # Check if we have data
+        if inputdata.stars.coords is not None:
+            n_particles = inputdata.stars.coords.shape[0]
+            self.logger.info(f"Running non-sharded pipeline on {n_particles} particles")
+        else:
+            self.logger.warning("No star particles found in input data")
+            return inputdata
+
+        # Assemble and compile the pipeline (same as sharded version)
+        functions = self._get_pipeline_functions()
+        self._pipeline = pipeline.LinearTransformerPipeline(
+            self.pipeline_config, functions
+        )
+        self.logger.info("Assembling the pipeline...")
+        self._pipeline.assemble()
+        self.logger.info("Compiling the expressions...")
+        self.func = self._pipeline.compile_expression()
+
+        # Move data to device (GPU if available)
+        inputdata = jax.device_put(inputdata)
+
+        time_mid = time.time()
+
+        # Run the pipeline directly (no sharding)
+        result = self.func(inputdata)
+
+        time_end = time.time()
+        self.logger.info(
+            "Pipeline setup completed in %.2f seconds.", time_mid - time_start
+        )
+        self.logger.info(
+            "Pipeline execution completed in %.2f seconds.", time_end - time_mid
+        )
+
+        return result

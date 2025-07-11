@@ -2,6 +2,7 @@
 import os
 from typing import Dict, Union
 
+import equinox as eqx
 import h5py
 import jax.numpy as jnp
 import yaml

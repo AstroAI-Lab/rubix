@@ -1,5 +1,6 @@
 from typing import Callable
 
+import jax
 import jax.numpy as jnp
 from beartype import beartype as typechecker
 from jaxtyping import jaxtyped
@@ -57,13 +58,24 @@ def get_apply_noise(config: dict) -> Callable:
 
     # Get the noise distribution
     noise_distribution = config["telescope"]["noise"]["noise_distribution"]
+    seed = config["telescope"]["noise"].get("seed", 42)  # For reproducible results
 
     logger = get_logger()
 
     def apply_noise(rubixdata: RubixData) -> RubixData:
+        """Apply noise to the input datacube using immutable operations."""
         logger.info(
             f"Applying noise to datacube with signal to noise ratio: {signal_to_noise} and noise distribution: {noise_distribution}"
         )
+
+        # Check if datacube exists
+        if rubixdata.stars.datacube is None:
+            logger.warning("No datacube found, skipping noise application")
+            return rubixdata
+
+        # Generate random key for noise
+        key = jax.random.PRNGKey(seed)
+
         datacube = rubixdata.stars.datacube
         # Define S2n for each spaxel
         S2N = jnp.ones(datacube.shape[:2]) * signal_to_noise
@@ -74,7 +86,11 @@ def get_apply_noise(config: dict) -> Callable:
         )
 
         # Add noise to the datacube
-        rubixdata.stars.datacube += noise_cube
-        return rubixdata
+        # Use immutable update with .replace()
+        updated_stars = rubixdata.stars.replace(datacube=datacube + noise_cube)
+        updated_rubixdata = rubixdata.replace(stars=updated_stars)
+        logger.debug(f"Noise applied to datacube shape: {updated_stars.datacube.shape}")
+
+        return updated_rubixdata
 
     return apply_noise

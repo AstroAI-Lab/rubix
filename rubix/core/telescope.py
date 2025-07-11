@@ -14,7 +14,7 @@ from rubix.telescope.utils import (
 )
 
 from .cosmology import get_cosmology
-from .data import RubixData
+from .data import RubixData, update_gas_batch, update_stars_batch
 
 
 @jaxtyped(typechecker=typechecker)
@@ -105,21 +105,27 @@ def get_spaxel_assignment(config: dict) -> Callable:
         raise ValueError(f"Pixel type {telescope.pixel_type} not supported")
     spatial_bin_edges = get_spatial_bin_edges(config)
 
+    @jaxtyped(typechecker=typechecker)
     def spaxel_assignment(rubixdata: RubixData) -> RubixData:
         logger.info("Assigning particles to spaxels...")
+
+        # Assign stars to spaxels
         if rubixdata.stars.coords is not None:
             pixel_assignment = square_spaxel_assignment(
                 rubixdata.stars.coords, spatial_bin_edges
             )
-            rubixdata.stars.pixel_assignment = pixel_assignment
-            rubixdata.stars.spatial_bin_edges = spatial_bin_edges
 
-        if rubixdata.gas.coords is not None:
+            # Use helper function for proper Equinox assignment
+            rubixdata = update_stars_batch(rubixdata, pixel_assignment=pixel_assignment)
+
+        # Assign gas to spaxels (if present)
+        if rubixdata.gas is not None and rubixdata.gas.coords is not None:
             pixel_assignment = square_spaxel_assignment(
                 rubixdata.gas.coords, spatial_bin_edges
             )
-            rubixdata.gas.pixel_assignment = pixel_assignment
-            rubixdata.gas.spatial_bin_edges = spatial_bin_edges
+
+            # Use helper function for proper Equinox assignment
+            rubixdata = update_gas_batch(rubixdata, pixel_assignment=pixel_assignment)
 
         return rubixdata
 
@@ -129,72 +135,47 @@ def get_spaxel_assignment(config: dict) -> Callable:
 @jaxtyped(typechecker=typechecker)
 def get_filter_particles(config: dict) -> Callable:
     """
-    Get the function to filter particles outside the aperture.
-
-    Args:
-        config (dict): Configuration dictionary.
-
-    Returns:
-        The filter particles function
-
-    Example
-    -------
-    >>> from rubix.core.telescope import get_filter_particles
-    >>> filter_particles = get_filter_particles(config)
-
-    >>> rubixdata = filter_particles(rubixdata)
+    Creates a function that filters particles using Equinox immutable operations.
     """
     logger = get_logger(config.get("logger", None))
 
+    # Get spatial bin edges
     spatial_bin_edges = get_spatial_bin_edges(config)
 
+    @jaxtyped(typechecker=typechecker)
     def filter_particles(rubixdata: RubixData) -> RubixData:
-        logger.info("Filtering particles outside the aperture...")
-        if "stars" in config["data"]["args"]["particle_type"]:
-            # if rubixdata.stars.coords is not None:
+        logger.info("Filtering particles...")
+
+        # Filter stars
+        if rubixdata.stars.coords is not None:
             mask = mask_particles_outside_aperture(
                 rubixdata.stars.coords, spatial_bin_edges
             )
 
-            attributes = [
-                attr
-                for attr in dir(rubixdata.stars)
-                if not attr.startswith("__")
-                and not callable(getattr(rubixdata.stars, attr))
-                and attr not in ("coords", "velocity")
-            ]
-            for attr in attributes:
-                current_attr_value = getattr(rubixdata.stars, attr)
-                # Apply mask only if current_attr_value is an ndarray
-                if isinstance(current_attr_value, jnp.ndarray):
-                    setattr(
-                        rubixdata.stars, attr, jnp.where(mask, current_attr_value, 0)
-                    )
-            mask_jax = jnp.array(mask)
-            setattr(rubixdata.stars, "mask", mask_jax)
-            # rubixdata.stars.mask = mask
+            # Apply mask using helper function for proper Equinox assignment
+            rubixdata = update_stars_batch(
+                rubixdata,
+                coords=jnp.where(mask[:, None], rubixdata.stars.coords, 0),
+                velocity=jnp.where(mask[:, None], rubixdata.stars.velocity, 0),
+                mass=jnp.where(mask, rubixdata.stars.mass, 0),
+                age=jnp.where(mask, rubixdata.stars.age, 0),
+                metallicity=jnp.where(mask, rubixdata.stars.metallicity, 0),
+            )
 
-        if "gas" in config["data"]["args"]["particle_type"]:
+        # Filter gas (if present)
+        if rubixdata.gas is not None and rubixdata.gas.coords is not None:
             mask = mask_particles_outside_aperture(
                 rubixdata.gas.coords, spatial_bin_edges
             )
-            attributes = [
-                attr
-                for attr in dir(rubixdata.gas)
-                if not attr.startswith("__")
-                and not callable(getattr(rubixdata.gas, attr))
-                and attr not in ("coords", "velocity", "metals")
-            ]
-            for attr in attributes:
-                current_attr_value = getattr(rubixdata.gas, attr)
-                if isinstance(current_attr_value, jnp.ndarray):
-                    setattr(rubixdata.gas, attr, jnp.where(mask, current_attr_value, 0))
-                # rubixdata.gas.__setattr__(attr, jnp.where(mask, rubixdata.gas.__getattribute__(attr), 0))
-            mask_jax = jnp.array(mask)
-            setattr(rubixdata.gas, "mask", mask_jax)
-            # rubixdata.gas.mask = mask
-            # masked_metals = jnp.where(mask_jax[:, jnp.newaxis], rubixdata.gas.metals, 0)
-            # setattr(rubixdata.gas, "metals", masked_metals)
+
+            # Apply mask using helper function for proper Equinox assignment
+            rubixdata = update_gas_batch(
+                rubixdata,
+                coords=jnp.where(mask[:, None], rubixdata.gas.coords, 0),
+                mass=jnp.where(mask, rubixdata.gas.mass, 0),
+                density=jnp.where(mask, rubixdata.gas.density, 0),
+                metallicity=jnp.where(mask, rubixdata.gas.metallicity, 0),
+            )
 
         return rubixdata
 

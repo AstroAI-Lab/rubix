@@ -15,7 +15,7 @@ calc_ifu:
       depends_on: filter_particles
       args: []
       kwargs: {}
-    calculate_datacube_vectorized:
+    calculate_datacube:
       name: calculate_datacube_vectorized # or calculate_datacube_optimized
       depends_on: spaxel_assignment
       args: []

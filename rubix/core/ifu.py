@@ -7,7 +7,7 @@ from jax import lax
 from jaxtyping import Array, Float, jaxtyped
 
 from rubix import config as rubix_config
-from rubix.core.data import GasData, StarsData
+from rubix.core.data import GasData, StarsData, update_stars_batch
 from rubix.logger import get_logger
 from rubix.spectra.ifu import (
     _velocity_doppler_shift_single,
@@ -36,7 +36,7 @@ def get_calculate_datacube_vectorized(config: dict) -> Callable:
     telescope = get_telescope(config)
     ns = int(telescope.sbin)
     nseg = ns * ns
-    target_wave = telescope.wave_seq  # (n_wave_tel,)
+    target_wave = jnp.array(telescope.wave_seq)  # (n_wave_tel,)
 
     # Prepare vectorized SSP lookup
     lookup_ssp_vectorized = get_vectorized_ssp_lookup(config)
@@ -110,9 +110,12 @@ def get_calculate_datacube_vectorized(config: dict) -> Callable:
         )  # Result: (nseg, n_wave_tel)
 
         cube_3d = cube_flat.reshape(ns, ns, -1)
-        setattr(rubixdata.stars, "datacube", cube_3d)
+
+        # Use our helper function for proper Equinox assignment
+        updated_rubixdata = update_stars_batch(rubixdata, datacube=cube_3d)
+
         logger.debug(f"Datacube shape: {cube_3d.shape}")
-        return rubixdata
+        return updated_rubixdata
 
     return calculate_datacube_vectorized
 
@@ -134,7 +137,7 @@ def get_calculate_datacube_particlewise(config: dict) -> Callable:
     telescope = get_telescope(config)
     ns = int(telescope.sbin)
     nseg = ns * ns
-    target_wave = telescope.wave_seq  # (n_wave_tel,)
+    target_wave = jnp.array(telescope.wave_seq)  # (n_wave_tel,)
 
     # prepare SSP lookup
     lookup_ssp = get_lookup_interpolation(config)
@@ -193,11 +196,13 @@ def get_calculate_datacube_particlewise(config: dict) -> Callable:
         cube_flat, _ = lax.scan(body, init_cube, jnp.arange(nstar, dtype=jnp.int32))
 
         cube_3d = cube_flat.reshape(ns, ns, -1)
-        setattr(rubixdata.stars, "datacube", cube_3d)
-        logger.debug(f"Datacube shape: {cube_3d.shape}")
-        return rubixdata
 
-    # return jax.jit(calculate_datacube_particlewise)
+        # Use our helper function for proper Equinox assignment
+        updated_rubixdata = update_stars_batch(rubixdata, datacube=cube_3d)
+
+        logger.debug(f"Datacube shape: {cube_3d.shape}")
+        return updated_rubixdata
+
     return calculate_datacube_particlewise
 
 
@@ -211,7 +216,7 @@ def get_calculate_datacube_optimized(config: dict) -> Callable:
     telescope = get_telescope(config)
     ns = int(telescope.sbin)
     nseg = ns * ns
-    target_wave = telescope.wave_seq  # (n_wave_tel,)
+    target_wave = jnp.array(telescope.wave_seq)  # (n_wave_tel,)
 
     # Prepare vectorized SSP lookup
     lookup_ssp = get_lookup_interpolation(config)
@@ -233,7 +238,12 @@ def get_calculate_datacube_optimized(config: dict) -> Callable:
     resample_vmap = jax.vmap(resample_spectrum, in_axes=(0, 0, None))
 
     def process_chunk(
-        ages_chunk, metallicity_chunk, masses_chunk, velocities_chunk, pix_idx_chunk
+        ages_chunk,
+        metallicity_chunk,
+        masses_chunk,
+        velocities_chunk,
+        pix_idx_chunk,
+        extinction_av_chunk=None,
     ):
         """Process a chunk of particles"""
         # 1) Vectorized SSP lookup
@@ -269,6 +279,7 @@ def get_calculate_datacube_optimized(config: dict) -> Callable:
         masses = stars.mass
         velocities = stars.velocity
         pix_idx = stars.pixel_assignment.astype(jnp.int32)
+        extinction_av = stars.extinction_av
         nstar = ages.shape[0]
 
         # Determine chunk size based on memory constraints
@@ -277,7 +288,7 @@ def get_calculate_datacube_optimized(config: dict) -> Callable:
         if nstar <= chunk_size:
             # Process all at once if small enough
             spectra_tel, pixel_indices = process_chunk(
-                ages, metallicity, masses, velocities, pix_idx
+                ages, metallicity, masses, velocities, pix_idx, extinction_av
             )
         else:
             # Process in chunks for large datasets
@@ -287,12 +298,19 @@ def get_calculate_datacube_optimized(config: dict) -> Callable:
             for start_idx in range(0, nstar, chunk_size):
                 end_idx = min(start_idx + chunk_size, nstar)
 
+                extinction_chunk = (
+                    extinction_av[start_idx:end_idx]
+                    if extinction_av is not None
+                    else None
+                )
+
                 chunk_spectra, chunk_pixels = process_chunk(
                     ages[start_idx:end_idx],
                     metallicity[start_idx:end_idx],
                     masses[start_idx:end_idx],
                     velocities[start_idx:end_idx],
                     pix_idx[start_idx:end_idx],
+                    extinction_chunk,
                 )
 
                 spectra_list.append(chunk_spectra)
@@ -310,8 +328,48 @@ def get_calculate_datacube_optimized(config: dict) -> Callable:
         )
 
         cube_3d = cube_flat.reshape(ns, ns, -1)
-        setattr(rubixdata.stars, "datacube", cube_3d)
+
+        # Use our helper function for proper Equinox assignment
+        updated_rubixdata = update_stars_batch(rubixdata, datacube=cube_3d)
+
         logger.debug(f"Datacube shape: {cube_3d.shape}")
-        return rubixdata
+        return updated_rubixdata
 
     return calculate_datacube_optimized
+
+
+@jaxtyped(typechecker=typechecker)
+def get_calculate_datacube_unified(config: dict) -> Callable:
+    """
+    Returns a unified datacube calculation function that automatically chooses
+    the best approach based on the number of particles and available memory.
+    """
+    logger = get_logger(config.get("logger", None))
+
+    # Get the appropriate function based on config or automatic detection
+    approach = config.get("ifu", {}).get("calculation_method", "auto")
+
+    if approach == "vectorized":
+        return get_calculate_datacube_vectorized(config)
+    elif approach == "particlewise":
+        return get_calculate_datacube_particlewise(config)
+    elif approach == "optimized":
+        return get_calculate_datacube_optimized(config)
+    else:  # auto
+
+        @jaxtyped(typechecker=typechecker)
+        def calculate_datacube_auto(rubixdata: RubixData) -> RubixData:
+            n_stars = rubixdata.stars.coords.shape[0]
+
+            # Choose method based on number of particles
+            if n_stars < 1000:
+                logger.info("Using particlewise calculation for small dataset")
+                return get_calculate_datacube_particlewise(config)(rubixdata)
+            elif n_stars < 100000:
+                logger.info("Using vectorized calculation for medium dataset")
+                return get_calculate_datacube_vectorized(config)(rubixdata)
+            else:
+                logger.info("Using optimized calculation for large dataset")
+                return get_calculate_datacube_optimized(config)(rubixdata)
+
+        return calculate_datacube_auto

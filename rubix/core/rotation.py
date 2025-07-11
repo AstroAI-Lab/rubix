@@ -1,3 +1,4 @@
+import equinox as eqx
 import jax.numpy as jnp
 from beartype import beartype as typechecker
 from jaxtyping import jaxtyped
@@ -5,7 +6,7 @@ from jaxtyping import jaxtyped
 from rubix.galaxy.alignment import rotate_galaxy as rotate_galaxy_core
 from rubix.logger import get_logger
 
-from .data import RubixData
+from .data import RubixData, update_gas_batch, update_stars_batch
 
 
 @jaxtyped(typechecker=typechecker)
@@ -40,6 +41,7 @@ def get_galaxy_rotation(config: dict):
         raise ValueError("Rotation information not provided in galaxy config")
 
     logger = get_logger()
+
     # Check if type is provided
     if "type" in config["galaxy"]["rotation"]:
         # Check if type is valid: face-on or edge-on
@@ -53,13 +55,14 @@ def get_galaxy_rotation(config: dict):
             alpha = 0.0
             beta = 0.0
             gamma = 0.0
-
-        else:
-            # type is edge-on
+        elif config["galaxy"]["rotation"]["type"] == "edge-on":
             logger.debug("Rotation Type found: edge-on")
             alpha = 90.0
             beta = 0.0
             gamma = 0.0
+        else:  # matrix type
+            logger.debug("Rotation Type found: matrix")
+            alpha = beta = gamma = 0.0  # Will be overridden by matrix
 
     else:
         # If type is not provided, then alpha, beta, gamma should be set
@@ -76,61 +79,40 @@ def get_galaxy_rotation(config: dict):
     @jaxtyped(typechecker=typechecker)
     def rotate_galaxy(rubixdata: RubixData) -> RubixData:
         logger.info(f"Rotating galaxy with alpha={alpha}, beta={beta}, gamma={gamma}")
-
-        """
-        for particle_type in ["stars", "gas"]:
-            if particle_type in config["data"]["args"]["particle_type"]:
-                # Get the component (either stars or gas)
-                logger.info(f"Rotating {particle_type}")
-                component = getattr(rubixdata, particle_type)
-
-                # Get the inputs
-                coords = component.coords
-                velocities = component.velocity
-                masses = component.mass
-                halfmass_radius = rubixdata.galaxy.halfmassrad_stars
-
-                assert (
-                    coords is not None
-                ), f"Coordinates not found for {particle_type}. "
-                assert (
-                    velocities is not None
-                ), f"Velocities not found for {particle_type}. "
-                assert masses is not None, f"Masses not found for {particle_type}. "
-
-                if config["galaxy"]["rotation"] == "matrix":
-
-                    rot_np = jnp.load("./data/rotation_matrix.npy")
-                    rot_jax = jnp.array(rot_np)
-                    logger.info(f"Using rotation matrix from file: {rot_jax}.")
-                    rotation_matrix = rot_jax
-                else:
-                    rotation_matrix = None
-
-                # Rotate the galaxy
-                coords, velocities = rotate_galaxy_core(
-                    positions=coords,
-                    velocities=velocities,
-                    positions_stars=rubixdata.stars.coords,
-                    masses_stars=rubixdata.stars.mass,
-                    halfmass_radius=halfmass_radius,
-                    alpha=alpha,
-                    beta=beta,
-                    gamma=gamma,
-                    R=rotation_matrix,
-                )
-
-                # Update the inputs
-                # rubixdata.stars.coords = coords
-                # rubixdata.stars.velocity = velocities
-                setattr(component, "coords", coords)
-                setattr(component, "velocity", velocities)
-
-        return rubixdata
-        """
         logger.info("Rotating galaxy for simulation: " + config["simulation"]["name"])
-        # Rotate gas
-        if "gas" in config["data"]["args"]["particle_type"]:
+
+        # Handle matrix rotation if specified
+        rotation_matrix = None
+        if config["galaxy"]["rotation"].get("type") == "matrix":
+            rot_np = jnp.load("./data/rotation_matrix.npy")
+            rotation_matrix = jnp.array(rot_np)
+            logger.info(f"Using rotation matrix from file: {rotation_matrix}.")
+
+        # Always rotate stellar component (required)
+        new_coords_stars, new_velocities_stars = rotate_galaxy_core(
+            positions=rubixdata.stars.coords,
+            velocities=rubixdata.stars.velocity,
+            positions_stars=rubixdata.stars.coords,
+            masses_stars=rubixdata.stars.mass,
+            halfmass_radius=rubixdata.galaxy.halfmassrad_stars,
+            alpha=alpha,
+            beta=beta,
+            gamma=gamma,
+            key=config["simulation"]["name"],
+        )
+
+        # Update stars using Equinox tree_at operations
+        rubixdata = update_stars_batch(
+            rubixdata, coords=new_coords_stars, velocity=new_velocities_stars
+        )
+
+        # Rotate gas component if present
+        if (
+            rubixdata.gas is not None
+            and rubixdata.gas.coords is not None
+            and "gas" in config["data"]["args"]["particle_type"]
+        ):
+
             logger.info("Rotating gas")
 
             # Rotate the gas component
@@ -144,46 +126,19 @@ def get_galaxy_rotation(config: dict):
                 beta=beta,
                 gamma=gamma,
                 key=config["simulation"]["name"],
+                R=rotation_matrix,
             )
 
-            setattr(rubixdata.gas, "coords", new_coords_gas)
-            setattr(rubixdata.gas, "velocity", new_velocities_gas)
-
-            # Rotate the stellar component
-            new_coords_stars, new_velocities_stars = rotate_galaxy_core(
-                positions=rubixdata.stars.coords,
-                velocities=rubixdata.stars.velocity,
-                positions_stars=rubixdata.stars.coords,
-                masses_stars=rubixdata.stars.mass,
-                halfmass_radius=rubixdata.galaxy.halfmassrad_stars,
-                alpha=alpha,
-                beta=beta,
-                gamma=gamma,
-                key=config["simulation"]["name"],
+            # Update gas using Equinox tree_at operations
+            rubixdata = update_gas_batch(
+                rubixdata, coords=new_coords_gas, velocity=new_velocities_gas
             )
-
-            setattr(rubixdata.stars, "coords", new_coords_stars)
-            setattr(rubixdata.stars, "velocity", new_velocities_stars)
 
         else:
             logger.warning(
-                "Gas not found in particle_type, only rotating stellar component."
+                "Gas not found in particle_type or gas data not present, "
+                "only rotating stellar component."
             )
-            # Rotate the stellar component
-            new_coords_stars, new_velocities_stars = rotate_galaxy_core(
-                positions=rubixdata.stars.coords,
-                velocities=rubixdata.stars.velocity,
-                positions_stars=rubixdata.stars.coords,
-                masses_stars=rubixdata.stars.mass,
-                halfmass_radius=rubixdata.galaxy.halfmassrad_stars,
-                alpha=alpha,
-                beta=beta,
-                gamma=gamma,
-                key=config["simulation"]["name"],
-            )
-
-            setattr(rubixdata.stars, "coords", new_coords_stars)
-            setattr(rubixdata.stars, "velocity", new_velocities_stars)
 
         return rubixdata
 

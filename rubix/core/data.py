@@ -1,14 +1,14 @@
 import logging
 import os
-from dataclasses import dataclass
-from functools import partial
 from typing import Callable, Optional, Union
 
+import equinox as eqx
 import jax
 import jax.numpy as jnp
+import jax.tree_util as jtu
 import numpy as np
 from beartype import beartype as typechecker
-from jaxtyping import jaxtyped
+from jaxtyping import Array, Float, Int, jaxtyped
 
 from rubix.galaxy import IllustrisAPI, get_input_handler
 from rubix.galaxy.alignment import center_particles
@@ -16,495 +16,379 @@ from rubix.logger import get_logger
 from rubix.utils import load_galaxy_data, read_yaml
 
 
-# Registering the dataclass with JAX for automatic tree traversal
-# @jaxtyped(typechecker=typechecker)
-@partial(jax.tree_util.register_pytree_node_class)
-@dataclass
-class Galaxy:
+@jaxtyped(typechecker=typechecker)
+class Galaxy(eqx.Module):
+    """Minimal galaxy data structure containing only essential fields."""
+
+    # Core galaxy properties (no unit fields - handle units in config/conversion layer)
+    redshift: Optional[Float[Array, ""]] = None
+    center: Optional[Float[Array, "3"]] = None
+    halfmassrad_stars: Optional[Float[Array, ""]] = None
+
+
+@jaxtyped(typechecker=typechecker)
+class StarsData(eqx.Module):
+    """Streamlined stellar particle data - only fields actually used in pipeline."""
+
+    # Essential particle properties
+    coords: Optional[Float[Array, "n_stars 3"]] = None
+    velocity: Optional[Float[Array, "n_stars 3"]] = None
+    mass: Optional[Float[Array, "n_stars"]] = None
+    age: Optional[Float[Array, "n_stars"]] = None
+    metallicity: Optional[Float[Array, "n_stars"]] = None
+
+    # Pipeline-generated fields
+    pixel_assignment: Optional[Int[Array, "n_stars"]] = None
+    datacube: Optional[Float[Array, "n_x n_y n_wave"]] = None
+    spectra: Optional[Float[Array, "n_stars n_wave"]] = None
+
+    # Optional extinction information (only if dust is enabled)
+    extinction_av: Optional[Float[Array, "n_stars"]] = None
+
+
+@jaxtyped(typechecker=typechecker)
+class GasData(eqx.Module):
+    """Streamlined gas particle data - only if dust extinction is used."""
+
+    # Essential gas properties for dust calculations
+    coords: Optional[Float[Array, "n_gas 3"]] = None
+    mass: Optional[Float[Array, "n_gas"]] = None
+    density: Optional[Float[Array, "n_gas"]] = None
+    metallicity: Optional[Float[Array, "n_gas"]] = None
+
+    # Pipeline-generated fields (only if needed)
+    pixel_assignment: Optional[Int[Array, "n_gas"]] = None
+
+
+@jaxtyped(typechecker=typechecker)
+class RubixData(eqx.Module):
+    """Main data container - now an Equinox module with minimal fields."""
+
+    galaxy: Galaxy
+    stars: StarsData
+    gas: Optional[GasData] = None  # Only include if dust extinction is enabled
+
+
+# Helper functions for efficient Equinox updates using eqx.tree_at
+@jaxtyped(typechecker=typechecker)
+def update_stars(rubixdata: RubixData, **updates) -> RubixData:
+    """Update stellar data fields using eqx.tree_at."""
+    current_stars = rubixdata.stars
+
+    # Apply updates one by one (more reliable than batch updates)
+    for key, value in updates.items():
+        if hasattr(current_stars, key):
+            current_stars = eqx.tree_at(lambda x: getattr(x, key), current_stars, value)
+
+    # Update the rubixdata with the new stars
+    return eqx.tree_at(lambda x: x.stars, rubixdata, current_stars)
+
+
+@jaxtyped(typechecker=typechecker)
+def update_gas(rubixdata: RubixData, **updates) -> RubixData:
+    """Update gas data fields using eqx.tree_at."""
+    if rubixdata.gas is None:
+        return rubixdata
+
+    current_gas = rubixdata.gas
+
+    # Apply updates one by one
+    for key, value in updates.items():
+        if hasattr(current_gas, key):
+            current_gas = eqx.tree_at(lambda x: getattr(x, key), current_gas, value)
+
+    # Update the rubixdata with the new gas
+    return eqx.tree_at(lambda x: x.gas, rubixdata, current_gas)
+
+
+@jaxtyped(typechecker=typechecker)
+def update_galaxy(rubixdata: RubixData, **updates) -> RubixData:
+    """Update galaxy data fields using eqx.tree_at."""
+    current_galaxy = rubixdata.galaxy
+
+    # Apply updates one by one
+    for key, value in updates.items():
+        if hasattr(current_galaxy, key):
+            current_galaxy = eqx.tree_at(
+                lambda x: getattr(x, key), current_galaxy, value
+            )
+
+    # Update the rubixdata with the new galaxy
+    return eqx.tree_at(lambda x: x.galaxy, rubixdata, current_galaxy)
+
+
+# Helper function to create lambda with proper closure
+def _make_getter(field_name):
+    """Create a getter function for a specific field name."""
+    return lambda x: getattr(x, field_name)
+
+
+# Alternative: Batch update function for better performance
+@jaxtyped(typechecker=typechecker)
+def update_stars_batch(rubixdata: RubixData, **updates) -> RubixData:
     """
-    Dataclass for storing the galaxy data
+    Update multiple star attributes at once using proper Equinox tree_at patterns.
 
     Args:
-        redshift: Redshift of the galaxy
-        center: Center coordinates of the galaxy
-        halfmassrad_stars: Half mass radius of the stars in the galaxy
+        rubixdata: The RubixData object to update
+        **updates: Star attributes to update (coords, velocity, mass, age, etc.)
+
+    Returns:
+        Updated RubixData object
     """
+    # Filter out None values and invalid attributes
+    valid_updates = {}
+    for key, value in updates.items():
+        if value is not None and hasattr(rubixdata.stars, key):
+            valid_updates[key] = value
 
-    redshift: Optional[jnp.ndarray] = None
-    center: Optional[jnp.ndarray] = None
-    halfmassrad_stars: Optional[jnp.ndarray] = None
+    if not valid_updates:
+        return rubixdata
 
-    def tree_flatten(self):
-        """
-        Flattens the Galaxy object into a tuple of children and auxiliary data
+    # Apply updates one by one with proper None handling
+    current_stars = rubixdata.stars
+    updated_stars = current_stars
 
-        Returns:
-            children (tuple) - A tuple containing the redshift, center, and halfmassrad_stars
-
-            aux_data (dict) - An empty dictionary (no auxiliary data)
-        """
-        children = (self.redshift, self.center, self.halfmassrad_stars)
-        aux_data = {}
-        return children, aux_data
-
-    @classmethod
-    def tree_unflatten(cls, aux_data, children):
-        """
-        Reconstructs the Galaxy object from children and auxiliary data
-
-        Args:
-            aux_data (dict): An empty dictionary (no auxiliary data)
-            children (tuple): A tuple containing the redshift, center, and halfmassrad_stars
-
-        Returns:
-            The reconstructed Galaxy object.
-        """
-        return cls(*children)
-
-
-# @jaxtyped(typechecker=typechecker)
-@partial(jax.tree_util.register_pytree_node_class)
-@dataclass
-class StarsData:
-    """
-    Dataclass for storing the stars data
-
-    Args:
-        coords: Coordinates of the stars
-        velocity: Velocities of the stars
-        mass: Mass of the stars
-        metallicity: Metallicity of the stars
-        age: Age of the stars
-        pixel_assignment: Pixel assignment of the stars in the IFU grid
-        spatial_bin_edges: Spatial bin edges of the IFU grid
-        mask: Mask for the stars
-        spectra: Spectra for each stellar particle
-        datacube: IFU datacube for the stellar component
-
-    """
-
-    coords: Optional[jnp.ndarray] = None
-    velocity: Optional[jnp.ndarray] = None
-    mass: Optional[jnp.ndarray] = None
-    metallicity: Optional[jnp.ndarray] = None
-    age: Optional[jnp.ndarray] = None
-    pixel_assignment: Optional[jnp.ndarray] = None
-    spatial_bin_edges: Optional[jnp.ndarray] = None
-    mask: Optional[jnp.ndarray] = None
-    spectra: Optional[jnp.ndarray] = None
-    datacube: Optional[jnp.ndarray] = None
-
-    def tree_flatten(self):
-        """
-        Flattens the Stars object into a tuple of children and auxiliary data
-
-        Returns:
-            children (tuple) - A tuple containing the coordinates, velocity, mass, metallicity, age, pixel_assignment, spatial_bin_edges, mask, spectra, and datacube
-
-            aux_data (dict) - An empty dictionary (no auxiliary data)
-        """
-        children = (
-            self.coords,
-            self.velocity,
-            self.mass,
-            self.metallicity,
-            self.age,
-            self.pixel_assignment,
-            self.spatial_bin_edges,
-            self.mask,
-            self.spectra,
-            self.datacube,
+    for key, value in valid_updates.items():
+        # Add is_leaf parameter to handle None values correctly
+        updated_stars = eqx.tree_at(
+            lambda x, k=key: getattr(x, k),
+            updated_stars,
+            value,
+            is_leaf=lambda x: x is None,  # This fixes the None handling issue
         )
-        aux_data = {}
-        return children, aux_data
 
-    @classmethod
-    def tree_unflatten(cls, aux_data, children):
-        """
-        Reconstructs the Stars object from children and auxiliary data
-
-        Args:
-            aux_data (dict): An empty dictionary (no auxiliary data)
-            children (tuple): A tuple containing the coordinates, velocity, mass, metallicity, age, pixel_assignment, spatial_bin_edges, mask, spectra, and datacube
-
-        Returns:
-            The reconstructed Stars object.
-        """
-        return cls(*children)
+    # Update the rubixdata with the new stars
+    return eqx.tree_at(
+        lambda x: x.stars,
+        rubixdata,
+        updated_stars,
+        is_leaf=lambda x: x is None,  # Add this here too for consistency
+    )
 
 
-# @jaxtyped(typechecker=typechecker)
-@partial(jax.tree_util.register_pytree_node_class)
-@dataclass
-class GasData:
+@jaxtyped(typechecker=typechecker)
+def update_gas_batch(rubixdata: RubixData, **updates) -> RubixData:
     """
-    Dataclass for storing Gas data
+    Update multiple gas attributes at once using proper Equinox tree_at patterns.
 
     Args:
-        coords: Coordinates of the gas particles
-        velocity: Velocities of the gas particles
-        mass: Mass of the gas particles
-        density: Density of the gas particles
-        internal_energy: Internal energy of the gas particles
-        metallicity: Metallicity of the gas particles
-        sfr: Star formation rate of the gas particles
-        electron_abundance: Electron abundance of the gas particles
-        pixel_assignment: Pixel assignment of the gas particles in the IFU grid
-        spatial_bin_edges: Spatial bin edges of the IFU grid
-        mask: Mask for the gas particles
-        spectra: Spectra for each gas particle
-        datacube: IFU datacube for the gas component
+        rubixdata: The RubixData object to update
+        **updates: Gas attributes to update (coords, mass, density, etc.)
+
+    Returns:
+        Updated RubixData object
     """
+    if rubixdata.gas is None:
+        return rubixdata
 
-    coords: Optional[jnp.ndarray] = None
-    velocity: Optional[jnp.ndarray] = None
-    mass: Optional[jnp.ndarray] = None
-    density: Optional[jnp.ndarray] = None
-    internal_energy: Optional[jnp.ndarray] = None
-    metallicity: Optional[jnp.ndarray] = None
-    metals: Optional[jnp.ndarray] = None
-    sfr: Optional[jnp.ndarray] = None
-    electron_abundance: Optional[jnp.ndarray] = None
-    pixel_assignment: Optional[jnp.ndarray] = None
-    spatial_bin_edges: Optional[jnp.ndarray] = None
-    mask: Optional[jnp.ndarray] = None
-    spectra: Optional[jnp.ndarray] = None
-    datacube: Optional[jnp.ndarray] = None
+    # Filter out None values and invalid attributes
+    valid_updates = {}
+    for key, value in updates.items():
+        if value is not None and hasattr(rubixdata.gas, key):
+            valid_updates[key] = value
 
-    def tree_flatten(self):
-        """
-        Flattens the Gas object into a tuple of children and auxiliary data
+    if not valid_updates:
+        return rubixdata
 
-        Returns:
-            children (tuple) - A tuple containing the coordinates, velocity, mass, density, internal_energy, metallicity, sfr, electron_abundance, pixel_assignment, spatial_bin_edges, mask, spectra, and datacube
+    # Apply updates one by one with proper None handling
+    current_gas = rubixdata.gas
+    updated_gas = current_gas
 
-            aux_data (dict) - An empty dictionary (no auxiliary data)
-        """
-        children = (
-            self.coords,
-            self.velocity,
-            self.mass,
-            self.density,
-            self.internal_energy,
-            self.metallicity,
-            self.metals,
-            self.sfr,
-            self.electron_abundance,
-            self.pixel_assignment,
-            self.spatial_bin_edges,
-            self.mask,
-            self.spectra,
-            self.datacube,
+    for key, value in valid_updates.items():
+        # Add is_leaf parameter to handle None values correctly
+        updated_gas = eqx.tree_at(
+            lambda x, k=key: getattr(x, k),
+            updated_gas,
+            value,
+            is_leaf=lambda x: x is None,  # This fixes the None handling issue
         )
-        aux_data = {}
-        return children, aux_data
 
-    @classmethod
-    def tree_unflatten(cls, aux_data, children):
-        """
-        Reconstructs the Gas object from children and auxiliary data
-
-        Args:
-            aux_data (dict): An empty dictionary (no auxiliary data)
-            children (tuple): A tuple containing the coordinates, velocity, mass, density, internal_energy, metallicity, sfr, electron_abundance, pixel_assignment, spatial_bin_edges, mask, spectra, and datacube
-
-        Returns:
-            The reconstructed Gas object.
-        """
-        return cls(*children)
+    # Update the rubixdata with the new gas
+    return eqx.tree_at(
+        lambda x: x.gas,
+        rubixdata,
+        updated_gas,
+        is_leaf=lambda x: x is None,  # Add this here too for consistency
+    )
 
 
-# @jaxtyped(typechecker=typechecker)
-@partial(jax.tree_util.register_pytree_node_class)
-@dataclass
-class RubixData:
+# Data scaling and processing functions
+@jaxtyped(typechecker=typechecker)
+def scale_particle_data(rubixdata: RubixData, factor: int) -> RubixData:
     """
-    Dataclass for storing Rubix data. The RubixData object contains the galaxy, stars, and gas data.
+    Helper function to scale particle data for testing purposes.
 
     Args:
-        galaxy: Galaxy object containing the galaxy data
-        stars: StarsData object containing the stars data
-        gas: GasData object containing the gas data
+        rubixdata: Input RubixData
+        factor: Scaling factor (how many times to replicate the data)
+
+    Returns:
+        Scaled RubixData with factor times more particles
     """
+    if factor <= 1:
+        return rubixdata
 
-    galaxy: Optional[Galaxy] = None
-    stars: Optional[StarsData] = None
-    gas: Optional[GasData] = None
+    # Scale stellar data
+    if rubixdata.stars.coords is not None:
+        rubixdata = update_stars_batch(
+            rubixdata,
+            coords=jnp.concatenate([rubixdata.stars.coords] * factor, axis=0),
+            velocity=jnp.concatenate([rubixdata.stars.velocity] * factor, axis=0),
+            mass=jnp.concatenate([rubixdata.stars.mass] * factor, axis=0),
+            age=jnp.concatenate([rubixdata.stars.age] * factor, axis=0),
+            metallicity=jnp.concatenate([rubixdata.stars.metallicity] * factor, axis=0),
+        )
 
-    def tree_flatten(self):
-        """
-        Flattens the RubixData object into a tuple of children and auxiliary data
+    # Scale gas data if present
+    if rubixdata.gas is not None and rubixdata.gas.coords is not None:
+        rubixdata = update_gas_batch(
+            rubixdata,
+            coords=jnp.concatenate([rubixdata.gas.coords] * factor, axis=0),
+            mass=jnp.concatenate([rubixdata.gas.mass] * factor, axis=0),
+            density=jnp.concatenate([rubixdata.gas.density] * factor, axis=0),
+            metallicity=jnp.concatenate([rubixdata.gas.metallicity] * factor, axis=0),
+        )
 
-        Returns:
-            children (tuple) - A tuple containing the galaxy, stars, and gas objects
+    return rubixdata
 
-            aux_data (dict) - An empty dictionary (no auxiliary data)
-        """
-        children = (self.galaxy, self.stars, self.gas)
-        aux_data = {}
-        return children, aux_data
 
-    @classmethod
-    def tree_unflatten(cls, aux_data, children):
-        """
-        Reconstructs the RubixData object from children and auxiliary data
+@jaxtyped(typechecker=typechecker)
+def center_particles_equinox(rubixdata: RubixData, particle_type: str) -> RubixData:
+    """
+    Centers particles using Equinox tree operations.
+    """
+    if particle_type == "stars" and rubixdata.stars.coords is not None:
+        # Handle potential shape issues with center
+        center = rubixdata.galaxy.center
+        if center.ndim == 0:
+            center = jnp.array([center, center, center])
+        elif center.shape == (1,):
+            center = jnp.array([center[0], center[0], center[0]])
 
-        Args:
-            aux_data (dict): An empty dictionary (no auxiliary data)
-            children (tuple): A tuple containing the galaxy, stars, and gas objects
+        centered_coords = rubixdata.stars.coords - center[None, :]
+        return update_stars(rubixdata, coords=centered_coords)
 
-        Returns:
-            The reconstructed RubixData object.
-        """
-        return cls(*children)
+    elif (
+        particle_type == "gas"
+        and rubixdata.gas is not None
+        and rubixdata.gas.coords is not None
+    ):
+        # Handle potential shape issues with center
+        center = rubixdata.galaxy.center
+        if center.ndim == 0:
+            center = jnp.array([center, center, center])
+        elif center.shape == (1,):
+            center = jnp.array([center[0], center[0], center[0]])
+
+        centered_coords = rubixdata.gas.coords - center[None, :]
+        return update_gas(rubixdata, coords=centered_coords)
+
+    return rubixdata
+
+
+@jaxtyped(typechecker=typechecker)
+def apply_subset(rubixdata: RubixData, config: dict, logger) -> RubixData:
+    """
+    Applies subsetting to the data using the new update functions.
+    """
+    subset_size = config["data"]["subset"]["subset_size"]
+
+    if rubixdata.stars.coords is not None:
+        n_stars = len(rubixdata.stars.coords)
+        if n_stars > subset_size:
+            # Create reproducible random indices
+            key = jax.random.PRNGKey(42)
+            indices = jax.random.choice(
+                key, n_stars, shape=(subset_size,), replace=False
+            )
+
+            # Subset all star attributes using batch update
+            rubixdata = update_stars_batch(
+                rubixdata,
+                coords=rubixdata.stars.coords[indices],
+                velocity=rubixdata.stars.velocity[indices],
+                mass=rubixdata.stars.mass[indices],
+                age=rubixdata.stars.age[indices],
+                metallicity=rubixdata.stars.metallicity[indices],
+            )
+            logger.warning(f"Using subset of {subset_size} stellar particles")
+
+    # Similar for gas if present
+    if rubixdata.gas is not None and rubixdata.gas.coords is not None:
+        n_gas = len(rubixdata.gas.coords)
+        if n_gas > subset_size:
+            key = jax.random.PRNGKey(43)
+            indices = jax.random.choice(key, n_gas, shape=(subset_size,), replace=False)
+
+            rubixdata = update_gas_batch(
+                rubixdata,
+                coords=rubixdata.gas.coords[indices],
+                mass=rubixdata.gas.mass[indices],
+                density=rubixdata.gas.density[indices],
+                metallicity=rubixdata.gas.metallicity[indices],
+            )
+            logger.warning(f"Using subset of {subset_size} gas particles")
+
+    return rubixdata
 
 
 @jaxtyped(typechecker=typechecker)
 def convert_to_rubix(config: Union[dict, str]):
     """
-    This function converts the data to Rubix format. The data can be loaded from an API or from a file, is then
-    converted to Rubix format and saved to a file (hdf5 format). This ensures that the Rubix pipeline depends
-    not on the simulation data format and basically can hndle any data.
-    If the file already exists, the conversion is skipped.
-
-    Args:
-        config (dict or str): The configuration for the conversion. This can be a dictionary or a path to a YAML file containing the configuration.
-
-    Returns:
-        The configuration used for the conversion. This can be used to pass the output path to the next step in the pipeline.
-
-    Example
-    -------
-
-    >>> import os
-    >>> from rubix.core.data import convert_to_rubix
-
-    >>> # Define the configuration (example configuration)
-    >>> config = {
-    ...    "logger": {
-    ...        "log_level": "DEBUG",
-    ...        "log_file_path": None,
-    ...        "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    ...    },
-    ...    "data": {
-    ...        "name": "IllustrisAPI",
-    ...        "args": {
-    ...            "api_key": os.environ.get("ILLUSTRIS_API_KEY"),
-    ...            "particle_type": ["stars","gas"],
-    ...            "simulation": "TNG50-1",
-    ...            "snapshot": 99,
-    ...            "save_data_path": "data",
-    ...        },
-    ...        "load_galaxy_args": {
-    ...            "id": 12,
-    ...            "reuse": True,
-    ...        },
-    ...        "subset": {
-    ...            "use_subset": True,
-    ...            "subset_size": 1000,
-    ...        },
-    ...    },
-    ...    "simulation": {
-    ...        "name": "IllustrisTNG",
-    ...        "args": {
-    ...            "path": "data/galaxy-id-12.hdf5",
-    ...        },
-    ...    },
-    ...    "output_path": "output",
-    ... }
-
-    >>> # Convert the data to Rubix format
-    >>> convert_to_rubix(config)
-
+    Converts data to Rubix format with minimal overhead.
     """
-    # Check if the file already exists
-    # Create the input handler based on the config and create rubix galaxy data
     if isinstance(config, str):
         config = read_yaml(config)
 
     logger = get_logger(config.get("logger", None))
+    output_file = os.path.join(config["output_path"], "rubix_galaxy.h5")
 
-    if os.path.exists(os.path.join(config["output_path"], "rubix_galaxy.h5")):
+    if os.path.exists(output_file):
         logger.info("Rubix galaxy file already exists, skipping conversion")
         return config["output_path"]
 
-    # If the simulationtype is IllustrisAPI, get data from IllustrisAPI
-
-    # TODO: we can do this more elgantly
+    # Load data based on configuration
     if "data" in config:
         if config["data"]["name"] == "IllustrisAPI":
             logger.info("Loading data from IllustrisAPI")
             api = IllustrisAPI(**config["data"]["args"], logger=logger)
             api.load_galaxy(**config["data"]["load_galaxy_args"])
-        # else:
-        #    raise ValueError(f"Unknown data source: {config['data']['name']}.")
 
-        # Load the saved data into the input handler
-    logger.info("Loading data into input handler")
+    # Convert to Rubix format
+    logger.info("Converting to Rubix format")
     input_handler = get_input_handler(config, logger=logger)
     input_handler.to_rubix(output_path=config["output_path"])
 
-    print("Converted to Rubix format!")
-
+    logger.info("Conversion to Rubix format completed")
     return config["output_path"]
-
-
-@jaxtyped(typechecker=typechecker)
-def reshape_array(arr: jax.Array) -> jax.Array:
-    """Reshapes an array to be compatible with JAX parallelization
-
-    The function reshapes an array of shape (n_particles, n_features) to an array of shape (n_gpus, particles_per_gpu, n_features).
-
-    Padding with zero is added if necessary to ensure that the number of particles per GPU is the same for all GPUs.
-
-    Args:
-        arr (jnp.ndarray): The array to reshape
-
-    Returns:
-        The reshaped array as jnp.ndarray
-    """
-
-    n_gpus = jax.device_count()
-    n_particles = arr.shape[0]
-
-    # Check if arr is 1D or 2D
-    is_1d = arr.ndim == 1
-
-    if is_1d:
-        # Convert 1D array to 2D by adding a second dimension
-        arr = arr[:, None]
-    # Calculate the number of particles per GPU
-    particles_per_gpu = (n_particles + n_gpus - 1) // n_gpus
-
-    # Calculate the total number of particles after padding
-    total_particles = particles_per_gpu * n_gpus
-
-    # Pad the array with zeros if necessary
-    if total_particles > n_particles:
-        padding = total_particles - n_particles
-        arr = jnp.pad(arr, ((0, padding), (0, 0)), "constant")
-
-    # Reshape the array to (n_gpus, particles_per_gpu, arr.shape[1])
-    reshaped_arr = arr.reshape(n_gpus, particles_per_gpu, *arr.shape[1:])
-
-    if is_1d:
-        # Remove the second dimension added for 1D case
-        reshaped_arr = reshaped_arr.squeeze(-1)
-    return reshaped_arr
 
 
 @jaxtyped(typechecker=typechecker)
 def prepare_input(config: Union[dict, str]) -> RubixData:
     """
-    This function prepares the input data for the pipeline. It loads the data from the file and converts it to Rubix format.
-
-    Args:
-        config (dict or str): The configuration for the conversion. This can be a dictionary or a path to a YAML file containing the configuration.
-
-    Returns:
-        The RubixData object containing the galaxy, stars, and gas data.
-
-    Example
-    -------
-    >>> import os
-    >>> from rubix.core.data import convert_to_rubix, prepare_input
-
-    >>> # Define the configuration (example configuration)
-    >>> config = {
-    >>>            ...
-    >>>           }
-
-    >>> # Convert the data to Rubix format
-    >>> convert_to_rubix(config)
-
-    >>> # Prepare the input data
-    >>> rubixdata = prepare_input(config)
-    >>> # Access the galaxy data, e.g. the stellar coordintates
-    >>> rubixdata.stars.coords
+    Prepares input data using the new minimal structure.
     """
+    if isinstance(config, str):
+        config = read_yaml(config)
 
-    logger_config = config["logger"] if "logger" in config else None  # type:ignore
-    logger = get_logger(logger_config)
-    file_path = config["output_path"]
-    file_path = os.path.join(file_path, "rubix_galaxy.h5")
+    logger = get_logger(config.get("logger", None))
 
-    # Load the data from the file
-    # TODO: maybe also pass the units here, currently this is not used
-    data, units = load_galaxy_data(file_path)
+    # Create minimal data structure
+    rubixdata = create_minimal_rubix_data(config)
 
-    # Create the RubixData object
-    rubixdata = RubixData(Galaxy(), StarsData(), GasData())
+    # Apply centering if needed
+    if rubixdata.stars.coords is not None:
+        logger.info("Centering stellar particles")
+        rubixdata = center_particles_equinox(rubixdata, "stars")
 
-    # Set the galaxy attributes
-    rubixdata.galaxy.redshift = data["redshift"]
-    rubixdata.galaxy.redshift_unit = units["galaxy"]["redshift"]
-    rubixdata.galaxy.center = data["subhalo_center"]
-    rubixdata.galaxy.center_unit = units["galaxy"]["center"]
-    rubixdata.galaxy.halfmassrad_stars = data["subhalo_halfmassrad_stars"]
-    rubixdata.galaxy.halfmassrad_stars_unit = units["galaxy"]["halfmassrad_stars"]
+    if rubixdata.gas is not None and rubixdata.gas.coords is not None:
+        logger.info("Centering gas particles")
+        rubixdata = center_particles_equinox(rubixdata, "gas")
 
-    # Set the particle attributes
-    for partType in config["data"]["args"]["particle_type"]:
-        if partType in data["particle_data"]:
-            # Convert attributes to JAX arrays and set them on rubixdata
-            for attribute, value in data["particle_data"][partType].items():
-                jax_value = jnp.array(value)
-                setattr(getattr(rubixdata, partType), attribute, jax_value)
-                setattr(
-                    getattr(rubixdata, partType),
-                    attribute + "_unit",
-                    units[partType][attribute],
-                )
-
-            # Center the particles
-            logger.info(f"Centering {partType} particles")
-            rubixdata = center_particles(rubixdata, partType)
-
-            if (
-                "data" in config
-                and "subset" in config["data"]
-                and config["data"]["subset"]["use_subset"]
-            ):
-                size = config["data"]["subset"]["subset_size"]
-                # Randomly sample indices
-                # Set random seed for reproducibility
-                np.random.seed(42)
-                if rubixdata.stars.coords is not None:
-                    indices = np.random.choice(
-                        np.arange(len(rubixdata.stars.coords)),
-                        size=size,  # type:ignore
-                        replace=False,
-                    )  # type:ignore
-                elif rubixdata.gas.coords is not None:
-                    indices = np.random.choice(
-                        np.arange(len(rubixdata.gas.coords)),
-                        size=size,  # type:ignore
-                        replace=False,
-                    )
-                else:
-                    raise ValueError("Neither stars nor gas coordinates are available.")
-
-                # Subset the attributes
-                jax_indices = jnp.array(indices)
-                for attribute in data["particle_data"][partType].keys():
-                    attr_value = getattr(getattr(rubixdata, partType), attribute)
-                    if attr_value.ndim == 2:  # For attributes with shape (N, 3)
-                        setattr(
-                            getattr(rubixdata, partType),
-                            attribute,
-                            attr_value[jax_indices, :],
-                        )
-                    else:  # For attributes with shape (N,)
-                        setattr(
-                            getattr(rubixdata, partType),
-                            attribute,
-                            attr_value[jax_indices],
-                        )
-
-                # Log the subset warning
-                logger.warning(
-                    f"The Subset value is set in config. Using only subset of size {size} for {partType}"
-                )
+    # Apply subsetting if configured
+    if config.get("data", {}).get("subset", {}).get("use_subset", False):
+        rubixdata = apply_subset(rubixdata, config, logger)
 
     return rubixdata
 
@@ -512,66 +396,101 @@ def prepare_input(config: Union[dict, str]) -> RubixData:
 @jaxtyped(typechecker=typechecker)
 def get_rubix_data(config: Union[dict, str]) -> RubixData:
     """
-    Returns the Rubix data
-
-    First the function converts the data to Rubix format (``convert_to_rubix(config)``) and then prepares the input data (``prepare_input(config)``).
-
-    Args:
-        config (dict or str): The configuration for the conversion. This can be a dictionary or a path to a YAML file containing the configuration.
-
-    Returns:
-        The RubixData object containing the galaxy, stars, and gas data.
+    Returns the Rubix data using the new minimal structure.
     """
     convert_to_rubix(config)
     return prepare_input(config)
 
 
 @jaxtyped(typechecker=typechecker)
-def process_attributes(obj: Union[StarsData, GasData], logger: logging.Logger) -> None:
+def create_minimal_rubix_data(config: dict) -> RubixData:
     """
-    Process the attributes of the given object and reshape them if they are arrays.
+    Creates a minimal RubixData structure with only required fields.
+    Automatically converts units and optimizes memory layout.
     """
-    attributes = [attr for attr in dir(obj) if not attr.startswith("__")]
-    for key in attributes:
-        attr_value = getattr(obj, key)
-        if attr_value is None or not isinstance(attr_value, (jnp.ndarray, np.ndarray)):
-            logger.warning(f"Attribute value of {key} is None or not an array")
-            continue
-        reshaped_value = reshape_array(attr_value)
-        setattr(obj, key, reshaped_value)
+    logger = get_logger(config.get("logger", None))
+
+    # Load raw data
+    file_path = os.path.join(config["output_path"], "rubix_galaxy.h5")
+    raw_data, units = load_galaxy_data(file_path)
+
+    # Create galaxy data with proper array handling
+    def safe_array_conversion(data, key):
+        """Safely convert data to JAX array, handling scalars and arrays."""
+        if data.get(key) is not None:
+            value = data[key]
+            # Handle scalar values
+            if jnp.isscalar(value) or (hasattr(value, "shape") and value.shape == ()):
+                return jnp.array(value)
+            # Handle arrays
+            elif hasattr(value, "__len__"):
+                return jnp.array(value)
+            else:
+                return jnp.array(value)
+        return None
+
+    galaxy = Galaxy(
+        redshift=safe_array_conversion(raw_data, "redshift"),
+        center=safe_array_conversion(raw_data, "subhalo_center"),
+        halfmassrad_stars=safe_array_conversion(raw_data, "subhalo_halfmassrad_stars"),
+    )
+
+    # Create stars data (always required)
+    stars_raw = raw_data["particle_data"]["stars"]
+
+    # Ensure all stellar data is properly converted to JAX arrays
+    stars = StarsData(
+        coords=jnp.asarray(stars_raw["coords"]),
+        velocity=jnp.asarray(stars_raw["velocity"]),
+        mass=jnp.asarray(stars_raw["mass"]),
+        age=jnp.asarray(stars_raw["age"]),
+        metallicity=jnp.asarray(stars_raw["metallicity"]),
+    )
+
+    # Create gas data only if dust extinction is enabled
+    gas = None
+    if (
+        config.get("ssp", {}).get("dust", {}).get("enabled", False)
+        and "gas" in raw_data["particle_data"]
+    ):
+        gas_raw = raw_data["particle_data"]["gas"]
+        gas = GasData(
+            coords=jnp.asarray(gas_raw["coords"]),
+            mass=jnp.asarray(gas_raw["mass"]),
+            density=jnp.asarray(gas_raw["density"]),
+            metallicity=jnp.asarray(gas_raw["metallicity"]),
+        )
+        logger.info(
+            f"Loaded {len(gas_raw['coords'])} gas particles for dust extinction"
+        )
+
+    logger.info(
+        f"Created minimal RubixData with {len(stars_raw['coords'])} stellar particles"
+    )
+
+    return RubixData(galaxy=galaxy, stars=stars, gas=gas)
 
 
-@jaxtyped(typechecker=typechecker)
-def get_reshape_data(config: Union[dict, str]) -> Callable:
+def _pad_particles_equinox(rubixdata: RubixData, pad_size: int) -> RubixData:
     """
-    Returns a function to reshape the data
-
-    Maps the `reshape_array` function to the input data dictionary.
-
-    Args:
-        config (dict or str): The configuration for the conversion. This can be a dictionary or a path to a YAML file containing the configuration.
-
-    Returns:
-        A function to reshape the data.
-
-    Example
-    -------
-    >>> from rubix.core.data import get_reshape_data
-    >>> reshape_data = get_reshape_data(config)
-    >>> rubixdata = reshape_data(rubixdata)
+    Pads particle arrays to make them divisible by the number of devices.
+    Works with Equinox modules.
     """
-    # Setup a logger based on the config
-    logger_config = config["logger"] if "logger" in config else None
-    logger = get_logger(logger_config)
 
-    def reshape_data(rubixdata: RubixData) -> RubixData:
-        # Check if input_data has 'stars' and 'gas' attributes and process them separately
-        if rubixdata.stars.coords is not None:
-            process_attributes(rubixdata.stars, logger)
+    def pad_array(arr):
+        if arr is None:
+            return None
+        if arr.ndim == 1:
+            # 1D array - pad with zeros
+            return jnp.pad(arr, (0, pad_size), mode="constant", constant_values=0)
+        elif arr.ndim == 2:
+            # 2D array - pad first dimension
+            return jnp.pad(
+                arr, ((0, pad_size), (0, 0)), mode="constant", constant_values=0
+            )
+        else:
+            return arr
 
-        if rubixdata.gas.coords is not None:
-            process_attributes(rubixdata.gas, logger)
-
-        return rubixdata
-
-    return reshape_data
+    # Apply padding to all arrays in the structure using JAX tree_map
+    padded_data = jtu.tree_map(pad_array, rubixdata, is_leaf=lambda x: x is None)
+    return padded_data

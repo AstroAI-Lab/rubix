@@ -1,5 +1,7 @@
 from typing import Callable
 
+import jax
+import jax.numpy as jnp
 from beartype import beartype as typechecker
 from jaxtyping import jaxtyped
 
@@ -13,16 +15,16 @@ from .telescope import get_telescope
 @jaxtyped(typechecker=typechecker)
 def get_convolve_lsf(config: dict) -> Callable:
     """
-    Get the function to convolve with the Line Spread Function (LSF) based on the configuration.
+    Get the line spread function (LSF) kernel based on the configuration.
 
     Args:
         config (dict): Configuration dictionary.
 
     Returns:
-        The function to convolve with the LSF.
+        The function to convolve the datacube with the LSF kernel.
 
-    Example:
-    --------
+    Example
+    -------
     >>> config = {
     ...     ...
     ...     "telescope": {
@@ -51,17 +53,30 @@ def get_convolve_lsf(config: dict) -> Callable:
 
     telescope = get_telescope(config)
 
-    wave_resolution = telescope.wave_res  # Wave Relolution of the telescope
+    wave_resolution = jnp.array(telescope.wave_res)  # Wave Resolution of the telescope
 
     # Define the function to convolve the datacube with the PSF kernel
     def convolve_lsf(rubixdata: RubixData) -> RubixData:
-        """Convolve the input datacube with the LSF."""
+        """Convolve the input datacube with the LSF kernel using immutable operations."""
         logger.info("Convolving with LSF...")
-        rubixdata.stars.datacube = apply_lsf(
-            datacube=rubixdata.stars.datacube,
-            lsf_sigma=sigma,
-            wave_resolution=wave_resolution,
+
+        # Check if datacube exists
+        if rubixdata.stars.datacube is None:
+            logger.warning("No datacube found, skipping LSF convolution")
+            return rubixdata
+
+        # Apply LSF convolution
+        convolved_datacube = apply_lsf(
+            rubixdata.stars.datacube, lsf_sigma=sigma, wave_resolution=wave_resolution
         )
-        return rubixdata
+
+        # Use immutable update with .replace()
+        updated_stars = rubixdata.stars.replace(datacube=convolved_datacube)
+        updated_rubixdata = rubixdata.replace(stars=updated_stars)
+
+        logger.debug(
+            f"LSF convolution applied to datacube shape: {convolved_datacube.shape}"
+        )
+        return updated_rubixdata
 
     return convolve_lsf

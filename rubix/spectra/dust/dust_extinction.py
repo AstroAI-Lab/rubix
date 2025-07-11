@@ -339,6 +339,15 @@ def apply_spaxel_extinction(
 
         return Av_array, None
 
+    # this is a scan over the spaxel IDs, which are the segments of the gas and stars arrays.
+    # We use the body function to calculate the extinction for each segment.
+    # The carry is the Av_array, which is updated in each iteration.
+    # The spaxel_IDs are the indices of the segments.
+    # We use jax.lax.scan to iterate over the spaxel IDs and calculate the extinction for each segment.
+    # This is more efficient than using a for loop as it allows JAX to optimize the computation and parallelize it across devices.
+    # maybe this can become a jax.lax.map in the future, but for now we use scan to keep the carry state.
+    # Note: we use the sorted indices to ensure that the gas and stars arrays are sorted
+    # according to the spaxel IDs and z positions.
     Av_array, _ = jax.lax.scan(body_fn, Av_array, spaxel_IDs)
 
     # get the extinguished SSP flux for different amounts of dust

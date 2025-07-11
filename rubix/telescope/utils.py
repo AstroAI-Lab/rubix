@@ -1,5 +1,6 @@
 from typing import List, Tuple, Union
 
+import jax
 import jax.numpy as jnp
 import numpy as np
 from beartype import beartype as typechecker
@@ -67,7 +68,6 @@ def calculate_wave_edges(
     Returns:
         The bin edges for the wavelength bins as jnp.array.
     """
-
     wave_start = wave_bin_edges[0] - (wave_res / 2)
     wave_end = wave_bin_edges[-1] + (wave_res / 2)
     wave_bins = jnp.arange(wave_start, wave_end, wave_res)
