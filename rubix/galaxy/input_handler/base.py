@@ -46,8 +46,8 @@ def create_rubix_galaxy(
         particle_group = f.create_group("particles")
 
         # Save the simulation metadata
-        for key, value in simulation_metadata.items():
-            meta_group.create_dataset(key, data=value)
+        #for key, value in simulation_metadata.items():
+        #    meta_group.create_dataset(key, data=value)
 
         # Save the galaxy data: Create a dataset for each field and add the units as attributes
         for key, value in galaxy_data.items():
@@ -211,6 +211,7 @@ class BaseHandler(ABC):
             particle_units = units.get(particle_type, {})
             for field in particle_data[particle_type]:
                 if field not in particle_units:
-                    raise ValueError(
-                        f"Units for {field} not found in units for particle type {particle_type}"
-                    )
+                    particle_units[field] = u.dimensionless_unscaled  # Default unit if not specified
+                    #raise ValueError(
+                    #    f"Units for {field} not found in units for particle type {particle_type}"
+                    #)

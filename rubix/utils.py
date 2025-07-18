@@ -177,9 +177,9 @@ def load_galaxy_data(path_to_file: str):
         raise FileNotFoundError(f"File {str(path_to_file)} does not exist")
 
     with h5py.File(path_to_file, "r") as f:
-        galaxy_data["subhalo_center"] = f["galaxy/center"][()]
-        galaxy_data["subhalo_halfmassrad_stars"] = f["galaxy/halfmassrad_stars"][()]
-        galaxy_data["redshift"] = f["galaxy/redshift"][()]
+        #galaxy_data["subhalo_center"] = f["galaxy/center"][()]
+        #galaxy_data["subhalo_halfmassrad_stars"] = f["galaxy/halfmassrad_stars"][()]
+        #galaxy_data["redshift"] = f["galaxy/redshift"][()]
 
         units["galaxy"] = {}
         for key in f["galaxy"].keys():

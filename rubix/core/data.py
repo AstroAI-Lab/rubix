@@ -436,12 +436,12 @@ def prepare_input(config: Union[dict, str]) -> RubixData:
     rubixdata = RubixData(Galaxy(), StarsData(), GasData())
 
     # Set the galaxy attributes
-    rubixdata.galaxy.redshift = data["redshift"]
-    rubixdata.galaxy.redshift_unit = units["galaxy"]["redshift"]
-    rubixdata.galaxy.center = data["subhalo_center"]
-    rubixdata.galaxy.center_unit = units["galaxy"]["center"]
-    rubixdata.galaxy.halfmassrad_stars = data["subhalo_halfmassrad_stars"]
-    rubixdata.galaxy.halfmassrad_stars_unit = units["galaxy"]["halfmassrad_stars"]
+    #rubixdata.galaxy.redshift = data["redshift"]
+    #rubixdata.galaxy.redshift_unit = units["galaxy"]["redshift"]
+    #rubixdata.galaxy.center = data["subhalo_center"]
+    #rubixdata.galaxy.center_unit = units["galaxy"]["center"]
+    #rubixdata.galaxy.halfmassrad_stars = data["subhalo_halfmassrad_stars"]
+    #rubixdata.galaxy.halfmassrad_stars_unit = units["galaxy"]["halfmassrad_stars"]
 
     # Set the particle attributes
     for partType in config["data"]["args"]["particle_type"]:
@@ -458,7 +458,7 @@ def prepare_input(config: Union[dict, str]) -> RubixData:
 
             # Center the particles
             logger.info(f"Centering {partType} particles")
-            rubixdata = center_particles(rubixdata, partType)
+            #rubixdata = center_particles(rubixdata, partType)
 
             if (
                 "data" in config
