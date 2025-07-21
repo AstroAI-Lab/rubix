@@ -36,25 +36,25 @@ bibliography: paper.bib
 
 # Summary
 
-Integral field unit (IFU) observations combine imaging and spectroscopy, delivering highly information‑rich data products in astronomy. As more facilities are equipped with IFU instruments, observing a galaxy with an IFU allows us to study spatially resolved spectra and gain a more detailed understanding of galaxy evolution.
+Integral field unit (IFU) observations combine imaging and spectroscopy, delivering highly information‑rich data products in astronomy. More and more facilities are equipped with IFU instruments. Observing a galaxy with an IFU allows us to study spatially resolved spectra and gain a more detailed understanding of galaxy evolution.
 
 In addition to observations, we study galaxy evolution theoretically via cosmological hydrodynamical simulations. However, simulation outputs, which are particles with physical properties, cannot be directly compared to observations, which record stellar light.
 
-To bridge the simulation and observation domains, we need software that translates between them. `RUBIX` is an open‑source python package that generates realistic mock IFU data cubes from theoretical models such as cosmological hydrodynamical simulations of galaxies or any particle distribution. It provides a fully modular, configurable pipeline that produces science‑ready mock observations from arbitrary simulation outputs. Written in JAX for just‑in‑time compilation and GPU support, `RUBIX` performs forward modelling of stellar particles into spatially resolved integrated spectra in seconds rather than haround an hour which previous packages needed, and computes end‑to‑end gradients via automatic differentiation. This differentiable pipeline enables gradient‑based inverse modelling and optimization workflows, opening the door to simulation‑based inference and Machine Learning applications on IFU data.
+To bridge the simulation and observation domains, we need software that translates between them. `RUBIX` is an open‑source python package that generates realistic mock IFU data cubes from theoretical models such as cosmological hydrodynamical simulations of galaxies or any particle distribution. It provides a fully modular, configurable pipeline that produces science‑ready mock observations from arbitrary simulation outputs. Written in JAX for just‑in‑time compilation and GPU support, `RUBIX` performs forward modelling of stellar particles into spatially resolved integrated spectra in seconds rather than around an hour which previous packages needed, and computes end‑to‑end gradients via automatic differentiation. This differentiable pipeline enables gradient‑based inverse modelling and optimization workflows, opening the door to simulation‑based inference and Machine Learning applications on IFU data.
 
 # Statement of need
 
-The era of large integral field unit (IFU) surveys like MaNGA, SAMI, and upcoming JWST programs has created an urgent need for scalable forward-modeling tools. Current challenges include:
+The era of large integral field unit (IFU) surveys like CALIFA, MaNGA, SAMI, GECKOS and upcoming MUSE and JWST NIRSpec programs has created an urgent need for scalable forward-modeling tools. Current challenges include:
 
-**Computational bottlenecks**: Existing tools like SimSpin [@Harborne2020;@Harborne2023], MaNGIA [@Sarmiento2023] or GalCraft [@Wang2024] require 30 minutes to hours per galaxy on CPUs, making large mock surveys (>10,000 galaxies) computationally prohibitive. This limits statistical studies and prevents adequate exploration of systematic uncertainties.
+**Computational bottlenecks**: Existing tools like SimSpin [@Harborne2020;@Harborne2023], MaNGIA [@Sarmiento2023] or GalCraft [@Wang2024] require 30 minutes to hours per galaxy on CPUs. This makes large mock surveys with thousands of galaxies computationally prohibitive and limits statistical studies.
 
-**Inverse modeling limitations**: Traditional forward-modeling codes lack differentiability, preventing gradient-based parameter inference. This forces researchers to rely on expensive sampling methods (MCMC) or simplified analytical approximations, limiting the precision of simulation-observation comparisons. One workaround could be Enzyme AD, which can turn arbitraty code into a computational graph and compute derivatives, but you have to provide your code as LLVM IR. JAX operates on a higher python level, uses XLA underneath  and supports combinations of auto-vectorisation, XLA compilation and gradient calculation. 
+**Inverse modeling limitations**: Traditional forward-modeling codes lack differentiability, preventing gradient-based parameter inference. This forces researchers to rely on expensive sampling methods (MCMC) or simplified analytical approximations, limiting the precision of simulation-observation comparisons. One workaround could be Enzyme AD, which can turn arbitraty code into a computational graph and compute derivatives, but you have to provide your code as LLVM IR. JAX operates on a higher python level, it offers a simple high level numpy API. JAX also offers easy parallelization and sharding. One can write code in python in numpy API and get for free end to end differentiability and GPU support.
 
 **Reproducibility and extensibility**: Many existing codes are monolithic with hard-coded assumptions, making it difficult to reproduce results, modify dust models, or integrate new physics. This hampers scientific progress and collaboration.
 
 | Feature | `RUBIX` | SimSpin | MaNGIA | GalCraft |
 |---------|-------|---------|---------|----------|
-| Runtime (typical galaxy) | ~1 minute | ~? hour | ~30 minutes | ~1.4 hours |
+| Runtime (typical galaxy) | ~ 1 minute | ~ 1 hour | ~ 30 minutes | ~ 1.4 hours |
 | GPU Support | yes | no | no | no |
 | Differentiable | yes | no | no | no |
 | Modular Architecture | yes | Limited | Limited | Limited |
@@ -70,30 +70,39 @@ This combination of speed, differentiability, and modularity opens new possibili
 
 # Software description
 
-![Schematic overview of the `RUBIX`softwarre: We hand into the pipeline particle data and a configuration as input. The pipeline splits the data onto different devices and are then linear structured functions. As output of our software we get an IFU CUBE.\label{fig:overview}](rubix_code_overview.png)
+![Schematic overview of the `RUBIX` software: We hand into the pipeline particle data and a configuration as input. The pipeline splits the data onto different devices. The pipeline itself consists of functiona that are applieds in a linear way. As output of our software we get an IFU cube‚.\label{fig:overview}](rubix_code_overview.png)
 
-`RUBIX` is implemented as a modular Python package built on JAX [@jax2018github] for high-performance numerical computing. In \autoref{fig:overview} we show a schematic overview of our pipeline. `RUBIX`takes as input particle data i.e. from cosmological hydrodynamical simulations and a configuration. In the beginning of the pipeline the particle data are splitt and distributed to the computation devices via `shard_map`. The software follows functional programming principles with pure functions throughout the pipeline, enabling parallelization, and automatic differentiation. To each subset of particles the pipeline functions are applied in a linear way and in the end the data are pulled together from all devices and combined. The final output is then the computed mock IFU cube.
+`RUBIX` is implemented as a modular Python package built on JAX [@jax2018github] for high-performance numerical computing. In \autoref{fig:overview} we show a schematic overview of our pipeline. `RUBIX` takes as input particle data i.e. from cosmological hydrodynamical simulations and a configuration. In the beginning of the pipeline the particle data are splitt and distributed to the computation devices via `shard_map`. The software follows functional programming principles with pure functions throughout the pipeline, enabling parallelization, and automatic differentiation. To each subset of particles the pipeline functions are applied in a linear way and in the end the data are pulled together from all devices and combined. The final output is the computed mock IFU cube.
 
 The key features of `RUBIX` are:
 
 **Forward modeling**: `RUBIX` transforms particle-based simulation data into realistic mock IFU observations through:
+
 1. Stellar particle assignment to spatial pixels based on user-defined field of view
+
 2. Age and metallicity-dependent spectral synthesis using stellar population models, i.e. FSPS [@Conroy2009]
+
 3. Dust extinction calculation from gas particle distributions (multiple dust laws availible [@Cardelli1989;@Gordon2023;@Calzetti2000])
+
 4. Instrumental effects application (LSF, PSF, noise, spectral resolution)
+
 5. Output generation in standard astronomical formats (FITS)
 
 **Inverse modeling**: `RUBIX` has a differentiable architecture. The JAX implementation enables automatic differentiation through the entire pipeline, supporting:
+
 - Gradient-based parameter estimation
+
 - Integration with modern ML frameworks (Optax, Flax)
+
 - Simulation-based inference workflows
+
 - Uncertainty quantification via variational methods
 
 # Research applications
 
 The software was alredy presented in the Machine Learning and the Physical Sciences workshop at the 38th conference on Neural Information Processing Systems (NeurIPS) in December 2024 [@Cakir2024].
 
-So far we are using the forward modeling mode to generate large-scale mock surveys for the GECKOS survey [@Fraser-McKelvie2024]. We are also working on the inverse modeling mode and do parameter inference studies using gradient-based optimization. Further plans are generating Machine Learning training data for spectral analysis pipelines.
+So far we are using the forward modeling mode to generate large-scale mock surveys for the GECKOS survey [@Fraser-McKelvie2024]. We are also working on the inverse modeling mode and do parameter inference studies using gradient-based optimization.
 
 # Usage example
 
