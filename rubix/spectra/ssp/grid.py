@@ -15,6 +15,7 @@ from jaxtyping import Array, Float, Int, jaxtyped
 
 from rubix import config as rubix_config
 from rubix.logger import get_logger
+from rubix.cosmology import PLANCK15 as rubix_cosmo
 
 SSP_UNITS = rubix_config["ssp"]["units"]
 
@@ -545,6 +546,9 @@ class pyPipe3DSSPGrid(SSPGrid):
             wavelength = cls.get_wavelength_from_header(_header)
             offset = (wavelength[1] - wavelength[0]) / 2.0
             wavelength = wavelength - offset
+
+            age_at_z0 = rubix_cosmo.age_at_z0()
+            ages = age_at_z0 * u.Gyr - ages * u.Gyr
 
             # read in the flux of the models and multiply by the mass-to-light ratio to get the flux in Lsun/Msun
             # see also eq. A1 here https://arxiv.org/pdf/1811.04856.pdf
