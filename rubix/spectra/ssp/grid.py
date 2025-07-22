@@ -543,6 +543,8 @@ class pyPipe3DSSPGrid(SSPGrid):
             # normalization_wavelength = get_normalization_wavelength(_header, wavelength, flux_models, n_models)
             ages, metallicities, m2l = cls.get_tZ_models(_header, n_models)
             wavelength = cls.get_wavelength_from_header(_header)
+            offset = (wavelength[1] - wavelength[0]) / 2.0
+            wavelength = wavelength - offset
 
             # read in the flux of the models and multiply by the mass-to-light ratio to get the flux in Lsun/Msun
             # see also eq. A1 here https://arxiv.org/pdf/1811.04856.pdf
