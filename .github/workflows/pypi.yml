@@ -14,7 +14,7 @@ jobs:
       id-token: write
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
           # setuptools_scm requires a non-shallow clone of the repository
           fetch-depth: 0
