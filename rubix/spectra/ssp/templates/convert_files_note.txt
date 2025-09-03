@@ -1,0 +1,130 @@
+We use for BC and EMILES the template files from Kate (https://github.com/kateharborne/SimSpin/tree/main/data).
+These files are in .rda format. We have to convert it to h5.
+
+Read out the format in a R Terminal:
+load("BC03lr.rda")
+ls()
+str(BC03lr)
+class(BC03lr)
+names(BC03lr)
+q() #for exiting
+
+
+
+load("BC03lr.rda")
+class(BC03lr)        # should be "list"
+saveRDS(BC03lr, file = "BC03lr.rds")
+
+
+
+
+
+# 1. Installiere Bioconductor (falls noch nicht vorhanden)
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+# 2. Installiere rhdf5 über Bioconductor
+BiocManager::install("rhdf5")
+
+
+
+
+
+
+# Pakete laden
+install.packages("rhdf5")  # falls nicht vorhanden
+library(rhdf5)
+
+# Datei laden
+BC03lr <- readRDS("BC03lr.rds")
+
+# flux als 3D Array vorbereiten
+flux <- array(NA, dim = c(length(BC03lr$Z), length(BC03lr$Age), length(BC03lr$Wave)))
+for (i in seq_along(BC03lr$Z)) {
+  flux[i,,] <- BC03lr$Zspec[[i]]
+}
+
+# HDF5 schreiben
+h5createFile("BC03lr.h5")
+h5write(BC03lr$Z, "BC03lr.h5", "metallicity")
+h5write(BC03lr$Age, "BC03lr.h5", "age")
+h5write(BC03lr$Wave, "BC03lr.h5", "wavelength")
+h5write(flux, "BC03lr.h5", "flux")
+
+
+
+
+
+
+load("BC03hr.rda")
+class(BC03hr)        # should be "list"
+saveRDS(BC03hr, file = "BC03hr.rds")
+
+
+# 1. Installiere Bioconductor (falls noch nicht vorhanden)
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+# 2. Installiere rhdf5 über Bioconductor
+BiocManager::install("rhdf5")
+
+# Pakete laden
+install.packages("rhdf5")  # falls nicht vorhanden
+library(rhdf5)
+
+# Datei laden
+BC03hr <- readRDS("BC03hr.rds")
+
+# flux als 3D Array vorbereiten
+flux <- array(NA, dim = c(length(BC03hr$Z), length(BC03hr$Age), length(BC03hr$Wave)))
+for (i in seq_along(BC03hr$Z)) {
+  flux[i,,] <- BC03hr$Zspec[[i]]
+}
+
+# HDF5 schreiben
+h5createFile("BC03hr.h5")
+h5write(BC03hr$Z, "BC03hr.h5", "metallicity")
+h5write(BC03hr$Age, "BC03hr.h5", "age")
+h5write(BC03hr$Wave, "BC03hr.h5", "wavelength")
+h5write(flux, "BC03hr.h5", "flux")
+
+
+
+
+
+
+
+
+
+
+load("EMILES.rda")
+class(EMILES)        # should be "list"
+saveRDS(EMILES, file = "EMILES.rds")
+
+
+# 1. Installiere Bioconductor (falls noch nicht vorhanden)
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+# 2. Installiere rhdf5 über Bioconductor
+BiocManager::install("rhdf5")
+
+# Pakete laden
+install.packages("rhdf5")  # falls nicht vorhanden
+library(rhdf5)
+
+# Datei laden
+EMILES <- readRDS("EMILES.rds")
+
+# flux als 3D Array vorbereiten
+flux <- array(NA, dim = c(length(EMILES$Z), length(EMILES$Age), length(EMILES$Wave)))
+for (i in seq_along(EMILES$Z)) {
+  flux[i,,] <- EMILES$Zspec[[i]]
+}
+
+# HDF5 schreiben
+h5createFile("EMILES.h5")
+h5write(EMILES$Z, "EMILES.h5", "metallicity")
+h5write(EMILES$Age, "EMILES.h5", "age")
+h5write(EMILES$Wave, "EMILES.h5", "wavelength")
+h5write(flux, "EMILES.h5", "flux")

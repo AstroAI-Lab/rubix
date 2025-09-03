@@ -325,6 +325,8 @@ class HDF5SSPGrid(SSPGrid):
             for field_name, field_info in config["fields"].items():
                 data = f[field_info["name"]][:]  # type: ignore
                 data = jnp.power(10, data) if field_info["in_log"] else data  # type: ignore
+                if field_name == "flux":
+                    data = jnp.transpose(data, (2, 1, 0))  # fix axis order
                 data = jnp.array(data, dtype=jnp.float32)
                 data = cls.convert_units(
                     data, field_info["units"], SSP_UNITS[field_name]
