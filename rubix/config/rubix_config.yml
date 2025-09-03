@@ -179,7 +179,7 @@ ssp:
       name: "EMILES"
       format: "HDF5" # Format of the template
       source: "https://github.com/kateharborne/SimSpin/tree/main/data/" # note: we end with a slash, so that in combination with the file_name, the full URL is formed
-      file_name: EMILES.h5" # File name of the template, stored in templates directory
+      file_name: "EMILES.h5" # File name of the template, stored in templates directory
       # Define the Fields in the template and their units
       # This is used to convert them to the required units
       fields: # Fields in the template and their units
