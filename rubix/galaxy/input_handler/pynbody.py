@@ -6,6 +6,8 @@ import numpy as np
 import pynbody
 import yaml
 import pickle
+import ast
+import re
 
 from rubix.cosmology import PLANCK15 as rubix_cosmo
 from rubix.units import Zsun
@@ -104,39 +106,83 @@ class PynbodyHandler(BaseHandler):
             gmm_iords = gsf_spliting["iord"]         # array of star iords
 
             # normalize config to a list (or empty list for no filter)
-            if self.component is None:
+            def _norm_tag(s: str) -> str:
+                s = s.strip()
+                s = s.replace("ThinDisk", "ThinDisc").replace("ThickDisk", "ThickDisc")
+                return re.sub(r"\s+", "", s).lower()  # case/space-insensitive
+
+            def _parse_components(comp):
+                """Return None (no filter), a str, or a list[str] in original form."""
+                if comp is None:
+                    return None
+                if isinstance(comp, list) or isinstance(comp, tuple):
+                    return list(comp)
+                if isinstance(comp, str):
+                    c = comp.strip()
+                    if c == "" or c.lower() == "none":
+                        return None
+                    # handle "['A','B']" or '["A","B"]'
+                    if c.startswith("[") and c.endswith("]"):
+                        try:
+                            parsed = ast.literal_eval(c)
+                            return [str(x) for x in parsed]
+                        except Exception:
+                            pass
+                    # handle CSV "A,B,C"
+                    if "," in c:
+                        return [x.strip() for x in c.split(",")]
+                    return c
+                return None
+
+            # ---- parse & normalize requested components
+            requested = _parse_components(self.component)  # None | str | list[str]
+            if requested is None:
                 target_tags = []
-            elif isinstance(self.component, str):
-                target_tags = [self.component]
             else:
-                target_tags = list(self.component)
+                if isinstance(requested, str):
+                    target_tags = [requested]
+                else:
+                    target_tags = list(requested)
 
-            # validate
-            valid = [t for t in target_tags if t in tags]
-            invalid = set(target_tags) - set(valid)
-            if invalid:
+            # build normalization map from pickle tags -> original form
+            tags_norm_map = {_norm_tag(t): t for t in tags}
+
+            # map requested tags (after normalization/synonyms) to original tags if possible
+            resolved = []
+            unknown = []
+            for t in target_tags:
+                tN = _norm_tag(t)
+                if tN in tags_norm_map:
+                    resolved.append(tags_norm_map[tN])
+                else:
+                    unknown.append(t)
+
+            if unknown:
                 self.logger.warning(
-                    f"Ignoring unknown components: {sorted(invalid)}; valid tags are {tags}"
+                    "Ignoring unknown components after normalization: %s ; valid tags are: %s",
+                    sorted(set(unknown)), tags
                 )
 
-            if valid:
-                self.logger.info(
-                    f"Filtering components by tags: {valid}."
-                )
-                # find all integer labels matching any requested tag
-                target_idxs = [tags.index(t) for t in valid]
-                # build mask: iord in any of those labels
+            if resolved:
+                self.logger.info("Filtering components by tags (resolved): %s", resolved)
+                target_idxs = [tags.index(t) for t in resolved]
                 snap_iords = np.asarray(halo.s["iord"])
-                sel_iords  = np.concatenate([gmm_iords[labels == idx] for idx in target_idxs])
-                mask       = np.isin(snap_iords, sel_iords)
-                halo.s     = halo.s[mask]
+                # union of all requested labels
+                sel_list = [gmm_iords[labels == idx] for idx in target_idxs]
+                if len(sel_list) == 1:
+                    sel_iords = sel_list[0]
+                else:
+                    sel_iords = np.concatenate(sel_list, axis=0)
+                # unique for safety (large sets)
+                sel_iords = np.unique(sel_iords)
+                mask = np.isin(snap_iords, sel_iords, assume_unique=False)
+                halo.s = halo.s[mask]
                 self.logger.info(
-                    f"Filtered to components {valid} "
-                    f"({mask.sum()} particles out of {len(snap_iords)} total)."
+                    "Filtered to components %s (%d particles out of %d).",
+                    resolved, int(mask.sum()), int(len(snap_iords))
                 )
             else:
                 self.logger.info("No component filtering; loading all stars.")
-
             self.sim = halo
 
 
