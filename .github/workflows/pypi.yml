@@ -19,7 +19,7 @@ jobs:
           # setuptools_scm requires a non-shallow clone of the repository
           fetch-depth: 0
 
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v6
       name: Install Python
 
     - name: Build SDist
