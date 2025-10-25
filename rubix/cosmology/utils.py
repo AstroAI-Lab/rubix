@@ -8,8 +8,8 @@ from jaxtyping import Array, Float, jaxtyped
 
 
 # Source: https://github.com/ArgonneCPAC/dsps/blob/b81bac59e545e2d68ccf698faba078d87cfa2dd8/dsps/utils.py#L247C1-L256C1
-@jaxtyped(typechecker=typechecker)
 @jit
+@jaxtyped(typechecker=typechecker)
 def _cumtrapz_scan_func(carryover, el):
     """
     Integral helper function, which uses the formula for trapezoidal integration.
