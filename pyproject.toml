@@ -35,7 +35,6 @@ dependencies = [
     "jax[cpu]!=0.4.27",
     "jax[cpu]!=0.4.36",
     "jax[cpu]!=0.5.1",
-    "jax[cpu]!=0.8.0",
     "interpax",
     "astroquery",
     "beartype",
@@ -54,7 +53,6 @@ tests = [
     "nbval",
     "jax[cpu]!=0.4.27",
     "jax[cpu]!=0.4.36",
-    "jax[cpu]!=0.8.0",
     "pre-commit",
 ]
 docs = [

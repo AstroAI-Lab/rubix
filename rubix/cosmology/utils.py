@@ -37,8 +37,8 @@ def _cumtrapz_scan_func(carryover, el):
 
 
 # Source: https://github.com/ArgonneCPAC/dsps/blob/b81bac59e545e2d68ccf698faba078d87cfa2dd8/dsps/utils.py#L278C1-L298C1
-@jaxtyped(typechecker=typechecker)
 @jit
+@jaxtyped(typechecker=typechecker)
 def trapz(
     xarr: Union[jnp.ndarray, Float[Array, "n"]],
     yarr: Union[jnp.ndarray, Float[Array, "n"]],
