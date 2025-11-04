@@ -23,14 +23,20 @@ from .telescope import get_telescope
 @jaxtyped(typechecker=typechecker)
 def get_calculate_datacube_particlewise(config: dict) -> Callable:
     """
-    Returns a function that builds the IFU cube by, for each star:
-      1) looking up SSP
-      2) scaling by mass
-      3) Doppler‐shifting
-      4) resampling
-      5) accumulating into the shared datacube
+    Create a function that calculates the datacube for the stars component
+    of a RubixData object on a per-particle basis. First, it looks up the SSP
+    spectrum for each star based on its age and metallicity, scales it by the
+    star's mass, applies a Doppler shift based on the star's velocity, resamples
+    the spectrum onto the telescope's wavelength grid, and finally accumulates
+    the resulting spectra into the appropriate pixels of the datacube.
+    
+    Args:
+        config (dict): Configuration dictionary containing telescope and galaxy
+                       parameters.
 
-    Args
+    Returns:
+        Callable: A function that takes a RubixData object and returns it with
+                  the datacube calculated and added to the stars component.
     """
     logger = get_logger(config.get("logger", None))
     telescope = get_telescope(config)
@@ -99,5 +105,4 @@ def get_calculate_datacube_particlewise(config: dict) -> Callable:
         logger.debug(f"Datacube shape: {cube_3d.shape}")
         return rubixdata
 
-    # return jax.jit(calculate_datacube_particlewise)
     return calculate_datacube_particlewise

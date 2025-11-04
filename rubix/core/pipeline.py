@@ -54,6 +54,20 @@ class RubixPipeline:
     """
 
     def __init__(self, user_config: Union[dict, str]):
+        """
+        Initializes the RubixPipeline with the given user configuration.
+
+        Args:
+            user_config (Union[dict, str]): User configuration dictionary or path to config file.
+            pipeline_config (dict): Pipeline configuration dictionary.
+            logger: Logger instance for logging messages.
+            ssp: SSP model instance.
+            telescope: Telescope instance.
+            func: Compiled pipeline function.
+
+        Returns:
+            None
+        """
         self.user_config = get_config(user_config)
         self.pipeline_config = get_pipeline_config(self.user_config["pipeline"]["name"])
         self.logger = get_logger(self.user_config["logger"])
@@ -97,7 +111,6 @@ class RubixPipeline:
         rotate_galaxy = get_galaxy_rotation(self.user_config)
         filter_particles = get_filter_particles(self.user_config)
         spaxel_assignment = get_spaxel_assignment(self.user_config)
-        # reshape_data = get_reshape_data(self.user_config)
         apply_extinction = get_extinction(self.user_config)
         calculate_datacube_particlewise = get_calculate_datacube_particlewise(
             self.user_config
@@ -110,7 +123,6 @@ class RubixPipeline:
             rotate_galaxy,
             filter_particles,
             spaxel_assignment,
-            # reshape_data,
             apply_extinction,
             calculate_datacube_particlewise,
             convolve_psf,
@@ -243,18 +255,12 @@ class RubixPipeline:
             check_rep=False,
         )
 
-        time_mid = time.time()
         sharded_result = sharded_pipeline(inputdata)
 
         time_end = time.time()
-        self.logger.info("Sharding completed in %.2f seconds.", time_mid - time_start)
-        self.logger.info(
-            "Sharded pipeline run completed in %.2f seconds.", time_end - time_mid
-        )
         self.logger.info(
             "Total time for sharded pipeline run: %.2f seconds.",
             time_end - time_start,
         )
-        # final_cube = jnp.sum(partial_cubes, axis=0)
 
         return sharded_result
