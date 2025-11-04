@@ -29,7 +29,7 @@ def get_calculate_datacube_particlewise(config: dict) -> Callable:
     star's mass, applies a Doppler shift based on the star's velocity, resamples
     the spectrum onto the telescope's wavelength grid, and finally accumulates
     the resulting spectra into the appropriate pixels of the datacube.
-    
+
     Args:
         config (dict): Configuration dictionary containing telescope and galaxy
                        parameters.
