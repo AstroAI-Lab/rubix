@@ -2,7 +2,7 @@ import logging
 import os
 from dataclasses import dataclass
 from functools import partial
-from typing import Callable, Optional, Union, Any
+from typing import Any, Callable, Optional, Union
 
 import jax
 import jax.numpy as jnp
@@ -386,7 +386,6 @@ def convert_to_rubix(config: Union[dict, str]):
             logger.info("Loading data from Nihao simulation")
         else:
             raise ValueError(f"Unknown data source: {config['data']['name']}.")
-
 
     # Load the saved data into the input handler
     logger.info("Loading data into input handler")
