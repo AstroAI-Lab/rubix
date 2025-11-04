@@ -131,7 +131,7 @@ class RubixPipeline:
         ]
         return functions
 
-    def run_sharded(self, inputdata):
+    def run_sharded(self, inputdata, devices):
         """
         Runs the pipeline on sharded input data in parallel using jax.shard_map.
         It splits the particle arrays (e.g. under stars and gas) into shards, runs
@@ -162,7 +162,7 @@ class RubixPipeline:
         self.logger.info("Compiling the expressions...")
         self.func = self._pipeline.compile_expression()
 
-        devices = jax.devices()
+        #devices = jax.devices()
         num_devices = len(devices)
         self.logger.info("Number of devices: %d", num_devices)
 

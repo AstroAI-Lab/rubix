@@ -15,12 +15,13 @@ from .base import BaseHandler
 
 class PynbodyHandler(BaseHandler):
     def __init__(
-        self, path, halo_path=None, logger=None, config=None, dist_z=None, halo_id=None
+        self, path, halo_path=None, rotation_path="./data", logger=None, config=None, dist_z=None, halo_id=None
     ):
         """Initialize handler with paths to snapshot and halo files."""
         self.metallicity_unit = Zsun
         self.path = path
         self.halo_path = halo_path
+        self.rotation_path = rotation_path
         self.halo_id = halo_id
         self.pynbody_config = config or self._load_config()
         self.logger = logger or self._default_logger()
@@ -77,12 +78,12 @@ class PynbodyHandler(BaseHandler):
             pynbody.analysis.angmom.faceon(halo.s)
             ang_mom_vec = pynbody.analysis.angmom.ang_mom_vec(halo.s)
             rotation_matrix = pynbody.analysis.angmom.calc_sideon_matrix(ang_mom_vec)
-            if not os.path.exists("./data"):
+            if not os.path.exists(self.rotation_path):
                 self.logger.info("Rotation matrix calculated and not saved.")
             else:
-                np.save("./data/rotation_matrix.npy", rotation_matrix)
+                np.save(os.path.join(self.rotation_path, "rotation_matrix.npy"), rotation_matrix)
                 self.logger.info(
-                    "Rotation matrix calculated and saved to '/notebooks/data/rotation_matrix.npy'."
+                    f"Rotation matrix calculated and saved to '{self.rotation_path}/rotation_matrix.npy'."
                 )
             self.sim = halo
 

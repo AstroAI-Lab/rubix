@@ -202,6 +202,13 @@ def _pad_particles(inputdata, pad: int) -> "InputData":
     """
     Pads the particle arrays in inputdata to make their length divisible by num_devices.
     This is necessary for sharding to work correctly.
+
+    Args:
+        inputdata (InputData): The input data containing particle arrays.
+        pad (int): The number of particles to pad.
+    
+    Returns:
+        InputData: The padded input data.
     """
 
     # pad along the first axis

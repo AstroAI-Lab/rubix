@@ -127,5 +127,3 @@ def test_rubix_pipeline_run_sharded():
     # The cube should have nonzero values (sanity check)
     assert jnp.any(output_cube != 0)
 
-    print("run_sharded output shape:", output_cube.shape)
-    print("run_sharded output sum:", jnp.sum(output_cube))
