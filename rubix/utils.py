@@ -206,7 +206,7 @@ def _pad_particles(inputdata, pad: int) -> "InputData":
     Args:
         inputdata (InputData): The input data containing particle arrays.
         pad (int): The number of particles to pad.
-    
+
     Returns:
         InputData: The padded input data.
     """

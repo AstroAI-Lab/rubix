@@ -162,7 +162,7 @@ class RubixPipeline:
         self.logger.info("Compiling the expressions...")
         self.func = self._pipeline.compile_expression()
 
-        #devices = jax.devices()
+        # devices = jax.devices()
         num_devices = len(devices)
         self.logger.info("Number of devices: %d", num_devices)
 

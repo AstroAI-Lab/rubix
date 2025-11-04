@@ -126,4 +126,3 @@ def test_rubix_pipeline_run_sharded():
     assert not jnp.isnan(output_cube).any()
     # The cube should have nonzero values (sanity check)
     assert jnp.any(output_cube != 0)
-

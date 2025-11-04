@@ -15,7 +15,14 @@ from .base import BaseHandler
 
 class PynbodyHandler(BaseHandler):
     def __init__(
-        self, path, halo_path=None, rotation_path="./data", logger=None, config=None, dist_z=None, halo_id=None
+        self,
+        path,
+        halo_path=None,
+        rotation_path="./data",
+        logger=None,
+        config=None,
+        dist_z=None,
+        halo_id=None,
     ):
         """Initialize handler with paths to snapshot and halo files."""
         self.metallicity_unit = Zsun
@@ -81,7 +88,10 @@ class PynbodyHandler(BaseHandler):
             if not os.path.exists(self.rotation_path):
                 self.logger.info("Rotation matrix calculated and not saved.")
             else:
-                np.save(os.path.join(self.rotation_path, "rotation_matrix.npy"), rotation_matrix)
+                np.save(
+                    os.path.join(self.rotation_path, "rotation_matrix.npy"),
+                    rotation_matrix,
+                )
                 self.logger.info(
                     f"Rotation matrix calculated and saved to '{self.rotation_path}/rotation_matrix.npy'."
                 )

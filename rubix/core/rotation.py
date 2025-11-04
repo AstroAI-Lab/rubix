@@ -81,7 +81,7 @@ def get_galaxy_rotation(config: dict):
 
         Args:
             rubixdata (RubixData): The RubixData object containing particle data.
-        
+
         Returns:
             RubixData: The rotated RubixData object.
         """
