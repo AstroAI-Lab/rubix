@@ -89,6 +89,7 @@ def test_rubix_pipeline_not_implemented(setup_environment):
 
 def test_rubix_pipeline_run_sharded():
     # Use the number of devices to set up data that can be sharded
+    devices = jax.devices()
     num_devices = len(jax.devices())
     n_particles = num_devices if num_devices > 1 else 2  # At least two for sanity
 
@@ -115,7 +116,7 @@ def test_rubix_pipeline_run_sharded():
     )
 
     pipeline = RubixPipeline(user_config=user_config)
-    output_cube = pipeline.run_sharded(input_data)
+    output_cube = pipeline.run_sharded(input_data, devices)
 
     # Output should be a jax array (the datacube)
     assert isinstance(output_cube, jax.Array)
