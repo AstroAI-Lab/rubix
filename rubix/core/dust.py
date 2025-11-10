@@ -56,7 +56,7 @@ def get_extinction(config: dict) -> Callable:
         """Apply the dust extinction to the spaxel data."""
         logger.info("Applying dust extinction to the spaxel data...")
 
-        rubixdata.stars.spectra = apply_spaxel_extinction(
+        rubixdata.stars.extinction = apply_spaxel_extinction(
             config, rubixdata, wavelength, n_spaxels, spaxel_area
         )
 

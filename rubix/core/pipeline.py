@@ -26,11 +26,13 @@ from .data import (
     GasData,
     RubixData,
     StarsData,
-    get_reshape_data,
     get_rubix_data,
 )
 from .dust import get_extinction
-from .ifu import get_calculate_datacube_particlewise
+from .ifu import (
+    get_calculate_datacube_particlewise,
+    get_calculate_dusty_datacube_particlewise,
+)
 from .lsf import get_convolve_lsf
 from .noise import get_apply_noise
 from .psf import get_convolve_psf
@@ -123,9 +125,12 @@ class RubixPipeline:
         rotate_galaxy = get_galaxy_rotation(self.user_config)
         filter_particles = get_filter_particles(self.user_config)
         spaxel_assignment = get_spaxel_assignment(self.user_config)
-        apply_extinction = get_extinction(self.user_config)
+        calculate_extinction = get_extinction(self.user_config)
         calculate_datacube_particlewise = get_calculate_datacube_particlewise(
             self.user_config
+        )
+        calculate_dusty_datacube_particlewise = (
+            get_calculate_dusty_datacube_particlewise(self.user_config)
         )
         convolve_psf = get_convolve_psf(self.user_config)
         convolve_lsf = get_convolve_lsf(self.user_config)
@@ -135,15 +140,16 @@ class RubixPipeline:
             rotate_galaxy,
             filter_particles,
             spaxel_assignment,
-            apply_extinction,
+            calculate_extinction,
             calculate_datacube_particlewise,
+            calculate_dusty_datacube_particlewise,
             convolve_psf,
             convolve_lsf,
             apply_noise,
         ]
         return functions
 
-    def run_sharded(self, inputdata, devices):
+    def run_sharded(self, inputdata, devices=None):
         """
         Runs the pipeline on sharded input data in parallel using jax.shard_map.
         It splits the particle arrays (e.g. under stars and gas) into shards, runs
@@ -174,8 +180,11 @@ class RubixPipeline:
         self.logger.info("Compiling the expressions...")
         self.func = self._pipeline.compile_expression()
 
-        # devices = jax.devices()
-        num_devices = len(devices)
+        if devices is None:
+            devices = jax.devices()
+            num_devices = len(devices)
+        else:
+            num_devices = len(devices)
         self.logger.info("Number of devices: %d", num_devices)
 
         mesh = Mesh(devices, axis_names=("data",))

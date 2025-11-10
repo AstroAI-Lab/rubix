@@ -37,19 +37,19 @@ def mock_config():
 def mock_rubixdata():
     class MockGas:
         def __init__(self):
-            self.coords = jnp.array([[[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]])
+            self.coords = jnp.array([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]])
             self.pixel_assignment = jnp.array([[0, 1]])
             self.metals = jnp.array(
-                [[[0.01, 0.02, 0.03, 0.04, 0.05], [0.06, 0.07, 0.08, 0.09, 0.1]]]
+                [[0.01, 0.02, 0.03, 0.04, 0.05], [0.06, 0.07, 0.08, 0.09, 0.1]]
             )
-            self.mass = jnp.array([[1.0, 2.0]])
+            self.mass = jnp.array([1.0, 2.0])
 
     class MockStars:
         def __init__(self):
-            self.coords = jnp.array([[[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]])
-            self.pixel_assignment = jnp.array([[0, 1]])
-            self.mass = jnp.array([[1.0, 2.0]])
-            self.spectra = jnp.array([[[1.0, 2.0], [3.0, 4.0]]])
+            self.coords = jnp.array([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]])
+            self.pixel_assignment = jnp.array([0, 1])
+            self.mass = jnp.array([1.0, 2.0])
+            self.spectra = jnp.array([[1.0, 2.0], [3.0, 4.0]])
 
     class MockRubixData(RubixData):
         def __init__(self):
@@ -68,7 +68,7 @@ def test_spaxel_extinction_Cardelli(mock_config, mock_rubixdata):
         mock_config, mock_rubixdata, wavelength, n_spaxels, spaxel_area
     )
 
-    assert result.shape == (1, 2, 2)
+    assert result.shape == (2,)
     assert jnp.all(result >= 0)
 
 
@@ -102,7 +102,7 @@ def test_spaxel_extinction_Gordon(mock_config, mock_rubixdata):
         mock_config, mock_rubixdata, wavelength, n_spaxels, spaxel_area
     )
 
-    assert result.shape == (1, 2, 2)
+    assert result.shape == (2,)
     assert jnp.all(result >= 0)
 
 
@@ -131,19 +131,19 @@ def mock_config():
 def mock_rubixdata():
     class MockGas:
         def __init__(self):
-            self.coords = jnp.array([[[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]])
-            self.pixel_assignment = jnp.array([[0, 1]])
+            self.coords = jnp.array([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]])
+            self.pixel_assignment = jnp.array([0, 1])
             self.metals = jnp.array(
-                [[[0.01, 0.02, 0.03, 0.04, 0.05], [0.06, 0.07, 0.08, 0.09, 0.1]]]
+                [[0.01, 0.02, 0.03, 0.04, 0.05], [0.06, 0.07, 0.08, 0.09, 0.1]]
             )
-            self.mass = jnp.array([[1.0, 2.0]])
+            self.mass = jnp.array([1.0, 2.0])
 
     class MockStars:
         def __init__(self):
-            self.coords = jnp.array([[[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]])
-            self.pixel_assignment = jnp.array([[0, 1]])
-            self.mass = jnp.array([[1.0, 2.0]])
-            self.spectra = jnp.array([[[1.0, 2.0], [3.0, 4.0]]])
+            self.coords = jnp.array([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]])
+            self.pixel_assignment = jnp.array([0, 1])
+            self.mass = jnp.array([1.0, 2.0])
+            self.spectra = jnp.array([[1.0, 2.0], [3.0, 4.0]])
 
     class MockRubixData(RubixData):
         def __init__(self):
