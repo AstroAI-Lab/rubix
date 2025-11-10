@@ -12,7 +12,7 @@ build-backend = "setuptools.build_meta"
 name = "rubix"
 description = "Add short description here"
 readme = "README.md"
-maintainers = [{ name = "Ufuk Çakır", email = "ufukcakir2001@gmail.com" }]
+maintainers = [{ name = "AstroAI-Lab", email = "astroai@iwr.uni-heidelberg.de" }]
 dynamic = ["version"]
 requires-python = ">=3.9"
 license = { text = "MIT" }
