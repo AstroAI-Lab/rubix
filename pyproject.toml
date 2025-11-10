@@ -10,7 +10,6 @@ build-backend = "setuptools.build_meta"
 # single source of truth for rubix's version
 [project]
 name = "rubix"
-version = "0.1.0"
 description = "A toolkit for simulating and analyzing integral field spectroscopic data cubes of astronomical sources."
 readme = "README.md"
 authors = [{ name = "AstroAI-Lab", email = "astroai@iwr.uni-heidelberg.de" }, { name = "Tobias Buck", email = "tobias.buck@iwr.uni-heidelberg.de" },
