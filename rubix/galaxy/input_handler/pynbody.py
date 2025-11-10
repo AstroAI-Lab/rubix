@@ -6,6 +6,7 @@ import numpy as np
 import pynbody
 import yaml
 
+from rubix.cosmology import PLANCK15 as rubix_cosmo
 from rubix.units import Zsun
 from rubix.utils import SFTtoAge
 
@@ -14,12 +15,20 @@ from .base import BaseHandler
 
 class PynbodyHandler(BaseHandler):
     def __init__(
-        self, path, halo_path=None, logger=None, config=None, dist_z=None, halo_id=None
+        self,
+        path,
+        halo_path=None,
+        rotation_path="./data",
+        logger=None,
+        config=None,
+        dist_z=None,
+        halo_id=None,
     ):
         """Initialize handler with paths to snapshot and halo files."""
         self.metallicity_unit = Zsun
         self.path = path
         self.halo_path = halo_path
+        self.rotation_path = rotation_path
         self.halo_id = halo_id
         self.pynbody_config = config or self._load_config()
         self.logger = logger or self._default_logger()
@@ -76,12 +85,15 @@ class PynbodyHandler(BaseHandler):
             pynbody.analysis.angmom.faceon(halo.s)
             ang_mom_vec = pynbody.analysis.angmom.ang_mom_vec(halo.s)
             rotation_matrix = pynbody.analysis.angmom.calc_sideon_matrix(ang_mom_vec)
-            if not os.path.exists("./data"):
+            if not os.path.exists(self.rotation_path):
                 self.logger.info("Rotation matrix calculated and not saved.")
             else:
-                np.save("./data/rotation_matrix.npy", rotation_matrix)
+                np.save(
+                    os.path.join(self.rotation_path, "rotation_matrix.npy"),
+                    rotation_matrix,
+                )
                 self.logger.info(
-                    "Rotation matrix calculated and saved to '/notebooks/data/rotation_matrix.npy'."
+                    f"Rotation matrix calculated and saved to '{self.rotation_path}/rotation_matrix.npy'."
                 )
             self.sim = halo
 
@@ -97,16 +109,6 @@ class PynbodyHandler(BaseHandler):
                     getattr(self.sim, cls), fields[cls], units[cls], cls
                 )
 
-        # for cls in self.data:
-        #    self.logger.info(f"Loaded {cls} data: {self.data[cls].keys()}")
-        #    self.logger.info("Assigning metals to gas particles........")
-
-        # Combine HI and OxMassFrac into a two-column metals field for gas
-        #    self.data["gas"]["metals"] = np.column_stack((self.data["gas"]["HI"],
-        #                                                self.data["gas"]["OxMassFrac"]))
-        #    self.logger.info("Metals assigned to gas particles........")
-        #    self.logger.info("Metals shape is: ", self.data["gas"]["metals"].shape)
-
         hi_data = self.load_particle_data(
             getattr(self.sim, "gas"),
             {"HI": "HI"},
@@ -119,8 +121,7 @@ class PynbodyHandler(BaseHandler):
             {"OxMassFrac": u.dimensionless_unscaled},
             "gas",
         )
-        # fe_data = self.load_particle_data(getattr(self.sim, "gas"), {"FeMassFrac": "FeMassFrac"}, {"FeMassFrac": u.dimensionless_unscaled}, "gas")
-        # self.data["gas"]["metals"] = np.column_stack((hi_data["HI"], ox_data["OxMassFrac"]))
+
         # Create a metals array with 10 columns, filled with zeros initially
         n_particles = hi_data["HI"].shape[0]
         metals = np.zeros((n_particles, 10), dtype=hi_data["HI"].dtype)
@@ -132,6 +133,9 @@ class PynbodyHandler(BaseHandler):
         self.data["gas"]["metals"] = metals
         self.logger.info("Metals assigned to gas particles.")
         self.logger.info("Metals shape is: %s", self.data["gas"]["metals"].shape)
+
+        age_at_z0 = rubix_cosmo.age_at_z0()
+        self.data["stars"]["age"] = age_at_z0 * u.Gyr - self.data["stars"]["age"]
 
         self.logger.info(
             f"Simulation snapshot and halo data loaded successfully for classes: {load_classes}."

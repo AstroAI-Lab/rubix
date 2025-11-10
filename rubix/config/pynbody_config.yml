@@ -34,7 +34,6 @@ units:
     metals: "dimensionless"
     #OxMassFrac: "dimensionless"
     #HI: "dimensionless"
-    metallicity: "Zsun"
     coords: "kpc"
     velocity: "km/s"
     mass: "Msun"
