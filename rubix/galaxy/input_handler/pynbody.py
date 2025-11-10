@@ -102,7 +102,8 @@ class PynbodyHandler(BaseHandler):
             # If a component is specified, load it and store from the input handler only the particles belonging to that file.
             gsf_spliting = pickle.load(open(self.component_file, "rb"))
             #tags = gsf_spliting["tags"]              # e.g. ["classicalBulge","ThinDisc",…]
-            tags = ["Disk", "Bulge", "Spheroid", "Halo"]
+            #tags = ["Disk", "Bulge", "Spheroid", "Halo"]
+            tags = ["PseudoBulge", "ClassicalBulge"]
             labels = gsf_spliting["label"]           # array of ints same length as iord
             gmm_iords = gsf_spliting["iord"]         # array of star iords
 
@@ -177,7 +178,7 @@ class PynbodyHandler(BaseHandler):
                 # unique for safety (large sets)
                 sel_iords = np.unique(sel_iords)
                 mask = np.isin(snap_iords, sel_iords, assume_unique=False)
-                halo.s = halo.s[mask]
+                halo.s = halo.s[~mask]
                 self.logger.info(
                     "Filtered to components %s (%d particles out of %d).",
                     resolved, int(mask.sum()), int(len(snap_iords))
