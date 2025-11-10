@@ -68,7 +68,7 @@ def test_spaxel_extinction_Cardelli(mock_config, mock_rubixdata):
         mock_config, mock_rubixdata, wavelength, n_spaxels, spaxel_area
     )
 
-    assert result.shape == (2, )
+    assert result.shape == (2,)
     assert jnp.all(result >= 0)
 
 
@@ -102,7 +102,7 @@ def test_spaxel_extinction_Gordon(mock_config, mock_rubixdata):
         mock_config, mock_rubixdata, wavelength, n_spaxels, spaxel_area
     )
 
-    assert result.shape == (2, )
+    assert result.shape == (2,)
     assert jnp.all(result >= 0)
 
 
