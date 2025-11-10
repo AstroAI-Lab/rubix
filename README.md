@@ -10,7 +10,7 @@
 [![codecov](https://codecov.io/gh/ufuk-cakir/rubix/branch/main/graph/badge.svg)](https://codecov.io/gh/ufuk-cakir/rubix)
 [![All Contributors](https://img.shields.io/github/all-contributors/ufuk-cakir/rubix?color=ee8449&style=flat-square)](#contributors)
 
-RUBIX is a versatile Integral Field Unit (IFU) tool designed for astrophysical simulations. It transforms cosmological hydrodynamical simulation outputs into realistic mock IFU cubes, enabling both forward and inverse modeling. Built on JAX, RUBIX leverages GPU acceleration and automatic differentiation, allowing users to perform gradient-based optimization for inverse modeling alongside traditional forward modeling.
+RUBIX is a versatile Integral Field Unit (IFU) tool designed for astrophysical simulations. It transforms any particle based galaxy model (e.g. cosmological hydrodynamical simulation outputs) into realistic mock IFU cubes, enabling both forward and inverse modeling. Built on JAX, RUBIX leverages GPU acceleration and automatic differentiation, allowing users to perform gradient-based optimization for inverse modeling alongside traditional forward modeling.
 
 Key features include:
 - **Mock IFU Cube Generation:** Convert simulation data into realistic IFU cubes.
@@ -68,7 +68,8 @@ If you find a bug or think of an enhancement, please open an issue on GitHub. Fo
 
 ### 2. Create a branch for your issue
 
-After creating the issue, create a new branch from `main` following a clear naming convention. For example:
+After creating the issue, create a new branch from `main` following a clear naming convention - e.g. name it such that the following sentence makes sense: ```If applied, this branch does/adds/ *name-of-branch*.```
+For example:
 
 ```bash
 git checkout -b fix/rotate-galaxy-angle
