@@ -231,8 +231,8 @@ def apply_rotation(
 
 @jaxtyped(typechecker=typechecker)
 def rotate_galaxy(
-    positions: Float[Array, "* 3"],
-    velocities: Float[Array, "* 3"],
+    positions: Float[Array, "..."],
+    velocities: Float[Array, "..."],
     positions_stars: Float[Array, "..."],
     masses_stars: Float[Array, "..."],
     halfmass_radius: Union[Float[Array, "..."], float],
