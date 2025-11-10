@@ -25,17 +25,6 @@ def store_fits(config, data, filepath):
     logger_config = config.get("logger", None)
     logger = get_logger(logger_config)
 
-    """
-    if "cube_type" not in config["data"]["args"]:
-        datacube = data.stars.datacube
-        parttype = "stars"
-    elif config["data"]["args"]["cube_type"] == "stars":
-        datacube = data.stars.datacube
-        parttype = "stars"
-    elif config["data"]["args"]["cube_type"] == "gas":
-        datacube = data.gas.datacube
-        parttype = "gas"
-    """
     datacube = data
 
     telescope = get_telescope(config)
@@ -103,7 +92,7 @@ def store_fits(config, data, filepath):
 
     output_filename = (
         f"{filepath}{config['simulation']['name']}_id{galaxy_id}_snap{snapshot}_"
-        f"subset{config['data']['subset']['use_subset']}.fits"
+        f'{config["telescope"]["name"]}_{config["pipeline"]["name"]}.fits'
     )
 
     os.makedirs(os.path.dirname(output_filename), exist_ok=True)

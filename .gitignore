@@ -173,7 +173,6 @@ firebase.json
 
 notebooks/frames
 notebooks/frames/*
-notebooks/nohup.out
 notebooks/data/*
 
 # don´t add .env files

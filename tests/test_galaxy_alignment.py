@@ -187,12 +187,13 @@ def test_rotate_galaxy():
     rotated_positions, rotated_velocities = rotate_galaxy(
         positions,
         velocities,
-        jnp.zeros_like(positions),  # Dummy star positions
+        positions,
         masses,
         halfmass_radius,
         alpha,
         beta,
         gamma,
+        "IllustrisTNG",
     )
 
     assert rotated_positions.shape == positions.shape

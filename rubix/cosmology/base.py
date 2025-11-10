@@ -327,9 +327,6 @@ class BaseCosmology(eqx.Module):
         E = self._Ez(z)
         return self.Om0 * (1.0 + z) ** 3 / E / E
 
-
-
-
     @jit
     def _delta_vir(self, z):
         x = self._Om(z) - 1.0
