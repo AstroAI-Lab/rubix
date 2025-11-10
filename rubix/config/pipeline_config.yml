@@ -53,9 +53,14 @@ calc_dusty_ifu:
       depends_on: filter_particles
       args: []
       kwargs: {}
+    calculate_extinction:
+      name: calculate_extinction
+      depends_on: spaxel_assignment
+      args: []
+      kwargs: {}
     calculate_dusty_datacube_particlewise:
       name: calculate_dusty_datacube_particlewise
-      depends_on: spaxel_assignment
+      depends_on: calculate_extinction
       args: []
       kwargs: {}
     convolve_psf:

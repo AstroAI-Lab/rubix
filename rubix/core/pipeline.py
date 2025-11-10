@@ -26,11 +26,10 @@ from .data import (
     GasData,
     RubixData,
     StarsData,
-    get_reshape_data,
     get_rubix_data,
 )
 from .dust import get_extinction
-from .ifu import get_calculate_datacube_particlewise
+from .ifu import get_calculate_datacube_particlewise, get_calculate_dusty_datacube_particlewise
 from .lsf import get_convolve_lsf
 from .noise import get_apply_noise
 from .psf import get_convolve_psf
@@ -123,8 +122,11 @@ class RubixPipeline:
         rotate_galaxy = get_galaxy_rotation(self.user_config)
         filter_particles = get_filter_particles(self.user_config)
         spaxel_assignment = get_spaxel_assignment(self.user_config)
-        apply_extinction = get_extinction(self.user_config)
+        calculate_extinction = get_extinction(self.user_config)
         calculate_datacube_particlewise = get_calculate_datacube_particlewise(
+            self.user_config
+        )
+        calculate_dusty_datacube_particlewise = get_calculate_dusty_datacube_particlewise(
             self.user_config
         )
         convolve_psf = get_convolve_psf(self.user_config)
@@ -135,8 +137,9 @@ class RubixPipeline:
             rotate_galaxy,
             filter_particles,
             spaxel_assignment,
-            apply_extinction,
+            calculate_extinction,
             calculate_datacube_particlewise,
+            calculate_dusty_datacube_particlewise,
             convolve_psf,
             convolve_lsf,
             apply_noise,

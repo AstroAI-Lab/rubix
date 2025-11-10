@@ -172,7 +172,7 @@ def apply_spaxel_extinction(
     wavelength: Float[Array, "n_wave"],
     n_spaxels: int,
     spaxel_area: Float[Array, "..."],
-) -> Float[Array, "1 n_star n_wave"]:
+) -> Float[Array, "..."]:
     r"""
     Calculate the extinction for each star in the spaxel and apply dust extinction to it's associated SSP.
 
@@ -236,10 +236,10 @@ def apply_spaxel_extinction(
 
     # sort the arrays by pixel assignment and z position
     gas_sorted_idx = jnp.lexsort(
-        (rubixdata.gas.coords[0, :, 2], rubixdata.gas.pixel_assignment[0])
+        (rubixdata.gas.coords[:, 2], rubixdata.gas.pixel_assignment)
     )
     stars_sorted_idx = jnp.lexsort(
-        (rubixdata.stars.coords[0, :, 2], rubixdata.stars.pixel_assignment[0])
+        (rubixdata.stars.coords[:, 2], rubixdata.stars.pixel_assignment)
     )
 
     # determine the segment boundaries
@@ -248,7 +248,7 @@ def apply_spaxel_extinction(
     gas_segment_boundaries = jnp.concatenate(
         [
             jnp.searchsorted(
-                rubixdata.gas.pixel_assignment[0][gas_sorted_idx],
+                rubixdata.gas.pixel_assignment[gas_sorted_idx],
                 spaxel_IDs,
                 side="left",
             ),
@@ -258,7 +258,7 @@ def apply_spaxel_extinction(
     stars_segment_boundaries = jnp.concatenate(
         [
             jnp.searchsorted(
-                rubixdata.stars.pixel_assignment[0][stars_sorted_idx],
+                rubixdata.stars.pixel_assignment[stars_sorted_idx],
                 spaxel_IDs,
                 side="left",
             ),
@@ -277,14 +277,14 @@ def apply_spaxel_extinction(
     # with this we can calculate the dust mass
     # we need to correct by factor of 16 for the difference in atomic mass
     log_OH = 12 + jnp.log10(
-        rubixdata.gas.metals[0, :, 4] / (16 * rubixdata.gas.metals[0, :, 0])
+        rubixdata.gas.metals[:, 4] / (16 * rubixdata.gas.metals[:, 0])
     )
     dust_to_gas_ratio = calculate_dust_to_gas_ratio(
         log_OH,
         rubix_config["ssp"]["dust"]["dust_to_gas_model"],
         rubix_config["ssp"]["dust"]["Xco"],
     )
-    dust_mass = rubixdata.gas.mass[0] * dust_to_gas_ratio
+    dust_mass = rubixdata.gas.mass * dust_to_gas_ratio
 
     dust_grain_density = config["ssp"]["dust"]["dust_grain_density"]
     extinction = (
@@ -293,7 +293,7 @@ def apply_spaxel_extinction(
     )
 
     # Preallocate arrays
-    Av_array = jnp.zeros_like(rubixdata.stars.mass[0])
+    Av_array = jnp.zeros_like(rubixdata.stars.mass)
 
     def body_fn(carry, idx):
         Av_array = carry
@@ -319,14 +319,14 @@ def apply_spaxel_extinction(
         cumulative_dust_mass = jnp.cumsum(extinction * gas_mask) * gas_mask
 
         # resort the arrays as jnp.interp requires sorted arrays and our approach of using masks to select the segment is not compatible with this requirement.
-        xp_arr = rubixdata.gas.coords[0, :, 2][gas_sorted_idx] * gas_mask2
+        xp_arr = rubixdata.gas.coords[:, 2][gas_sorted_idx] * gas_mask2
         fp_arr = cumulative_dust_mass
 
         xp_arr, fp_arr = jax.lax.sort_key_val(xp_arr, fp_arr)
 
         interpolated_column_density = (
             jnp.interp(
-                rubixdata.stars.coords[0, :, 2][stars_sorted_idx],
+                rubixdata.stars.coords[:, 2][stars_sorted_idx],
                 xp_arr,
                 fp_arr,
                 left="extrapolate",
@@ -350,9 +350,10 @@ def apply_spaxel_extinction(
 
     # undo the sorting of the stars
     undo_sort = jnp.argsort(stars_sorted_idx)
-    extinction = extinction[undo_sort]
+    Av_array = Av_array[undo_sort]
+    #extinction = extinction[undo_sort]
 
     # Apply the extinction to the SSP fluxes
-    extincted_ssp_template_fluxes = rubixdata.stars.spectra * extinction
+    #extincted_ssp_template_fluxes = rubixdata.stars.spectra * extinction
 
-    return extincted_ssp_template_fluxes
+    return Av_array

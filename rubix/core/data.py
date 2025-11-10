@@ -104,6 +104,7 @@ class StarsData:
     pixel_assignment: Optional[Any] = None
     spatial_bin_edges: Optional[Any] = None
     mask: Optional[Any] = None
+    extinction: Optional[Any] = None
     spectra: Optional[Any] = None
     datacube: Optional[Any] = None
 
@@ -138,6 +139,7 @@ class StarsData:
             self.pixel_assignment,
             self.spatial_bin_edges,
             self.mask,
+            self.extinction,
             self.spectra,
             self.datacube,
         )
