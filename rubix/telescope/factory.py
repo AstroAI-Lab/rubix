@@ -6,8 +6,11 @@ import numpy as np
 from beartype import beartype as typechecker
 from jaxtyping import jaxtyped
 
-from rubix.telescope.apertures import (CIRCULAR_APERTURE, HEXAGONAL_APERTURE,
-                                       SQUARE_APERTURE)
+from rubix.telescope.apertures import (
+    CIRCULAR_APERTURE,
+    HEXAGONAL_APERTURE,
+    SQUARE_APERTURE,
+)
 from rubix.telescope.base import BaseTelescope
 from rubix.telescope.utils import calculate_wave_edges, calculate_wave_seq
 from rubix.utils import read_yaml

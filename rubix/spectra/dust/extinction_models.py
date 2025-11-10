@@ -4,8 +4,7 @@ from beartype import beartype as typechecker
 from jaxtyping import Array, Float, jaxtyped
 
 from .dust_baseclasses import BaseExtRvModel
-from .generic_models import (FM90, Drude1d, Polynomial1d, PowerLaw1d,
-                             _modified_drude)
+from .generic_models import FM90, Drude1d, Polynomial1d, PowerLaw1d, _modified_drude
 from .helpers import _smoothstep
 
 RV_MODELS = [

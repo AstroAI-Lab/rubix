@@ -7,13 +7,17 @@ import matplotlib.pyplot as plt
 import pytest
 from astropy.table import Table
 
-from rubix.telescope.filters.filters import (Filter, FilterCurves,
-                                             _load_filter_list_for_instrument,
-                                             convolve_filter_with_spectra,
-                                             load_filter, print_filter_list,
-                                             print_filter_list_info,
-                                             print_filter_property,
-                                             save_filters)
+from rubix.telescope.filters.filters import (
+    Filter,
+    FilterCurves,
+    _load_filter_list_for_instrument,
+    convolve_filter_with_spectra,
+    load_filter,
+    print_filter_list,
+    print_filter_list_info,
+    print_filter_property,
+    save_filters,
+)
 
 # Use the Agg backend for testing to avoid opening a figure window
 matplotlib.use("Agg")

@@ -6,8 +6,11 @@ import numpy as np
 import pytest
 import yaml
 
-from rubix.telescope.apertures import (CIRCULAR_APERTURE, HEXAGONAL_APERTURE,
-                                       SQUARE_APERTURE)
+from rubix.telescope.apertures import (
+    CIRCULAR_APERTURE,
+    HEXAGONAL_APERTURE,
+    SQUARE_APERTURE,
+)
 from rubix.telescope.base import BaseTelescope
 from rubix.telescope.factory import TelescopeFactory
 

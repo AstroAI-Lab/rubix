@@ -9,8 +9,11 @@ from jaxtyping import Array, Float, jaxtyped
 from rubix import config as rubix_config
 from rubix.core.data import GasData, StarsData
 from rubix.logger import get_logger
-from rubix.spectra.ifu import (_velocity_doppler_shift_single,
-                               cosmological_doppler_shift, resample_spectrum)
+from rubix.spectra.ifu import (
+    _velocity_doppler_shift_single,
+    cosmological_doppler_shift,
+    resample_spectrum,
+)
 
 from .data import RubixData
 from .ssp import get_lookup_interpolation, get_ssp

@@ -4,9 +4,11 @@ import jax
 import jax.numpy as jnp
 from beartype import beartype as typechecker
 from jaxtyping import Array, Float, jaxtyped
+
 # from jax.scipy.special import comb
-from scipy.special import \
-    comb  # whenever there is a jax version of comb, replace this!!!
+from scipy.special import (  # whenever there is a jax version of comb, replace this!!!
+    comb,
+)
 
 # Might come soon according to this github PR: https://github.com/jax-ml/jax/pull/18389
 

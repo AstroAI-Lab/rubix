@@ -2,8 +2,13 @@ import jax.numpy as jnp
 import pytest
 
 from rubix.spectra.dust.extinction_models import Cardelli89, Gordon23
-from rubix.spectra.dust.generic_models import (FM90, Drude1d, Polynomial1d,
-                                               PowerLaw1d, _modified_drude)
+from rubix.spectra.dust.generic_models import (
+    FM90,
+    Drude1d,
+    Polynomial1d,
+    PowerLaw1d,
+    _modified_drude,
+)
 
 
 def test_PowerLaw1d():

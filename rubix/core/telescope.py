@@ -7,9 +7,11 @@ from jaxtyping import Array, Float, jaxtyped
 from rubix.logger import get_logger
 from rubix.telescope.base import BaseTelescope
 from rubix.telescope.factory import TelescopeFactory
-from rubix.telescope.utils import (calculate_spatial_bin_edges,
-                                   mask_particles_outside_aperture,
-                                   square_spaxel_assignment)
+from rubix.telescope.utils import (
+    calculate_spatial_bin_edges,
+    mask_particles_outside_aperture,
+    square_spaxel_assignment,
+)
 
 from .cosmology import get_cosmology
 from .data import RubixData
