@@ -3,6 +3,7 @@ import os
 from typing import Dict, Union
 
 import h5py
+import jax.numpy as jnp
 import yaml
 from astropy.cosmology import Planck15 as cosmo
 
@@ -195,3 +196,26 @@ def load_galaxy_data(path_to_file: str):
                 units[key][field] = f[f"particles/{key}/{field}"].attrs["unit"]
 
     return galaxy_data, units
+
+
+def _pad_particles(inputdata, pad: int) -> "InputData":
+    """
+    Pads the particle arrays in inputdata to make their length divisible by num_devices.
+    This is necessary for sharding to work correctly.
+
+    Args:
+        inputdata (InputData): The input data containing particle arrays.
+        pad (int): The number of particles to pad.
+
+    Returns:
+        InputData: The padded input data.
+    """
+
+    # pad along the first axis
+    inputdata.stars.coords = jnp.pad(inputdata.stars.coords, ((0, pad), (0, 0)))
+    inputdata.stars.velocity = jnp.pad(inputdata.stars.velocity, ((0, pad), (0, 0)))
+    inputdata.stars.mass = jnp.pad(inputdata.stars.mass, ((0, pad)))
+    inputdata.stars.age = jnp.pad(inputdata.stars.age, ((0, pad)))
+    inputdata.stars.metallicity = jnp.pad(inputdata.stars.metallicity, ((0, pad)))
+
+    return inputdata

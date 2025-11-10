@@ -2,7 +2,7 @@ import logging
 import os
 from dataclasses import dataclass
 from functools import partial
-from typing import Callable, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 import jax
 import jax.numpy as jnp
@@ -14,51 +14,6 @@ from rubix.galaxy import IllustrisAPI, get_input_handler
 from rubix.galaxy.alignment import center_particles
 from rubix.logger import get_logger
 from rubix.utils import load_galaxy_data, read_yaml
-
-# class Particles:
-#    def __init__(self, particle_data: object):
-#        self.particle_data = particle_data
-#        self.attributes = self._filter_attributes()
-#
-#    def _filter_attributes(self) -> list:
-#        """
-#        Filters the attributes of the particle_data object based on the specified criteria.
-#        """
-#        return [
-#            attr
-#            for attr in dir(self.particle_data)
-#            if not attr.startswith("__")
-#            and not callable(getattr(self.particle_data, attr))
-#        ]
-#
-#    def get_attributes(self) -> list:
-#        """
-#        Returns the filtered attributes.
-#        """
-#        return self.attributes
-
-
-# class Particles:
-#    def __init__(self, particle_data: object):
-#        self.particle_data = particle_data
-#        self.attributes = self._filter_attributes()
-#
-#    def _filter_attributes(self) -> list:
-#        """
-#        Filters the attributes of the particle_data object based on the specified criteria.
-#        """
-#        return [
-#            attr
-#            for attr in dir(self.particle_data)
-#            if not attr.startswith("__")
-#            and not callable(getattr(self.particle_data, attr))
-#        ]
-#
-#    def get_attributes(self) -> list:
-#        """
-#        Returns the filtered attributes.
-#        """
-#        return self.attributes
 
 
 # Registering the dataclass with JAX for automatic tree traversal
@@ -75,9 +30,9 @@ class Galaxy:
         halfmassrad_stars: Half mass radius of the stars in the galaxy
     """
 
-    redshift: Optional[jnp.ndarray] = None
-    center: Optional[jnp.ndarray] = None
-    halfmassrad_stars: Optional[jnp.ndarray] = None
+    redshift: Optional[Any] = None
+    center: Optional[Any] = None
+    halfmassrad_stars: Optional[Any] = None
 
     def __repr__(self):
         representationString = ["Galaxy:"]
@@ -141,16 +96,16 @@ class StarsData:
 
     """
 
-    coords: Optional[jnp.ndarray] = None
-    velocity: Optional[jnp.ndarray] = None
-    mass: Optional[jnp.ndarray] = None
-    metallicity: Optional[jnp.ndarray] = None
-    age: Optional[jnp.ndarray] = None
-    pixel_assignment: Optional[jnp.ndarray] = None
-    spatial_bin_edges: Optional[jnp.ndarray] = None
-    mask: Optional[jnp.ndarray] = None
-    spectra: Optional[jnp.ndarray] = None
-    datacube: Optional[jnp.ndarray] = None
+    coords: Optional[Any] = None
+    velocity: Optional[Any] = None
+    mass: Optional[Any] = None
+    metallicity: Optional[Any] = None
+    age: Optional[Any] = None
+    pixel_assignment: Optional[Any] = None
+    spatial_bin_edges: Optional[Any] = None
+    mask: Optional[Any] = None
+    spectra: Optional[Any] = None
+    datacube: Optional[Any] = None
 
     def __repr__(self):
         representationString = ["StarsData:"]
@@ -227,20 +182,20 @@ class GasData:
         datacube: IFU datacube for the gas component
     """
 
-    coords: Optional[jnp.ndarray] = None
-    velocity: Optional[jnp.ndarray] = None
-    mass: Optional[jnp.ndarray] = None
-    density: Optional[jnp.ndarray] = None
-    internal_energy: Optional[jnp.ndarray] = None
-    metallicity: Optional[jnp.ndarray] = None
-    metals: Optional[jnp.ndarray] = None
-    sfr: Optional[jnp.ndarray] = None
-    electron_abundance: Optional[jnp.ndarray] = None
-    pixel_assignment: Optional[jnp.ndarray] = None
-    spatial_bin_edges: Optional[jnp.ndarray] = None
-    mask: Optional[jnp.ndarray] = None
-    spectra: Optional[jnp.ndarray] = None
-    datacube: Optional[jnp.ndarray] = None
+    coords: Optional[Any] = None
+    velocity: Optional[Any] = None
+    mass: Optional[Any] = None
+    density: Optional[Any] = None
+    internal_energy: Optional[Any] = None
+    metallicity: Optional[Any] = None
+    metals: Optional[Any] = None
+    sfr: Optional[Any] = None
+    electron_abundance: Optional[Any] = None
+    pixel_assignment: Optional[Any] = None
+    spatial_bin_edges: Optional[Any] = None
+    mask: Optional[Any] = None
+    spectra: Optional[Any] = None
+    datacube: Optional[Any] = None
 
     def __repr__(self):
         representationString = ["GasData:"]
@@ -320,12 +275,6 @@ class RubixData:
         for k, v in self.__dict__.items():
             representationString.append("\n\t".join(f"{k}: {v}".split("\n")))
         return "\n\t".join(representationString)
-
-    # def __post_init__(self):
-    #    if self.stars is not None:
-    #        self.stars = Particles(self.stars)
-    #    if self.gas is not None:
-    #        self.gas = Particles(self.gas)
 
     def tree_flatten(self):
         """
@@ -427,13 +376,18 @@ def convert_to_rubix(config: Union[dict, str]):
     # If the simulationtype is IllustrisAPI, get data from IllustrisAPI
 
     # TODO: we can do this more elgantly
+
     if "data" in config:
         if config["data"]["name"] == "IllustrisAPI":
             logger.info("Loading data from IllustrisAPI")
             api = IllustrisAPI(**config["data"]["args"], logger=logger)
             api.load_galaxy(**config["data"]["load_galaxy_args"])
+        elif config["data"]["name"] == "NihaoHandler":
+            logger.info("Loading data from Nihao simulation")
+        else:
+            raise ValueError(f"Unknown data source: {config['data']['name']}.")
 
-            # Load the saved data into the input handler
+    # Load the saved data into the input handler
     logger.info("Loading data into input handler")
     input_handler = get_input_handler(config, logger=logger)
     input_handler.to_rubix(output_path=config["output_path"])

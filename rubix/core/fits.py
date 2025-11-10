@@ -25,15 +25,7 @@ def store_fits(config, data, filepath):
     logger_config = config.get("logger", None)
     logger = get_logger(logger_config)
 
-    if "cube_type" not in config["data"]["args"]:
-        datacube = data.stars.datacube
-        parttype = "stars"
-    elif config["data"]["args"]["cube_type"] == "stars":
-        datacube = data.stars.datacube
-        parttype = "stars"
-    elif config["data"]["args"]["cube_type"] == "gas":
-        datacube = data.gas.datacube
-        parttype = "gas"
+    datacube = data
 
     telescope = get_telescope(config)
 

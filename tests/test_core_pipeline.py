@@ -1,9 +1,11 @@
 import os  # noqa
 from unittest.mock import MagicMock, patch
 
+import jax
 import jax.numpy as jnp
 import pytest
 
+from rubix.core.data import Galaxy, GasData, RubixData, StarsData
 from rubix.core.pipeline import RubixPipeline
 from rubix.spectra.ssp.grid import SSPGrid
 from rubix.telescope.base import BaseTelescope
@@ -85,77 +87,43 @@ def test_rubix_pipeline_not_implemented(setup_environment):
         pipeline = RubixPipeline(user_config=config)  # noqa
 
 
-"""
-def test_rubix_pipeline_gradient_not_implemented(setup_environment):
+def test_rubix_pipeline_run_sharded():
+    # Use the number of devices to set up data that can be sharded
+    devices = jax.devices()
+    num_devices = len(jax.devices())
+    n_particles = num_devices if num_devices > 1 else 2  # At least two for sanity
+
+    # Mock input data
+    input_data = RubixData(
+        galaxy=Galaxy(
+            redshift=jnp.array([0.1]),
+            center=jnp.zeros((1, 3)),
+            halfmassrad_stars=jnp.array([1.0]),
+        ),
+        stars=StarsData(
+            coords=jnp.arange(n_particles * 3, dtype=jnp.float32).reshape(
+                n_particles, 3
+            ),
+            velocity=jnp.arange(n_particles * 3, dtype=jnp.float32).reshape(
+                n_particles, 3
+            ),
+            metallicity=jnp.linspace(0.01, 0.03, n_particles),
+            mass=jnp.ones(n_particles),
+            age=jnp.linspace(2.0, 10.0, n_particles),
+            pixel_assignment=jnp.arange(n_particles, dtype=jnp.int32),
+        ),
+        gas=GasData(velocity=None),
+    )
+
     pipeline = RubixPipeline(user_config=user_config)
-    with pytest.raises(
-        NotImplementedError, match="Gradient calculation is not implemented yet"
-    ):
-        pipeline.gradient()
-"""
+    output_cube = pipeline.run_sharded(input_data, devices)
 
-
-def test_rubix_pipeline_gradient_not_implemented(setup_environment):
-    mock_rubix_data = MagicMock()
-    mock_rubix_data.stars.coords = jnp.array([[0, 0, 0]])
-    mock_rubix_data.stars.velocities = jnp.array([[0, 0, 0]])
-    mock_rubix_data.stars.metallicity = jnp.array([0.1])
-    mock_rubix_data.stars.mass = jnp.array([1.0])
-    mock_rubix_data.stars.age = jnp.array([1.0])
-
-    with patch("rubix.core.pipeline.get_rubix_data", return_value=mock_rubix_data):
-        pipeline = RubixPipeline(user_config=user_config)
-        with pytest.raises(
-            NotImplementedError, match="Gradient calculation is not implemented yet"
-        ):
-            pipeline.gradient()
-
-
-def test_rubix_pipeline_run():
-    pipeline = RubixPipeline(user_config=user_config)
-    output = pipeline.run()
-
-    # Check if output is as expected
-    assert hasattr(output.stars, "coords")
-    assert hasattr(output.stars, "velocity")
-    assert hasattr(output.stars, "metallicity")
-    assert hasattr(output.stars, "mass")
-    assert hasattr(output.stars, "age")
-    assert hasattr(output.stars, "spectra")
-
-    assert isinstance(pipeline.telescope, BaseTelescope)
-    assert isinstance(pipeline.ssp, SSPGrid)
-
-    spectrum = output.stars.spectra
-    print("Spectrum shape: ", spectrum.shape)
-    print("Spectrum sum: ", jnp.sum(spectrum, axis=-1))
-
-    # Check if spectrum contains any nan values
-    # Only count the numby of NaN values in the spectra
-    is_nan = jnp.isnan(spectrum)
-    # check whether there are any NaN values in the spectra
-
-    indices_nan = jnp.where(is_nan)
-
-    # Get only the unique index of the spectra with NaN values
-    unique_spectra_indices = jnp.unique(indices_nan[-1])
-    print("Unique indices of spectra with NaN values: ", unique_spectra_indices)
-    print(
-        "Masses of the spectra with NaN values: ",
-        output.stars.mass[unique_spectra_indices],
-    )
-    print(
-        "Ages of the spectra with NaN values: ",
-        output.stars.age[unique_spectra_indices],
-    )
-    print(
-        "Metallicities of the spectra with NaN values: ",
-        output.stars.metallicity[unique_spectra_indices],
-    )
-
-    ssp = pipeline.ssp
-    print("SSP bounds age:", ssp.age.min(), ssp.age.max())
-    print("SSP bounds metallicity:", ssp.metallicity.min(), ssp.metallicity.max())
-
-    # assert that the spectra does not contain any NaN values
-    assert not jnp.isnan(spectrum).any()
+    # Output should be a jax array (the datacube)
+    assert isinstance(output_cube, jax.Array)
+    # Should have 3 dimensions (n_spaxels, n_spaxels, n_wave_tel)
+    assert output_cube.ndim == 3
+    # Should be non-negative and not NaN
+    assert jnp.all(output_cube >= 0)
+    assert not jnp.isnan(output_cube).any()
+    # The cube should have nonzero values (sanity check)
+    assert jnp.any(output_cube != 0)

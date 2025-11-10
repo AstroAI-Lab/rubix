@@ -252,6 +252,7 @@ def rotate_galaxy(
         alpha (float): Rotation around the x-axis in degrees
         beta (float): Rotation around the y-axis in degrees
         gamma (float): Rotation around the z-axis in degrees
+        key (str): The key to the particle data, e.g. "IllustrisTNG" or "NIHAO"
 
     Returns:
         The rotated positions and velocities as a jnp.ndarray.
