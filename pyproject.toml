@@ -25,10 +25,11 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
 ]
 
-[project.urls]
+urls = {
 Homepage = "https://astro-rubix.web.app"
 Repository = "https://github.com/AstroAI-Lab/rubix"
 Issues = "https://github.com/AstroAI-Lab/rubix/issues"
+}
 
 dependencies = [
     "requests",
