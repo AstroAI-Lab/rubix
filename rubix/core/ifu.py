@@ -9,12 +9,13 @@ from jaxtyping import Array, Float, jaxtyped
 from rubix import config as rubix_config
 from rubix.core.data import GasData, StarsData
 from rubix.logger import get_logger
+from rubix.spectra.dust.extinction_models import *
 from rubix.spectra.ifu import (
     _velocity_doppler_shift_single,
     cosmological_doppler_shift,
     resample_spectrum,
 )
-from rubix.spectra.dust.extinction_models import *
+
 from .data import RubixData
 from .ssp import get_lookup_interpolation, get_ssp
 from .telescope import get_telescope
@@ -156,7 +157,7 @@ def get_calculate_dusty_datacube_particlewise(config: dict) -> Callable:
         Av_array = stars.extinction  # (n_stars, n_wave_ssp)
         nstar = ages.shape[0]
 
-        #dust model
+        # dust model
         ext_model = config["ssp"]["dust"]["extinction_model"]
         Rv = config["ssp"]["dust"]["Rv"]
         # Dynamically choose the extinction model based on the string name
@@ -195,7 +196,7 @@ def get_calculate_dusty_datacube_particlewise(config: dict) -> Callable:
                 initial_wavelength=shifted_wave,
                 target_wavelength=target_wave,
             )  # (n_wave_tel,)
-            
+
             # apply extinction
             extinction = ext.extinguish(target_wave / 1e4, av_i)
 

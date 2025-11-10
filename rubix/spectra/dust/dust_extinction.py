@@ -351,9 +351,9 @@ def apply_spaxel_extinction(
     # undo the sorting of the stars
     undo_sort = jnp.argsort(stars_sorted_idx)
     Av_array = Av_array[undo_sort]
-    #extinction = extinction[undo_sort]
+    # extinction = extinction[undo_sort]
 
     # Apply the extinction to the SSP fluxes
-    #extincted_ssp_template_fluxes = rubixdata.stars.spectra * extinction
+    # extincted_ssp_template_fluxes = rubixdata.stars.spectra * extinction
 
     return Av_array
