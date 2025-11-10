@@ -6,7 +6,8 @@ import numpy as np
 import pytest
 
 from rubix.paths import TEMPLATE_PATH
-from rubix.spectra.ssp.factory import HDF5SSPGrid, get_ssp_template, pyPipe3DSSPGrid
+from rubix.spectra.ssp.factory import (HDF5SSPGrid, get_ssp_template,
+                                       pyPipe3DSSPGrid)
 
 
 # Fixture to reset the configuration after each test

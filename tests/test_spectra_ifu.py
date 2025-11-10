@@ -2,17 +2,12 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 
-from rubix.spectra.ifu import (
-    _get_velocity_component_multiple,
-    _get_velocity_component_single,
-    calculate_cube,
-    calculate_diff,
-    convert_luminoisty_to_flux,
-    cosmological_doppler_shift,
-    get_velocity_component,
-    resample_spectrum,
-    velocity_doppler_shift,
-)
+from rubix.spectra.ifu import (_get_velocity_component_multiple,
+                               _get_velocity_component_single, calculate_cube,
+                               calculate_diff, convert_luminoisty_to_flux,
+                               cosmological_doppler_shift,
+                               get_velocity_component, resample_spectrum,
+                               velocity_doppler_shift)
 
 # Assuming the functions are imported from the module
 

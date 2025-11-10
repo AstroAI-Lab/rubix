@@ -3,17 +3,9 @@ from unittest.mock import MagicMock, Mock, call, patch
 import jax
 import jax.numpy as jnp
 
-from rubix.core.data import (
-    Galaxy,
-    GasData,
-    RubixData,
-    StarsData,
-    convert_to_rubix,
-    get_reshape_data,
-    get_rubix_data,
-    prepare_input,
-    reshape_array,
-)
+from rubix.core.data import (Galaxy, GasData, RubixData, StarsData,
+                             convert_to_rubix, get_reshape_data,
+                             get_rubix_data, prepare_input, reshape_array)
 
 # Mock configuration for tests
 config_dict = {

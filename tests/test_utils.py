@@ -4,14 +4,9 @@ import pytest  # type: ignore # noqa
 import yaml
 from astropy.cosmology import Planck15 as cosmo
 
-from rubix.utils import (
-    SFTtoAge,
-    convert_values_to_physical,
-    get_config,
-    load_galaxy_data,
-    print_hdf5_file_structure,
-    read_yaml,
-)
+from rubix.utils import (SFTtoAge, convert_values_to_physical, get_config,
+                         load_galaxy_data, print_hdf5_file_structure,
+                         read_yaml)
 
 
 def test_convert_values_to_physical():

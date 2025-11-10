@@ -3,12 +3,9 @@ import pytest
 
 from rubix import config
 from rubix.core.data import reshape_array
-from rubix.core.ssp import (
-    get_lookup_interpolation,
-    get_lookup_interpolation_pmap,
-    get_lookup_interpolation_vmap,
-    get_ssp,
-)
+from rubix.core.ssp import (get_lookup_interpolation,
+                            get_lookup_interpolation_pmap,
+                            get_lookup_interpolation_vmap, get_ssp)
 
 ssp_config = config["ssp"]
 supported_templates = ssp_config["templates"]

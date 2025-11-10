@@ -6,14 +6,14 @@ from typing import Union
 
 import jax
 import jax.numpy as jnp
-
 # For shard_map and device mesh.
 import numpy as np
 from beartype import beartype as typechecker
 from jax import block_until_ready, lax
 from jax.experimental.pjit import pjit
 from jax.experimental.shard_map import shard_map
-from jax.sharding import Mesh, NamedSharding, PartitionSpec as P
+from jax.sharding import Mesh, NamedSharding
+from jax.sharding import PartitionSpec as P
 from jax.tree_util import tree_flatten, tree_map, tree_unflatten
 from jaxtyping import jaxtyped
 
@@ -21,14 +21,8 @@ from rubix.logger import get_logger
 from rubix.pipeline import linear_pipeline as pipeline
 from rubix.utils import _pad_particles, get_config, get_pipeline_config
 
-from .data import (
-    Galaxy,
-    GasData,
-    RubixData,
-    StarsData,
-    get_reshape_data,
-    get_rubix_data,
-)
+from .data import (Galaxy, GasData, RubixData, StarsData, get_reshape_data,
+                   get_rubix_data)
 from .dust import get_extinction
 from .ifu import get_calculate_datacube_particlewise
 from .lsf import get_convolve_lsf
@@ -36,7 +30,8 @@ from .noise import get_apply_noise
 from .psf import get_convolve_psf
 from .rotation import get_galaxy_rotation
 from .ssp import get_ssp
-from .telescope import get_filter_particles, get_spaxel_assignment, get_telescope
+from .telescope import (get_filter_particles, get_spaxel_assignment,
+                        get_telescope)
 
 
 class RubixPipeline:

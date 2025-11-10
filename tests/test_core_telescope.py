@@ -4,11 +4,8 @@ from unittest.mock import MagicMock, patch
 import jax.numpy as jnp
 import pytest
 
-from rubix.core.telescope import (
-    get_spatial_bin_edges,
-    get_spaxel_assignment,
-    get_telescope,
-)
+from rubix.core.telescope import (get_spatial_bin_edges, get_spaxel_assignment,
+                                  get_telescope)
 from rubix.telescope.base import BaseTelescope
 
 

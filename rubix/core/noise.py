@@ -5,10 +5,8 @@ from beartype import beartype as typechecker
 from jaxtyping import jaxtyped
 
 from rubix.logger import get_logger
-from rubix.telescope.noise.noise import (
-    SUPPORTED_NOISE_DISTRIBUTIONS,
-    calculate_noise_cube,
-)
+from rubix.telescope.noise.noise import (SUPPORTED_NOISE_DISTRIBUTIONS,
+                                         calculate_noise_cube)
 
 from .data import RubixData
 

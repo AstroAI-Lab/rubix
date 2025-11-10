@@ -5,11 +5,9 @@ import jax.numpy as jnp
 import numpy as np
 
 from rubix.cosmology.base import BaseCosmology
-from rubix.telescope.utils import (
-    calculate_spatial_bin_edges,
-    mask_particles_outside_aperture,
-    square_spaxel_assignment,
-)
+from rubix.telescope.utils import (calculate_spatial_bin_edges,
+                                   mask_particles_outside_aperture,
+                                   square_spaxel_assignment)
 
 # enfrce that jax uses cpu only
 

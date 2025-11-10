@@ -5,10 +5,8 @@ import pytest
 
 from rubix.core.data import RubixData
 from rubix.core.dust import get_extinction
-from rubix.spectra.dust.dust_extinction import (
-    apply_spaxel_extinction,
-    calculate_dust_to_gas_ratio,
-)
+from rubix.spectra.dust.dust_extinction import (apply_spaxel_extinction,
+                                                calculate_dust_to_gas_ratio)
 from rubix.spectra.dust.helpers import poly_map_domain
 
 
