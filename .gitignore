@@ -171,8 +171,6 @@ utils/*
 firebase.json
 .firebase/*
 
-rubix/spectra/ssp/templates/fsps.h5
-
 notebooks/frames
 notebooks/frames/*
 notebooks/data/*

@@ -484,11 +484,11 @@ def prepare_input(config: Union[dict, str]) -> RubixData:
     rubixdata = RubixData(Galaxy(), StarsData(), GasData())
 
     # Set the galaxy attributes
-    rubixdata.galaxy.redshift = data["redshift"]
+    rubixdata.galaxy.redshift = jnp.float64(data["redshift"])
     rubixdata.galaxy.redshift_unit = units["galaxy"]["redshift"]
-    rubixdata.galaxy.center = data["subhalo_center"]
+    rubixdata.galaxy.center = jnp.array(data["subhalo_center"], dtype=jnp.float64)
     rubixdata.galaxy.center_unit = units["galaxy"]["center"]
-    rubixdata.galaxy.halfmassrad_stars = data["subhalo_halfmassrad_stars"]
+    rubixdata.galaxy.halfmassrad_stars = jnp.float64(data["subhalo_halfmassrad_stars"])
     rubixdata.galaxy.halfmassrad_stars_unit = units["galaxy"]["halfmassrad_stars"]
 
     # Set the particle attributes

@@ -43,14 +43,26 @@ class RubixPipeline:
     """
     RubixPipeline is responsible for setting up and running the data processing pipeline.
 
-    Usage
-    -----
+    Args:
+        user_config (dict or str): Parsed user configuration for the pipeline.
+        pipeline_config (dict): Configuration for the pipeline.
+        logger(Logger) : Logger instance for logging messages.
+        ssp(object) : Stellar population synthesis model.
+        telescope(object) : Telescope configuration.
+        data (dict): Dictionary containing particle data.
+        func (callable): Compiled pipeline function to process data.
+
+    Example
+    --------
+    >>> from rubix.core.pipeline import RubixPipeline
+    >>> config = "path/to/config.yml"
     >>> pipe = RubixPipeline(config)
     >>> inputdata = pipe.prepare_data()
-    >>> # To run without sharding:
     >>> output = pipe.run(inputdata)
     >>> # To run with sharding using jax.shard_map:
     >>> final_datacube = pipe.run_sharded(inputdata, shard_size=100000)
+    >>> ssp_model = pipeline.ssp
+    >>> telescope = pipeline.telescope
     """
 
     def __init__(self, user_config: Union[dict, str]):
@@ -264,3 +276,24 @@ class RubixPipeline:
         )
 
         return sharded_result
+
+    def gradient(self, rubixdata, targetdata):
+        """
+        This function will calculate the gradient of the pipeline.
+        """
+        return jax.grad(self.loss, argnums=0)(rubixdata, targetdata)
+
+    def loss(self, rubixdata, targetdata):
+        """
+        Calculate the mean squared error loss.
+
+        Args:
+            data (array-like): The predicted data.
+            target (array-like): The target data.
+
+        Returns:
+            The mean squared error loss.
+        """
+        output = self.run(rubixdata)
+        loss_value = jnp.sum((output - targetdata) ** 2)
+        return loss_value
