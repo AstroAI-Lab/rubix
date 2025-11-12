@@ -5,14 +5,10 @@ Code versions
 
 Version 0.1
 -----------
-Forwardmodel IFU cubes of galaxies from cosmological hydrodynamical simulations for stellar particles from IllustrisTNG50.
+Forwardmodel IFU cubes of galaxies from cosmological hydrodynamical simulations (IllustrisTNG50, NIHAO, ...) for stellar particles from different stellar templates (Bruzual&Charlot, Mastar, FSPS, EMILES).
+Gradient calculation through the whole pipeline for gradient-based parameter estimation on particle parameters.
 
 
 Version 0.2
 -----------
-Under developement: Forwardmodel IFU cubes of galaxies from cosmological hydrodynamical simulations for gas particles from IllustrisTNG50.
-
-
-Version 0.3
------------
-Under developement: Add dust attenuation to the IFU cubes.
+Under developement
