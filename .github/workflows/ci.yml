@@ -38,7 +38,7 @@ jobs:
     - name: Install Python package
       run: |
         python -m pip install setuptools
-        python -m pip install .[tests]
+        python -m pip install .[cpu,tests]
 
     - name: Run Python tests
       run: |
@@ -62,7 +62,7 @@ jobs:
     - name: Install Python package
       run: |
         python -m pip install setuptools
-        python -m pip install -e .[tests]
+        python -m pip install -e .[cpu,tests]
 
     - name: Run Python tests
       working-directory: ./tests
