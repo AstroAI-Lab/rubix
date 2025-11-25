@@ -34,11 +34,19 @@ def compiled_transformer(
     Note that any array args/kwargs will behave as dynamic arguments in the jax jit, while any non-array args/kwargs will behave as static.
     static_args and static_kwargs refer to the remaining arguments.
 
-    *args count from the first positional argument of the decorated function in order. *args and **kwargs are bound to the decorated function
+    *args count from the first positional argument of the decorated function in
+    order. ``*args`` and ``**kwargs`` are bound to the decorated function.
 
     Args:
-        static_args (list, optional): Indices of static, i.e., untraced arguments of the bound function, by default [].
-        static_kwargs (list, optional): Names of static, i.e., untraced, keyword arguments of the bound function, by default {}.
+        *args: Positional arguments to bind to the target function.
+        static_args (list, optional): Indices of static (untraced) positional
+            arguments of the bound function. Defaults to ``[]``.
+        static_kwargs (list, optional): Names of static (untraced) keyword
+            arguments of the bound function. Defaults to ``[]``.
+        **kwargs: Keyword arguments to bind to the target function.
+
+    Returns:
+        callable: A decorator that returns a jitted function with bound args.
     """
 
     def transformer_wrap(kernel):
@@ -61,9 +69,13 @@ def expression_transformer(
     untraced arguments from a function. Please note that this only works with
     static positional arguments: JAX does currently not provide a way to have
     static keyword arguments when creating a jaxpr and not a jited function.
-
     Args:
-        static_args (list, optional): Indices of static, i.e., untraced arguments to the function, by default [].
+        *args: Positional arguments to bind for the expression generation.
+        static_args (list, optional): Indices of static (untraced) positional
+            arguments to the function. Defaults to ``[]``.
+
+    Returns:
+        callable: A function (or jaxpr) produced from the provided kernel.
     """
 
     def transformer_wrap(kernel):

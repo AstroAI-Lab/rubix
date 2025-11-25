@@ -45,6 +45,9 @@ class TelescopeFactory:
         Returns:
             The telescope object as BaseTelescope.
 
+        Raises:
+            ValueError: If the telescope name is not present in the configuration.
+
         Example 1 (Uses the defined telescope configuration)
         -----------------------------------------------------
         >>> from rubix.telescope import TelescopeFactory

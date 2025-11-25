@@ -10,20 +10,19 @@ from jaxtyping import Array, Float, Int, jaxtyped
 class BaseTelescope(eqx.Module):
     """
     Base class for the telescope module.
-    This class contains the base parameters for the telescope module.
 
-    Args:
-        fov (float): The field of view of the telescope.
-        spatial_res (float): The spatial resolution of the telescope.
-        wave_range (list): The wavelength range of the telescope.
-        wave_res (float): The wavelength resolution of the telescope.
-        lsf_fwhm (float): The full width at half maximum of the line spread function.
-        signal_to_noise (float): The signal to noise ratio of the telescope.
-        sbin (int): The size of the spatial bin in each direction for the aperture mask.
-        aperture_region (jnp.ndarray): The aperture region of the telescope.
-        pixel_type (str): The type of pixel used in the telescope.
-        wave_seq (jnp.ndarray): The wavelength sequence of the telescope.
-        wave_edges (jnp.ndarray): The wavelength edges of the telescope.
+    Attributes:
+        fov (Union[float, int]): Field of view of the telescope.
+        spatial_res (Union[float, int]): Spatial resolution of the telescope.
+        wave_range (List[float]): Wavelength range (lower, upper).
+        wave_res (Union[float, int]): Wavelength resolution.
+        lsf_fwhm (Union[float, int]): Line-spread-function FWHM.
+        signal_to_noise (Optional[float]): Target signal-to-noise ratio.
+        sbin (np.int64): Spatial binning size (integer).
+        aperture_region (Union[Float[Array, '...'], Int[Array, '...']]): Aperture array.
+        pixel_type (str): Pixel geometry/type string.
+        wave_seq (Float[Array, '...']): Wavelength sequence array.
+        wave_edges (Float[Array, '...']): Wavelength edges array.
     """
 
     fov: Union[float, int]
