@@ -411,7 +411,7 @@ class pyPipe3DSSPGrid(SSPGrid):
     @jaxtyped(typechecker=typechecker)
     @staticmethod
     def get_wavelength_from_header(
-        header: fits.Header, wave_axis: int | None = None
+        header: Union[fits.Header, dict], wave_axis: int | None = None
     ) -> Array:
         """Generate a wavelength array using ``header`` (an
         :class:`astropy.io.fits.header.Header` instance) at axis ``wave_axis``.
@@ -421,7 +421,8 @@ class pyPipe3DSSPGrid(SSPGrid):
             wavelengths = CRVAL + CDELT * ([0, 1, ..., NAXIS] + 1 - CRPIX)
 
         Args:
-            header (fits.Header): FITS header with spectral data.
+            header (Union[fits.Header, dict]): FITS header (or dict-like)
+                with spectral data.
             wave_axis (int | None, optional): Axis storing the wavelength
                 metadata (CRVAL, CDELT, NAXIS, CRPIX). If ``None`` the
                 function will default to axis 1.
@@ -494,13 +495,14 @@ class pyPipe3DSSPGrid(SSPGrid):
     @jaxtyped(typechecker=typechecker)
     @staticmethod
     def get_tZ_models(
-        header: fits.Header, n_models: int
+        header: Union[fits.Header, dict], n_models: int
     ) -> Tuple[Float[Array, "..."], Float[Array, "..."], Float[Array, "..."]]:
         """Read age, metallicity, and mass-to-light ratio at the
         normalization flux from a FITS file.
 
         Args:
-            header (fits.Header): FITS header with spectral data.
+            header (Union[fits.Header, dict]): FITS header (or dict-like)
+                with spectral data.
             n_models (int): Number of models in the SSP grid.
 
         Returns:

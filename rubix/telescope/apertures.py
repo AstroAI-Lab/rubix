@@ -1,6 +1,7 @@
 """This class defines the aperture mask for the observation of a galaxy."""
 
 import jax.numpy as jnp
+import numpy as np
 from beartype import beartype as typechecker
 from jaxtyping import Array, Float, jaxtyped
 
@@ -8,12 +9,13 @@ __all__ = ["HEXAGONAL_APERTURE", "SQUARE_APERTURE", "CIRCULAR_APERTURE"]
 
 
 @jaxtyped(typechecker=typechecker)
-def HEXAGONAL_APERTURE(sbin: int) -> Float[Array, "..."]:
+def HEXAGONAL_APERTURE(sbin: int | np.integer) -> Float[Array, "..."]:
     """
     Creates a hexagonal aperture mask for the observation of a galaxy.
 
     Args:
-        sbin (int): The size of the spatial bin in each direction for the aperture mask.
+        sbin (int | np.integer): The size of the spatial bin in each
+            direction for the aperture mask.
 
     Returns:
         A jnp.ndarray 1D array of the aperture mask.
@@ -41,11 +43,12 @@ def HEXAGONAL_APERTURE(sbin: int) -> Float[Array, "..."]:
 
 
 @jaxtyped(typechecker=typechecker)
-def SQUARE_APERTURE(sbin: int) -> Float[Array, "..."]:
+def SQUARE_APERTURE(sbin: int | np.integer) -> Float[Array, "..."]:
     """
     Creates a square aperture mask for the observation of a galaxy.
     Args:
-        sbin (int): The size of the spatial bin in each direction for the aperture mask.
+        sbin (int | np.integer): The size of the spatial bin in each
+            direction for the aperture mask.
 
     Returns:
         A jnp.ndarray 1D array of the aperture mask.
@@ -56,11 +59,12 @@ def SQUARE_APERTURE(sbin: int) -> Float[Array, "..."]:
 
 
 @jaxtyped(typechecker=typechecker)
-def CIRCULAR_APERTURE(sbin: int) -> Float[Array, "..."]:
+def CIRCULAR_APERTURE(sbin: int | np.integer) -> Float[Array, "..."]:
     """
     Creates a circular aperture mask for the observation of a galaxy.
     Args:
-        sbin (int): The size of the spatial bin in each direction for the aperture mask.
+        sbin (int | np.integer): The size of the spatial bin in each
+            direction for the aperture mask.
 
     Returns:
         A jnp.ndarray 1D array of the aperture mask.

@@ -326,7 +326,7 @@ def convert_to_rubix(config: Union[dict, str]):
             logger.info("Loading data from IllustrisAPI")
             api = IllustrisAPI(**config["data"]["args"], logger=logger)
             api.load_galaxy(**config["data"]["load_galaxy_args"])
-        elif config["data"]["name"] == "NihaoHandler":
+        elif config["data"]["name"] == "NihaoHandler":  # pragma no cover
             logger.info("Loading data from Nihao simulation")
         else:
             raise ValueError(f"Unknown data source: {config['data']['name']}.")
