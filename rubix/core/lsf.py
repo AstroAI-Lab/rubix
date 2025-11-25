@@ -11,32 +11,35 @@ from .telescope import get_telescope
 
 
 @jaxtyped(typechecker=typechecker)
-def get_convolve_lsf(config: dict) -> Callable:
-    """
-    Get the function to convolve with the Line Spread Function (LSF) based on the configuration.
+def get_convolve_lsf(config: dict) -> Callable[[RubixData], RubixData]:
+    """Create the LSF convolution function described by ``config``.
 
     Args:
-        config (dict): Configuration dictionary.
+        config (dict): Configuration dict that must include ``telescope.lsf``.
 
     Returns:
-        The function to convolve with the LSF.
+        Callable[[RubixData], RubixData]: Function that convolves Rubix data.
+
+    Raises:
+        ValueError: When the telescope LSF configuration or sigma is missing.
 
     Example:
-    --------
-    >>> config = {
-    ...     ...
-    ...     "telescope": {
-    ...         "name": "MUSE",
-    ...         "psf": {"name": "gaussian", "size": 5, "sigma": 0.6},
-    ...         "lsf": {"sigma": 0.5},
-    ...         "noise": {"signal_to_noise": 1,"noise_distribution": "normal"},
-    ...    },
-    ...     ...
-    ... }
+        ::
 
-    >>> from rubix.core.lsf import get_convolve_lsf
-    >>> convolve_lsf = get_convolve_lsf(config)
-    >>> rubixdata = convolve_lsf(rubixdata)
+            >>> config = {
+            ...     ...
+            ...     "telescope": {
+            ...         "name": "MUSE",
+            ...         "psf": {"name": "gaussian", "size": 5, "sigma": 0.6},
+            ...         "lsf": {"sigma": 0.5},
+            ...         "noise": {"signal_to_noise": 1,"noise_distribution": "normal"},
+            ...    },
+            ...     ...
+            ... }
+
+            >>> from rubix.core.lsf import get_convolve_lsf
+            >>> convolve_lsf = get_convolve_lsf(config)
+            >>> rubixdata = convolve_lsf(rubixdata)
     """
 
     logger = get_logger(config.get("logger", None))

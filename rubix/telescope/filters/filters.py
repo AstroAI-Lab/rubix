@@ -16,15 +16,15 @@ _logger = get_logger()
 
 class Filter(eqx.Module):
     """
-    A class representing a single filter with wavelength and response data.
+    A class representing a single filter with wavelength, response data and name.
 
     Attributes
     ----------
-    wavelength : Float[Array, "n_wavelengths"]
+    wavelength (Float[Array, "n_wavelengths"]):
         The wavelengths at which the filter response is defined.
-    response : Float[Array, "n_wavelengths"]
+    response (Float[Array, "n_wavelengths"]):
         The filter response at the corresponding wavelengths.
-    name : str
+    name (str):
         The name of the filter.
     """
 
@@ -33,30 +33,16 @@ class Filter(eqx.Module):
     name: str
 
     def __init__(self, wavelength, response, name: str):
-        """
-        Initialize the Filter with given wavelength, response, and name.
-
-        Parameters
-        ----------
-        wavelength : array-like
-            The wavelengths at which the filter response is defined.
-        response : array-like
-            The filter response at the corresponding wavelengths.
-        name : str
-            The name of the filter.
-        """
         self.wavelength = jnp.array(wavelength)
         self.response = jnp.array(response)
         self.name = name
 
-    def plot(self, ax=None):
+    def plot(self, ax: Optional[plt.Axes] = None) -> None:
         """
         Plot the filter response.
 
-        Parameters
-        ----------
-        ax : matplotlib.axes.Axes, optional
-            The axes on which to plot. If None, the current axes (`plt.gca()`) will be used.
+        Args:
+            ax (Optional[plt.Axes]): The axes on which to plot. If ``None``, the current axes are used.
         """
         if ax is None:
             ax = plt.gca()
@@ -66,19 +52,13 @@ class Filter(eqx.Module):
         ax.set_title("Filter Responses")
         ax.legend()
 
-    def __call__(self, new_wavelengths):
-        """
-        Interpolate the filter response at new wavelengths.
+    def __call__(self, new_wavelengths: Array) -> Float[Array, " n_wavelengths"]:
+        """Interpolate the filter response at new wavelengths.
 
-        Parameters
-        ----------
-        new_wavelengths : array-like
-            The new wavelengths at which to interpolate the filter response.
-
-        Returns
-        -------
-        jax.numpy.ndarray
-            The interpolated filter response at the new wavelengths.
+        Args:
+            new_wavelengths (Array): New wavelengths at which to interpolate the filter response.
+        Returns:
+            Float[Array, " n_wavelengths"]: The interpolated filter response at the new wavelengths.
         """
         new_response = jnp.interp(new_wavelengths, self.wavelength, self.response)
         return new_response
@@ -87,10 +67,8 @@ class Filter(eqx.Module):
         """
         Return the name of the filter.
 
-        Returns
-        -------
-        str
-            The name of the filter.
+        Returns:
+            (str): The name of the filter.
         """
         return self.name
 
@@ -98,24 +76,22 @@ class Filter(eqx.Module):
         """
         Return the name of the filter for representation.
 
-        Returns
-        -------
-        str
-            The name of the filter.
+        Returns:
+            (str): The name of the filter.
         """
         return self.name
 
-    def save(self, filter_path: Optional[str] = FILTERS_PATH):
-        """
-        Save the filter response to a csv file.
+    def save(self, filter_path: Optional[str] = FILTERS_PATH) -> str:
+        """Save the filter response to a csv file.
 
-        Parameters
-        ----------
-        filter_path : str
-            optional: default=FILTERS_PATH
-            The path to save the filter response to.
-            The filter response will be saved in a directory named after the facility, which is assumed to be the first part of the filter name, demarcated by a '/'.
-            The filter response will be saved in a csv file named after the filter name.
+        Args:
+            filter_path (Optional[str], optional): Path to save the filter response. Defaults to ``FILTERS_PATH``.
+                The filter response will be saved in a directory named after the facility, which is assumed to be the first part of the filter name, demarcated by a '/'.
+                The filter response will be saved in a csv file named after the filter name.
+
+        Returns:
+            str: Absolute path to the saved CSV file.
+
         """
         filter_dir = os.path.join(filter_path, self.name.split("/")[0])
         if not os.path.isdir(filter_dir):
@@ -136,24 +112,16 @@ class FilterCurves(eqx.Module):
 
     Attributes
     ----------
-    filters : List[Filter]
+    filters (List[Filter]):
         The list of filter objects.
     """
 
     filters: List[Filter]
 
     def __init__(self, filters):
-        """
-        Initialize the FilterCurves with a list of filters.
-
-        Parameters
-        ----------
-        filters : List[Filter]
-            The list of filter objects.
-        """
         self.filters = filters
 
-    def plot(self):
+    def plot(self) -> None:
         """
         Plot all filter responses on the same figure.
         """
@@ -162,19 +130,19 @@ class FilterCurves(eqx.Module):
             filter.plot(ax)
         plt.show()
 
-    def apply_filter_curves(self, cube, wavelengths):
-        """
-        Get the images of a cube of spectra through all filters.
-        Parameters
-        ----------
-        cube : jax.numpy.ndarray
-            The cube of spectra.
-        wavelengths : jax.numpy.ndarray
-            The wavelengths of the cube.
-        Returns
-        -------
-        List[jax.numpy.ndarray]
-            The list of images through each filter.
+    def apply_filter_curves(
+        self,
+        cube: Float[Array, " n_x n_y n_wavelengths"],
+        wavelengths: Float[Array, " n_wavelengths"],
+    ) -> dict:
+        """Get the images of a cube of spectra through all filters.
+
+        Args:
+            cube (Float[Array, " n_x n_y n_wavelengths"]): The cube of spectra.
+            wavelengths (Float[Array, " n_wavelengths"]): The wavelengths of the cube.
+
+        Returns:
+            dict: The images per filter.
         """
         images = {"filter": [], "image": []}
         for filter in self.filters:
@@ -185,19 +153,15 @@ class FilterCurves(eqx.Module):
 
         return images
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: int) -> "Filter":
         """
         Get a filter by index.
 
-        Parameters
-        ----------
-        key : int
-            The index of the filter to retrieve.
+        Args:
+            key (int): The index of the filter to retrieve.
 
-        Returns
-        -------
-        Filter
-            The filter at the specified index.
+        Returns:
+            (Filter): The filter at the specified index.
         """
         return self.filters[key]
 
@@ -205,10 +169,8 @@ class FilterCurves(eqx.Module):
         """
         Get the number of filters.
 
-        Returns
-        -------
-        int
-            The number of filters.
+        Returns:
+            (int): The number of filters.
         """
         return len(self.filters)
 
@@ -224,29 +186,20 @@ def load_filter(
     If filters are locally present we load them from the specified path, otherwise we download them from the SVO Filter Profile Service (http://svo2.cab.inta-csic.es/theory/fps/index.php).
     Filters are implicitly stored in the format of SVO: 'facilty/instrument.filter.csv'
 
-    Parameters
-    ----------
-    facility : str
-        Name of the facility. e.g 'SLOAN' for SDSS.
+    Args:
+        facility (str): Name of the facility. e.g 'SLOAN' for SDSS.
+        instrument (Optional[Union[str, List[str]]]): Name of the instrument/s e.g 'SDSS' for 'SLOAN'.
+            If None, all instruments are loaded.
+        filter_name (Optional[Union[str, List[str]]]): Name of the specific filter/s to load.
+            e.g 'r' for 'SDSS.r' which loads only the SDSS r-band filter.
+            If None, all filters of the facility and instrument are loaded.
+        filters_path (Optional[str]): Path to load/save filters on disk.
 
-    instrument : str or list of str
-        optional: default=None
-        Name of the instrument/s. e.g 'SDSS' for 'SLOAN'.
-        If None, all instruments are loaded.
+    Returns:
+        FilterCurves: FilterCurves object containing the Filter objects.
 
-    filter_name : str or list of str
-        optional: default=None
-        Name of the specific filter/s to load. e.g 'r' for 'SDSS.r' which loads only the SDSS r-band filter.
-        If None, all filters of the facility and instrument are loaded.
-
-    filters_path : str
-        optional: default=FILTERS_PATH
-        Path to load the filters from if present on disk, or to save the filters to if downloaded.
-
-    Returns
-    -------
-    FilterCurves
-        FilterCurves object containing the Filter objects.
+    Raises:
+        ValueError: If a filter_name is provided without specifying the instrument.
     """
 
     # some sanity checks...
@@ -306,7 +259,7 @@ def load_filter(
 
 
 def _load_filter_list_for_instrument(
-    filter_table,
+    filter_table: Table,
     filter_prefix: str,
     filter_name: Optional[List[str]] = None,
     filter_dir: Optional[str] = FILTERS_PATH,
@@ -314,23 +267,15 @@ def _load_filter_list_for_instrument(
     """
     Load the filter list from the specified path.
 
-    Parameters
-    ----------
-    filter_prefix : str
-        The filter prefix ID in the format of SVO: 'facilty/instrument'.
+    Args:
+        filter_table (Table): Astropy table containing available filters and metadata.
+        filter_prefix (str): The filter prefix ID in the format of SVO: 'facilty/instrument'.
+        filter_name (Optional[List[str]]): Optional. Name of the specific filters to load (e.g. 'r' for 'SDSS.r').
+            If ``None``, all filters are loaded.
+        filter_dir (Optional[str]): Optional. Path to load the filter list from. Defaults to ``FILTERS_PATH``.
 
-    filter_name : list of str
-        optional: default=None
-        Name of the specific filters to load. e.g 'r' for 'SDSS.r' which loads only the SDSS r-band filter.
-        If None, all filters are loaded.
-
-    filter_dir : str
-        optional: default=FILTERS_PATH
-        Path to load the filter list from.
-    Returns
-    -------
-    List[Filter]
-        List of Filter objects containing the transmission curve.
+    Returns:
+        (List[Filter]): List of Filter objects containing the transmission curve.
     """
 
     filter_list = []
@@ -391,19 +336,12 @@ def save_filters(facility: str, filters_path: Optional[str] = FILTERS_PATH):
     """
     Download all filters of a given facility from the Filter Profile Service of the Spanisch Virtual Observatory (http://svo2.cab.inta-csic.es/theory/fps/index.php) and save them as csv file to the specified path.
 
-    Parameters
-    ----------
-    facility : str
-        Name of the facility. e.g 'SLOAN' for SDSS.
+    Args:
+        facility (str): Name of the facility. e.g 'SLOAN' for SDSS.
+        filters_path (Optional[str]): Path to save the filters as csv files. Defaults to ``FILTERS_PATH``.
 
-    filters_path : str
-        optional: default=FILTERS_PATH
-        Path to save the filters as csv files.
-
-    Returns
-    -------
-    Table
-        Table containing the filter list.
+    Returns:
+        (Table): Table containing the filter list.
     """
 
     _logger.info(f"Downloading telescope filter files for {facility}.")
@@ -427,24 +365,18 @@ def save_filters(facility: str, filters_path: Optional[str] = FILTERS_PATH):
     return filter_list
 
 
-def print_filter_list(facility: str, instrument: Optional[str] = None):
+def print_filter_list(facility: str, instrument: Optional[str] = None) -> None:
     """
     Print the list of filters available for a given facility and instrument.
     If you want to see the list of all facilities and instruments, follow the link below:
-    http://svo2.cab.inta-csic.es/theory/fps/index.php
+    http (//svo2.cab.inta-csic.es/theory/fps/index.php):
 
-    Parameters
-    ----------
-    facility : str
-        Name of the facility. e.g 'SLOAN' for SDSS.
+    Args:
+        facility (str): Name of the facility. e.g 'SLOAN' for SDSS.
+        instrument (Optional[str], optional): Name of the instrument. e.g 'MIRI' for 'JWST'.
 
-    instrument : str
-        optional: default=None
-        Name of the instrument. e.g 'MIRI' for 'JWST'.
-
-    Returns
-    -------
-    None
+    Returns:
+        None
     """
 
     # TODO: for some facilities we might want to add a mapping from the fps names to more common names, e.g. 'SDSS' instead of 'SLOAN'.
@@ -452,24 +384,18 @@ def print_filter_list(facility: str, instrument: Optional[str] = None):
     print(filter_list["filterID"])
 
 
-def print_filter_list_info(facility: str, instrument: Optional[str] = None):
+def print_filter_list_info(facility: str, instrument: Optional[str] = None) -> None:
     """
     Print the information of a filter list available for a given facility and instrument.
     If you want to see the list of all facilities and instruments, follow the link below:
-    http://svo2.cab.inta-csic.es/theory/fps/index.php
+    http (//svo2.cab.inta-csic.es/theory/fps/index.php):
 
-    Parameters
-    ----------
-    facility : str
-        Name of the facility. e.g 'SLOAN' for SDSS.
+    Args:
+        facility (str): Name of the facility. e.g 'SLOAN' for SDSS.
+        instrument (Optional[str], optional): Name of the instrument. e.g 'MIRI' for 'JWST'. Defaults to ``None``.
 
-    instrument : str
-    optinal: default=None
-        Name of the instrument. e.g 'MIRI' for 'JWST'.
-
-    Returns
-    -------
-    None
+    Returns:
+        None
     """
     # TODO: for some facilities we might want to add a mapping from the fps names to more common names, e.g. 'SDSS' instead of 'SLOAN'.
     filter_list = SvoFps.get_filter_list(facility=facility, instrument=instrument)
@@ -482,23 +408,15 @@ def print_filter_property(
     """
     Print the properties of a filter available for a given facility, instrument and filter name.
     If you want to see the list of all facilities and instruments, follow the link below:
-    http://svo2.cab.inta-csic.es/theory/fps/index.php
+    http (//svo2.cab.inta-csic.es/theory/fps/index.php):
 
-    Parameters
-    ----------
-    facility : str
-        Name of the facility. e.g 'SLOAN' for SDSS.
+    Args:
+        facility (str): Name of the facility. e.g 'SLOAN' for SDSS.
+        filter_name (str): Name of the filter. e.g 'r' for 'SDSS.r'.
+        instrument (Optional[str], optional): Name of the instrument. e.g 'MIRI' for 'JWST'. Defaults to ``None``.
 
-    instrument : str
-        Name of the instrument. e.g 'MIRI' for 'JWST'.
-
-    filter_name : str
-        Name of the filter. e.g 'r' for 'SDSS.r'.
-
-    Returns
-    -------
-    filter_info : Table
-        Table containing the filter properties such as wavelength range, effective wavelength, zero point etc.
+    Returns:
+        filter_info (Table): Table containing the filter properties such as wavelength range, effective wavelength, zero point etc.
     """
 
     filter_list = SvoFps.get_filter_list(facility=facility, instrument=instrument)
@@ -527,19 +445,15 @@ def convolve_filter_with_spectra(
     """
     Convolves a single filter with a single spectrum or a cube of spectra.
 
-    Parameters
-    ----------
-    filter : Filter
-        The filter to convolve with the spectrum or cube.
-    spectrum_or_cube : jax.numpy.ndarray
-        The spectrum or cube of spectra.
-    wavelengths : jax.numpy.ndarray
-        The wavelengths of the spectrum or cube.
+    Args:
+        filter (Filter): The filter to convolve with the spectrum or cube.
+        spectra (Union[Float[Array, " n_wavelengths"], Float[Array, " n_x n_y n_wavelengths"]]): The spectrum or cube of spectra.
+        wavelengths (Float[Array, " n_wavelengths"]): The wavelengths of the spectrum or cube.
 
-    Returns
-    -------
-    jax.numpy.ndarray
-        The convolved flux value for a single spectrum or the convolved image for a cube of spectra.
+    Raises:
+        ValueError: If input array is not 1D (spectrum) or 3D (cube of spectra).
+    Returns:
+        (jax.numpy.ndarray): The convolved flux value for a single spectrum or the convolved image for a cube of spectra.
     """
     # Interpolate the filter response to the wavelengths
     filter_response = filter(wavelengths)

@@ -7,18 +7,19 @@ from jdaviz import Cubeviz
 from mpdaf.obj import Cube
 
 
-def visualize_rubix(filename):
-    """
-    This function creates an interactive visualization of a given data cube.
-    The visualization consists of two plots:
-    1. A 2D image slice of the data cube at a given wavelength index.
-    2. A spectrum plot for a selected pixel in the image slice, along with the summed spectrum for all pixels within a given radius of the selected pixel.
+def visualize_rubix(filename: str) -> widgets.Widget:
+    """Create an interactive visualization for a Rubix FITS data cube.
 
-    Parameters:
-        filename (str): The path to the FITS file containing the data cube.
+    The interface presents an image slice and two spectra. The image
+    slice responds to the selected wavelength range, while the spectra
+    show the selected pixel and the summed aperture response.
+
+    Args:
+        filename (str): Path to the FITS file containing the cube.
 
     Returns:
-        An interactive visualization of the data cube with sliders for selecting the wavelength index, pixel coordinates, and radius of the aperture.
+        widgets.Widget: Interactive widget with linked sliders for
+            wavelength, pixel selection, and radius.
     """
 
     cube = Cube(filename=filename)
@@ -36,7 +37,8 @@ def visualize_rubix(filename):
         # Extract the spectrum for the given pixel
         spectrum = cube[:, y, x]
 
-        # Create a mask for pixels within the specified radius of the selected pixel (x, y)
+        # Create a mask for pixels within the specified radius
+        # of the selected pixel
         y_indices, x_indices = np.indices((cube.shape[1], cube.shape[2]))
         distance_mask = np.sqrt((x_indices - x) ** 2 + (y_indices - y) ** 2) <= radius
 
@@ -56,7 +58,7 @@ def visualize_rubix(filename):
         image1.plot(
             ax=ax1,
             colorbar="v",
-            title="$\lambda$ = %.1f to %.1f (%s)"
+            title=r"$\lambda$ = %.1f to %.1f (%s)"
             % (
                 cube.wave.coord(start),
                 cube.wave.coord(wave_index + wave_range),
@@ -67,7 +69,8 @@ def visualize_rubix(filename):
         # Add scatter point for the selected pixel
         ax1.scatter(x, y, color="red", marker="o", s=100)
 
-        # Highlight all selected pixels by overlaying the mask with a transparent color
+        # Highlight all selected pixels by overlaying the mask
+        # with a transparent color
         mask_overlay = np.zeros_like(image1.data)
         mask_overlay[distance_mask] = 1  # Mark selected pixels
         ax1.imshow(mask_overlay, origin="lower", cmap="Blues", alpha=0.1)
@@ -77,14 +80,18 @@ def visualize_rubix(filename):
         ax1.set_ylabel("Y-axis")
 
         # Plot the spectrum on the second axis (ax2)
-        spectrum.plot(ax=ax2, label=f"Spectrum for Pixel ({x}, {y})", color="blue")
+        spectrum.plot(
+            ax=ax2,
+            label=f"Spectrum for Pixel ({x}, {y})",
+            color="blue",
+        )
 
         # Create a second y-axis for the field-of-view spectrum
         ax3 = ax2.twinx()
         ax3.plot(
             cube.wave.coord(),
             spectrum_all,
-            label=f"Spectrum for Whole FOV",
+            label="Spectrum for whole FOV",
             color="black",
         )
 
@@ -92,7 +99,7 @@ def visualize_rubix(filename):
         ax2.plot(
             cube.wave.coord(),
             spectrum_sum,
-            label=f"Summed Spectrum (Radius = {radius})",
+            label=f"Summed spectrum (radius = {radius})",
             color="green",
             linestyle="-.",
         )
@@ -105,7 +112,7 @@ def visualize_rubix(filename):
             color="red",
             linestyle="--",
             linewidth=1.5,
-            label="$\lambda$ = %.1f (%s)"
+            label=r"$\lambda$ = %.1f (%s)"
             % (cube.wave.coord(wave_index), cube.wave.unit),
         )
 
@@ -187,7 +194,7 @@ def visualize_rubix(filename):
         continuous_update=False,
     )
 
-    # Use the interact function to link the sliders with the combined plotting function
+    # Link the sliders with the combined plotting function
     interactive_plot = interact(
         plot_cube_slice_and_spectrum,
         wave_index=wave_slider,
@@ -200,15 +207,14 @@ def visualize_rubix(filename):
     return interactive_plot
 
 
-def visualize_cubeviz(filename):
-    """
-    This function creates an interactive visualization of a given data cube using Cubeviz.
+def visualize_cubeviz(filename: str) -> None:
+    """Launch Cubeviz for an IFU data cube.
 
-    Parameters:
-        filename (str): The path to the FITS file containing the data cube.
+    Args:
+        filename (str): Path to the FITS file containing the cube.
 
     Returns:
-        An interactive visualization of the data cube using Cubeviz.
+        None: Cubeviz is displayed inline via ``Cubeviz.show()``.
     """
 
     def cubeviz(self):
@@ -219,11 +225,22 @@ def visualize_cubeviz(filename):
     return cubeviz(filename)
 
 
-def stellar_age_histogram(h5_file):
+def stellar_age_histogram(h5_file: str) -> None:
+    """Plot a histogram of stellar ages stored in an HDF5 file.
+
+    Args:
+        h5_file (str): Path to the HDF5 file containing star particle data.
+    """
     with h5py.File(h5_file, "r") as f:
         star_ages = f["particles/stars/age"][:]
     plt.figure(figsize=(8, 6))
-    plt.hist(star_ages, bins=50, color="darkorange", edgecolor="black", alpha=0.7)
+    plt.hist(
+        star_ages,
+        bins=50,
+        color="darkorange",
+        edgecolor="black",
+        alpha=0.7,
+    )
     plt.xlabel("Age [Gyr]")
     plt.ylabel("Number of stars")
     plt.grid(True, linestyle="--", alpha=0.5)
@@ -231,7 +248,12 @@ def stellar_age_histogram(h5_file):
     plt.show()
 
 
-def star_coords_2D(h5_file):
+def star_coords_2D(h5_file: str) -> None:
+    """Scatter the x/y positions of star particles in the galactic plane.
+
+    Args:
+        h5_file (str): Path to the HDF5 file containing star coordinates.
+    """
     with h5py.File(h5_file, "r") as f:
         star_coords = f["particles/stars/coords"][:]
     x = star_coords[:, 0]
@@ -244,12 +266,21 @@ def star_coords_2D(h5_file):
     plt.show()
 
 
-def star_metallicity_histogram(h5_file):
+def star_metallicity_histogram(h5_file: str) -> None:
+    """Plot the metallicity distribution of star particles.
+
+    Args:
+        h5_file (str): Path to the HDF5 file containing star metallicities.
+    """
     with h5py.File(h5_file, "r") as f:
         star_metallicity = f["particles/stars/metallicity"][:]
     plt.figure(figsize=(8, 6))
     plt.hist(
-        star_metallicity, bins=50, color="forestgreen", edgecolor="black", alpha=0.7
+        star_metallicity,
+        bins=50,
+        color="forestgreen",
+        edgecolor="black",
+        alpha=0.7,
     )
     plt.xlabel("Metallicity")
     plt.ylabel("Number of stars")

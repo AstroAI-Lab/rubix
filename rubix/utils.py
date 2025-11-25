@@ -1,11 +1,14 @@
 # Description: Utility functions for Rubix
 import os
-from typing import Dict, Union
+from typing import TYPE_CHECKING, Any, Dict, Tuple, Union
 
 import h5py
 import jax.numpy as jnp
 import yaml
 from astropy.cosmology import Planck15 as cosmo
+
+if TYPE_CHECKING:
+    from rubix.core.data import RubixData
 
 
 def get_config(config: Union[str, Dict]) -> Dict:
@@ -13,7 +16,8 @@ def get_config(config: Union[str, Dict]) -> Dict:
     Get the configuration from a file or a dictionary.
 
     Args:
-        config (Union[str, Dict]): The configuration as a file path or a dictionary
+        config (Union[str, Dict]):
+            The configuration as a file path or a dictionary
 
     Returns:
         The configuration as a dictionary.
@@ -24,15 +28,18 @@ def get_config(config: Union[str, Dict]) -> Dict:
         return config
 
 
-def get_pipeline_config(name: str):
+def get_pipeline_config(name: str) -> Dict[str, Any]:
     """
-    Get the configuration of the pipeline with the given name.
+    Get the configuration of a pipeline by name.
 
     Args:
-        name (str): The name of the pipeline
+        name (str): The name of the pipeline to look up
+
+    Raises:
+        ValueError: If the requested pipeline is not defined
 
     Returns:
-        The configuration of the pipeline as a dictionary.
+        Dict[str, Any]: The configuration dictionary for the pipeline
     """
     from rubix import config
 
@@ -45,16 +52,18 @@ def get_pipeline_config(name: str):
     return config
 
 
-def read_yaml(path_to_file: str) -> dict:
+def read_yaml(path_to_file: str) -> Dict[str, Any]:
     """
-    read_yaml Read yaml file into dictionary
+    Read a YAML file into a dictionary.
 
     Args:
-        path_to_file (str): path to the file to read
+        path_to_file (str): Path to the YAML file to read
+
+    Raises:
+        RuntimeError: If the file cannot be read or parsed
 
     Returns:
-        Either the read yaml file in dictionary form, or an empty
-            dictionary if an error occured.
+        Dict[str, Any]: Contents of the YAML file
     """
     cfg = {}
     try:
@@ -68,16 +77,17 @@ def read_yaml(path_to_file: str) -> dict:
 
 
 def convert_values_to_physical(
-    value,
-    a,
-    a_scale_exponent,
-    hubble_param,
-    hubble_scale_exponent,
-    CGS_conversion_factor,
-):
+    value: float,
+    a: float,
+    a_scale_exponent: float,
+    hubble_param: float,
+    hubble_scale_exponent: float,
+    CGS_conversion_factor: float,
+) -> float:
     """
     Convert values from cosmological simulations to physical units
-    Source: https://kateharborne.github.io/SimSpin/examples/generating_hdf5.html#attributes
+    Source:
+        https://kateharborne.github.io/SimSpin/examples/generating_hdf5.html#attributes
 
     Args:
         value (float): Value from Simulation Parameter to be converted
@@ -88,11 +98,12 @@ def convert_values_to_physical(
         CGS_conversion_factor (float): Conversion factor to CGS units
 
     Returns:
-        Value in physical units
+        float: Value in physical units
     """
     # check if CGS_conversion_factor is 0
     if CGS_conversion_factor == 0:
-        # Sometimes IllustrisTNG returns 0 for the conversion factor, in which case we assume it is already in CGS
+        # Sometimes IllustrisTNG returns 0 for the conversion factor,
+        # in which case we assume it is already in CGS
         CGS_conversion_factor = 1.0
     # convert to physical units
     value = (
@@ -104,34 +115,33 @@ def convert_values_to_physical(
     return value
 
 
-def SFTtoAge(a):
-    """Convert scale factor to age in Gyr.
+def SFTtoAge(a: float) -> float:
+    """
+    Convert a scale factor to a stellar age in Gyr.
 
-    The lookback time is calculated as the difference between current age
-    of the universe and the age at redshift z=1/a - 1.
-
-    This hence gives the age of the star formed at redshift z=1/a - 1.
+    The lookback time is calculated as the difference between the current age
+    of the universe and the age at redshift $z = 1/a - 1$, giving the time
+    since the formation of a star with scale factor $a$.
 
     Args:
-        a (float): scale factor
+        a (float): Scale factor
 
     Returns:
-        Age in Gyr.
+        float: Age in Gyr
     """
     # TODO maybe implement this in JAX?
-    # TODO CHECK IF THIS IS WHAT WE WANT
     return cosmo.lookback_time((1 / a) - 1).value
 
 
-def print_hdf5_file_structure(file_path):
+def print_hdf5_file_structure(file_path: str) -> str:
     """
     Print the structure of an HDF5 file.
 
     Args:
-        file_path (str): path to the HDF5 file
+        file_path (str): Path to the HDF5 file
 
     Returns:
-        The structure of the HDF5 file as a string.
+        str: The structure of the HDF5 file as a string
     """
     return_string = f"File: {file_path}\n"
     with h5py.File(file_path, "r") as f:
@@ -147,27 +157,32 @@ def _print_hdf5_group_structure(group, indent=0):
             return_string += f"{' ' * indent}Group: {key}\n"
             return_string += _print_hdf5_group_structure(sub_group, indent + 4)
         else:
-            return_string += f"{' ' * indent}Dataset: {key} ({sub_group.dtype}) ({sub_group.shape})\n"
+            return_string += (
+                f"{' ' * indent}Dataset: {key} "
+                f"({sub_group.dtype}) ({sub_group.shape})\n"
+            )
     return return_string
 
 
-def load_galaxy_data(path_to_file: str):
+def load_galaxy_data(
+    path_to_file: str,
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """
-    load_galaxy_data Load galaxy data from a file
+    Load galaxy data and unit metadata from an HDF5 file.
 
     Args:
-        path_to_file (str): path to the file to load
+        path_to_file (str): Path to the HDF5 file to load
 
     Raises:
-        RuntimeError: When an error occurs during loading
+        FileNotFoundError: If the file cannot be found
 
     Returns:
-        Either the loaded galaxy data, or an empty dictionary if an error occured.
+        Tuple[Dict[str, Any], Dict[str, Any]]: Galaxy data and associated units
 
-    Example
-    -------
-    >>> from rubix.utils import load_galaxy_data
-    >>> galaxy_data = load_galaxy_data("path/to/file.hdf5")
+    Example:
+        ::
+        >>> from rubix.utils import load_galaxy_data
+        >>> galaxy_data, units = load_galaxy_data("path/to/file.hdf5")
     """
     galaxy_data = {}
     units = {}
@@ -198,17 +213,18 @@ def load_galaxy_data(path_to_file: str):
     return galaxy_data, units
 
 
-def _pad_particles(inputdata, pad: int) -> "InputData":
+def _pad_particles(inputdata: "RubixData", pad: int) -> "RubixData":
     """
-    Pads the particle arrays in inputdata to make their length divisible by num_devices.
-    This is necessary for sharding to work correctly.
+    Pad the particle arrays so their length is divisible by the device count.
+
+    This is necessary for JAX sharding to succeed.
 
     Args:
-        inputdata (InputData): The input data containing particle arrays.
-        pad (int): The number of particles to pad.
+        inputdata (RubixData): The input data containing particle arrays.
+        pad (int): The number of particles to append along the first axis
 
     Returns:
-        InputData: The padded input data.
+        RubixData: The padded input data
     """
 
     # pad along the first axis

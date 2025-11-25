@@ -1,33 +1,20 @@
-import dataclasses
 import time
-from functools import partial
-from types import SimpleNamespace
-from typing import Union
+from typing import Any, Optional, Sequence, Union
 
 import jax
 import jax.numpy as jnp
-
-# For shard_map and device mesh.
-import numpy as np
 from beartype import beartype as typechecker
-from jax import block_until_ready, lax
-from jax.experimental.pjit import pjit
+from jax import lax
 from jax.experimental.shard_map import shard_map
 from jax.sharding import Mesh, NamedSharding, PartitionSpec as P
-from jax.tree_util import tree_flatten, tree_map, tree_unflatten
+from jax.tree_util import tree_map
 from jaxtyping import jaxtyped
 
 from rubix.logger import get_logger
 from rubix.pipeline import linear_pipeline as pipeline
 from rubix.utils import _pad_particles, get_config, get_pipeline_config
 
-from .data import (
-    Galaxy,
-    GasData,
-    RubixData,
-    StarsData,
-    get_rubix_data,
-)
+from .data import Galaxy, GasData, RubixData, StarsData, get_rubix_data
 from .dust import get_extinction
 from .ifu import (
     get_calculate_datacube_particlewise,
@@ -42,48 +29,29 @@ from .telescope import get_filter_particles, get_spaxel_assignment, get_telescop
 
 
 class RubixPipeline:
-    """
-    RubixPipeline is responsible for setting up and running the data processing pipeline.
+    """Builds and executes the Rubix data processing pipeline with the provided configuration.
 
     Args:
-        user_config (dict or str): Parsed user configuration for the pipeline.
-        pipeline_config (dict): Configuration for the pipeline.
-        logger(Logger) : Logger instance for logging messages.
-        ssp(object) : Stellar population synthesis model.
-        telescope(object) : Telescope configuration.
-        data (dict): Dictionary containing particle data.
-        func (callable): Compiled pipeline function to process data.
+        user_config (Union[dict, str]):
+            Parsed configuration dictionary or path to a configuration file.
 
-    Example
-    --------
-    >>> from rubix.core.pipeline import RubixPipeline
-    >>> config = "path/to/config.yml"
-    >>> pipe = RubixPipeline(config)
-    >>> inputdata = pipe.prepare_data()
-    >>> output = pipe.run(inputdata)
-    >>> # To run with sharding using jax.shard_map:
-    >>> final_datacube = pipe.run_sharded(inputdata, shard_size=100000)
-    >>> ssp_model = pipeline.ssp
-    >>> telescope = pipeline.telescope
+    Example:
+        ::
+
+            >>> from rubix.core.pipeline import RubixPipeline
+            >>> config = "path/to/config.yml"
+            >>> pipe = RubixPipeline(config)
+            >>> inputdata = pipe.prepare_data()
+            >>> output = pipe.run(inputdata)
+            >>> final_datacube = pipe.run_sharded(inputdata)
+            >>> ssp_model = pipeline.ssp
+            >>> telescope = pipeline.telescope
     """
 
     def __init__(self, user_config: Union[dict, str]):
-        """
-        Initializes the RubixPipeline with the given user configuration.
-
-        Args:
-            user_config (Union[dict, str]): User configuration dictionary or path to config file.
-            pipeline_config (dict): Pipeline configuration dictionary.
-            logger: Logger instance for logging messages.
-            ssp: SSP model instance.
-            telescope: Telescope instance.
-            func: Compiled pipeline function.
-
-        Returns:
-            None
-        """
         self.user_config = get_config(user_config)
-        self.pipeline_config = get_pipeline_config(self.user_config["pipeline"]["name"])
+        pipeline_name = self.user_config["pipeline"]["name"]
+        self.pipeline_config = get_pipeline_config(pipeline_name)
         self.logger = get_logger(self.user_config["logger"])
         self.ssp = get_ssp(self.user_config)
         self.telescope = get_telescope(self.user_config)
@@ -95,7 +63,8 @@ class RubixPipeline:
 
         Returns:
             Object containing particle data with attributes such as:
-            'coords', 'velocities', 'mass', 'age', and 'metallicity' under stars and gas.
+                'coords', 'velocities', 'mass', 'age', and 'metallicity'
+                under stars and gas.
         """
         t1 = time.time()
         self.logger.info("Getting rubix data...")
@@ -108,7 +77,7 @@ class RubixPipeline:
             f"Data loaded with {star_count} star particles and {gas_count} gas particles."
         )
         t2 = time.time()
-        self.logger.info("Data preparation completed in %.2f seconds.", t2 - t1)
+        self.logger.info(f"Data preparation completed in {t2 - t1:.2f} seconds.")
         return rubixdata
 
     @jaxtyped(typechecker=typechecker)
@@ -149,25 +118,33 @@ class RubixPipeline:
         ]
         return functions
 
-    def run_sharded(self, inputdata, devices=None):
+    def run_sharded(
+        self,
+        inputdata: RubixData,
+        devices: Optional[Sequence[Any]] = None,
+    ) -> jnp.ndarray:
         """
-        Runs the pipeline on sharded input data in parallel using jax.shard_map.
-        It splits the particle arrays (e.g. under stars and gas) into shards, runs
-        the compiled pipeline on each shard, and then combines the resulting datacubes.
+            Run the compiled pipeline across devices by sharding the particle data.
 
-        This is the recomended method to run the pipeline in parallel at the moment!!!
+        It splits the particle arrays under stars and gas into shards,
+            runs the compiled pipeline on each shard, and then combines the
+            resulting datacubes.
 
-        Parameters
-        ----------
-        inputdata : object
-            Data prepared from the `prepare_data` method.
-        shard_size : int
-            Number of particles per shard.
+            Note:
+                This is the recommended method to run the pipeline in parallel at
+                the moment.
 
-        Returns
-        -------
-        jax.numpy.ndarray
-            The final datacube combined from all shards.
+            Args:
+                inputdata (RubixData):
+                    Output of :py:meth:`prepare_data`.
+                    Contains star and gas particles.
+                devices (Optional[Sequence[Any]], optional):
+                    Devices to use for :func:`shard_map`. These should be
+                    :class:`jax.Device` instances.
+                    Defaults to ``jax.devices()``.
+
+            Returns:
+                jnp.ndarray: Sharded pipeline output aggregated across devices.
         """
         time_start = time.time()
         # Assemble and compile the pipeline as before.
@@ -195,7 +172,10 @@ class RubixPipeline:
         shard_2d = NamedSharding(mesh, P("data", None))  # for (N, D)
         shard_1d = NamedSharding(mesh, P("data"))  # for (N,)
         shard_bins = NamedSharding(mesh, P(None, None))
-        replicate_3d = NamedSharding(mesh, P(None, None, None))  # for full cube
+        replicate_3d = NamedSharding(
+            mesh,
+            P(None, None, None),
+        )  # for full cube
 
         # — 1) allocate empty instances —
         galaxy_spec = object.__new__(Galaxy)
@@ -244,16 +224,18 @@ class RubixPipeline:
 
         # 1) Make a pytree of PartitionSpec
         partition_spec_tree = tree_map(
-            lambda s: s.spec if isinstance(s, NamedSharding) else None, rubix_spec
+            lambda s: s.spec if isinstance(s, NamedSharding) else None,
+            rubix_spec,
         )
 
-        # if the particle number is not modulo the device number, we have to pad a few empty particles
-        # to make it work
+        # If the particle number is not divisible by the device count,
+        # pad a few empty particles so the numbers line up.
         n = inputdata.stars.coords.shape[0]
         pad = (num_devices - (n % num_devices)) % num_devices
         if pad:
             self.logger.info(
-                "Padding particles to make the number of particles divisible by the number of devices (%d).",
+                "Padding particles to make the number of particles divisible "
+                "by the number of devices (%d).",
                 num_devices,
             )
             inputdata = _pad_particles(inputdata, pad)
@@ -286,22 +268,41 @@ class RubixPipeline:
 
         return sharded_result
 
-    def gradient(self, rubixdata, targetdata):
-        """
-        This function will calculate the gradient of the pipeline.
+    def gradient(
+        self,
+        rubixdata: RubixData,
+        targetdata: jnp.ndarray,
+    ) -> RubixData:
+        """Compute the gradient of the loss with respect to ``rubixdata``.
+
+        Args:
+            rubixdata (RubixData):
+                Pytree describing the current pipeline input data.
+            targetdata (jnp.ndarray):
+                Target datacube used to compute the loss.
+
+        Returns:
+            RubixData:
+                Gradient pytree that matches the structure of ``rubixdata``.
         """
         return jax.grad(self.loss, argnums=0)(rubixdata, targetdata)
 
-    def loss(self, rubixdata, targetdata):
-        """
-        Calculate the mean squared error loss.
+    def loss(
+        self,
+        rubixdata: RubixData,
+        targetdata: jnp.ndarray,
+    ) -> jnp.ndarray:
+        """Compute the mean squared error between pipeline output and target.
 
         Args:
-            data (array-like): The predicted data.
-            target (array-like): The target data.
+            rubixdata (RubixData):
+                Input data passed to :py:meth:`run`.
+            targetdata (jnp.ndarray):
+                Target datacube used for comparison.
 
         Returns:
-            The mean squared error loss.
+            jnp.ndarray:
+                Scalar mean squared error value.
         """
         output = self.run(rubixdata)
         loss_value = jnp.sum((output - targetdata) ** 2)
