@@ -1,13 +1,13 @@
 # Contributing
 
 Please feel free to submit issues and pull requests to this repository.
-The GitHub workflow will automatically run [Black](https://black.readthedocs.io/en/stable/) and (isort)[https://pycqa.github.io/isort/] on any contributions; builds that fail these tests will not be accepted. Further notes on code style are detailed below.
+The GitHub workflow will automatically run [Black](https://black.readthedocs.io/en/stable/) and (isort)[https://pycqa.github.io/isort/] as well as (pydoclint)[https://pypi.org/project/pydoclint/] on any contributions; builds that fail these tests will not be accepted. Further notes on code style are detailed below.
 
 
 **Contents:**
 
 - [Setting up your development environment](#setting-up-your-development-environment)
-- [Using Black and isort](#using-black)
+- [Using Black, isort and pydoclint](#using-black)
 - [Style guide](#style-guide)
 - [Development Documentation](#development-documentation)
 - [Contributing to the Documentation](#contributing-to-the-documentation)
@@ -37,7 +37,7 @@ Note: if you are planning to use RUBIX on the GPU you need to replace the `cpu` 
 
 ### Setting up pre-commit hooks
 
-Once you have developed your new functionality, you'll want to commit it to the repo. We employ a pre-commit hook to ensure any code you commit will pass our tests and you won't be stuck with a failing Pull Request. This pre-commit hook will guard against files containing merge conflict strings, guard against the committing of large files, sanitise Jupyter notebooks (using `nbstripout`), check the yaml files, and, most importantly, will run `black`.
+Once you have developed your new functionality, you'll want to commit it to the repo. We employ a pre-commit hook to ensure any code you commit will pass our tests and you won't be stuck with a failing Pull Request. This pre-commit hook will guard against files containing merge conflict strings, guard against the committing of large files, sanitise Jupyter notebooks (using `nbstripout`), check the yaml files, and, most importantly, will run `black`, `isort` and `pydoclint`.
 
 This requires a small amount of set-up on your part, some of which was done when you installed the optional development dependencies above. The rest of the setup requires you run
 
@@ -54,6 +54,11 @@ If you would like to test whether it works you can run `pre-commit run --all-fil
 We use [Black](https://black.readthedocs.io/en/stable/) for code formatting. Assuming you installed the development dependencies (if not you can install `black` with pip: `pip install black`), you can run the linting with `black {source_file_or_directory}`. For more details see the [Black documentation](https://black.readthedocs.io/en/stable/usage_and_configuration/the_basics.html).
 
 The `Black` configuration is defined in our `pyproject.toml` so there's no need to configure it yourself, we've made all the decisions for you (for better or worse). Any merge request will be checked with `Black` and must pass before being eligable to merge.
+
+In addition we run `isort` to sort imports alphabetically and automatically separate them  into sections and by import type.
+For more information see the [isort documentation](https://pycqa.github.io/isort/).
+
+Similarly, we use `pydoclint` for docstring linting. [`pydoclint`](https://pypi.org/project/pydoclint/) checks whether a docstring's sections (arguments, returns, raises, ...) match the function signature or function implementation. We adhere to the [Google docstring format](https://google.github.io/styleguide/pyguide.html#s3.8-comments-and-docstrings). See also next section for more details.
 
 Note that using the pre-commit hook will mean all of this is done automatically for you.
 
