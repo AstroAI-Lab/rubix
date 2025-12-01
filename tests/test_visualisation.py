@@ -1,9 +1,107 @@
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import h5py
 import numpy as np
 
 from rubix.core import visualisation
+
+
+class DummyWave:
+    def __init__(self):
+        self.unit = "Angstrom"
+
+    def coord(self, index=None):
+        if index is None:
+            return np.array([4000.0, 5000.0])
+        return 4000.0 + index * 1000.0
+
+
+class DummyImage:
+    def __init__(self, data):
+        self.data = data
+        self.plot = MagicMock()
+
+
+class DummySpectrum:
+    def __init__(self, data):
+        self.data = data
+        self.plot = MagicMock()
+
+
+class DummyCube:
+    def __init__(self):
+        self.shape = (4, 3, 3)
+        self.data = np.arange(np.prod(self.shape)).reshape(self.shape)
+        self.wave = DummyWave()
+
+    def __getitem__(self, key):
+        sliced = self.data[key]
+        if sliced.ndim == 3:
+            return DummyCubeSlice(sliced)
+        return DummySpectrum(sliced)
+
+
+class DummyCubeSlice:
+    def __init__(self, data):
+        self._data = data
+
+    def sum(self, axis=0):
+        return DummyImage(self._data.sum(axis=axis))
+
+
+def test_plot_cube_slice_and_spectrum(monkeypatch):
+    cube = DummyCube()
+    monkeypatch.setattr(visualisation, "Cube", lambda filename: cube)
+
+    sliders = []
+
+    def fake_slider(**kwargs):
+        sliders.append(kwargs)
+        return SimpleNamespace(description=kwargs.get("description", ""))
+
+    monkeypatch.setattr(visualisation.widgets, "IntSlider", fake_slider)
+
+    ax1 = MagicMock()
+    ax2 = MagicMock()
+    ax3 = MagicMock()
+    ax2.twinx.return_value = ax3
+    fig = MagicMock()
+    monkeypatch.setattr(
+        visualisation.plt,
+        "subplots",
+        lambda *args, **kwargs: (fig, (ax1, ax2)),
+    )
+    monkeypatch.setattr(visualisation.plt, "tight_layout", MagicMock())
+    monkeypatch.setattr(visualisation.plt, "show", MagicMock())
+
+    interact_data = {}
+
+    def fake_interact(func, **kwargs):
+        interact_data["func"] = func
+        return "widget"
+
+    monkeypatch.setattr(visualisation, "interact", fake_interact)
+
+    visualisation.visualize_rubix("/tmp/cube.fits")
+
+    plot_fn = interact_data["func"]
+    plot_fn(wave_index=1, wave_range=1, x=1, y=1, radius=1)
+
+    ax1.scatter.assert_called_once()
+    ax1.imshow.assert_called_once()
+    ax2.plot.assert_called()
+    ax3.plot.assert_called_once()
+    ax2.axvspan.assert_called_once()
+    ax2.set_xlabel.assert_called_once()
+    ax2.set_ylabel.assert_called_once()
+    ax2.grid.assert_called_once()
+    ax2.legend.assert_called_once()
+    ax3.set_ylabel.assert_called_once()
+    ax3.legend.assert_called_once()
+    ax2.set_ylim.assert_called_with(bottom=0)
+    ax3.set_ylim.assert_called_with(bottom=0)
+    ax3.vlines.assert_called_once()
 
 
 def _create_star_h5(tmp_path):
@@ -54,7 +152,11 @@ def test_visualize_rubix_sets_up_interact(monkeypatch):
 
 def test_visualize_cubeviz_loads_and_shows(monkeypatch):
     cubeviz_mock = MagicMock()
-    monkeypatch.setattr(visualisation, "Cubeviz", MagicMock(return_value=cubeviz_mock))
+    monkeypatch.setattr(
+        visualisation,
+        "Cubeviz",
+        MagicMock(return_value=cubeviz_mock),
+    )
 
     visualisation.visualize_cubeviz("/tmp/cube.fits")
 
