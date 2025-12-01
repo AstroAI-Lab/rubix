@@ -146,6 +146,51 @@ Subfolders of examples should contain a `README.rst` with a section heading (ple
 
 ### Building the Documentation locally
 
+The documentation is build via `Sphinx`. You can build the documentation locally by following these steps:
+
+#### Setup and Installation
+
+First, ensure you have Sphinx installed in your environment:
+
+```
+pip install sphinx
+```
+
+If you are setting up the documentation source files for the first time, use the quickstart utility (this step is usually skipped if the source files already exist):
+
+```
+sphinx-quickstart
+```
+
+#### Configuration and Content
+
+The core of the documentation setup resides in the source folder:
+
+- `conf.py`: This is the main configuration file where you define extensions (like myst_nb for notebooks), set the theme, and manage global build settings.
+
+- `index.rst`: This file serves as the main page and table of contents for the entire documentation. You can link all other .rst files, notebooks, and content pages here.
+
+By default, the documentation build process is configured to use pre-rendered outputs embedded within your Jupyter Notebooks (.ipynb files). This is done to significantly speed up the build time by skipping the execution step. If you want to compile the notebooks during the build process, you can set the `nb_execution_mode` variable in the `conf.py` file to `auto` or `force`.
+
+#### Building the Documentation
+
+Once your content and configuration are ready, run the following command from the root of your Sphinx project (where the Makefile is located):
+
+````
+make html
+````
+
+This command will compile all source files (RST, Notebooks, etc.) and generate the final HTML output files. you can find them in the `build/html` folder.
+
+#### Viewing the Documentation
+
+The generated files will be placed in the `build/html` folder.
+
+To view the documentation, simply open the main file in your web browser:
+
+```
+build/html/index.html
+```
 
 ## Summary of how to contribute
 ### 1. File your issue

@@ -25,6 +25,9 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
 ]
+
+nb_execution_mode = "off"
+
 source_suffix = {
     ".rst": "restructuredtext",
     ".ipynb": "myst-nb",
