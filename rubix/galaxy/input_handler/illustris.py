@@ -255,6 +255,10 @@ class IllustrisHandler(BaseHandler):
             if "Coordinates" in f[part_type]:
                 attributes_coords = f[part_type]["Coordinates"].attrs
                 break  # Found 'Coordinates', stop the loop
+            else:
+                raise ValueError(
+                    "Coordinates field not found in any particle type for unit conversion."
+                )
 
         # attributes_coords = f[present_fields[0]]["Coordinates"].attrs
 
