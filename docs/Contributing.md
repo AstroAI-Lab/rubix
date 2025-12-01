@@ -105,13 +105,13 @@ Adding content should be relatively simple if you follow the instructions below.
 
 To add Jupyter notebooks to the documentation:
 
-1. Add your Jupyter notebook to the `notebooks` directory under the `docs/source` folder. Make sure that you 'Restart Kernel and run all cells' to ensure that the notebook is producing up to date, consistent outputs.
-2. Add your notebook to the relevant toctree. See below for an example toctree. Each toctree is contained within a Sphinx `.rst` file in each documentation source directory. The top-level file is `source/index.rst`. If your file is in a subfolder, you need to update the `.rst` file in that directory.
+1. Add your Jupyter notebook to the `notebooks` directory under the `docs` folder. Make sure that you 'Restart Kernel and run all cells' to ensure that the notebook is producing up to date, consistent outputs.
+2. Add your notebook to the relevant toctree. See below for an example toctree. Each toctree is contained within a Sphinx `.rst` file in each documentation source directory. The top-level file is `docs/index.rst`. If your file is in a subfolder, you need to update the `.rst` file in that directory.
 
 - If you're creating a new sub-directory of documentation, you will need to carry out a couple more steps:
 
 1.  Create a new `.rst` file in that directory
-2.  Update `source/index.rst` with the path to that `.rst` file
+2.  Update `docs/index.rst` with the path to that `.rst` file
 3.  Currently we do not run pytests on jupyter notebooks. So please make sure your notebooks are actually working fine.
 
 Example toctree:
@@ -164,7 +164,7 @@ sphinx-quickstart
 
 #### Configuration and Content
 
-The core of the documentation setup resides in the source folder:
+The core of the documentation setup resides in the `docs` folder:
 
 - `conf.py`: This is the main configuration file where you define extensions (like myst_nb for notebooks), set the theme, and manage global build settings.
 

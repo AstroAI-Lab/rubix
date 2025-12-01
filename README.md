@@ -63,7 +63,7 @@ Sphinx Documentation of all the functions is currently available under [this lin
 Contributions to `rubix` are welcome and greatly appreciated!
 Whether you're fixing bugs, improving documentation, or suggesting new features, your help is valuable to us.
 
-Please see [here](source/CONTRIBUTING.md) for contribution guidelines.
+Please see [here](docs/CONTRIBUTING.md) for contribution guidelines.
 
 Thank you for helping improve `rubix`!
 
