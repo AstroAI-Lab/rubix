@@ -23,7 +23,7 @@ repos:
       - id: isort
         name: isort (python)
   - repo: https://github.com/jsh9/pydoclint
-    rev: 0.8.1
+    rev: 0.8.3
     hooks:
     - id: pydoclint
       args: [--style=google, --check-return-types=False]
