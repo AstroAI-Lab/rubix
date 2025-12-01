@@ -157,7 +157,7 @@ class RubixPipeline:
         self.logger.info("Compiling the expressions...")
         self.func = self._pipeline.compile_expression()
 
-        if devices is None:
+        if devices is None:  # pragma: no cover
             devices = jax.devices()
             num_devices = len(devices)
         else:
