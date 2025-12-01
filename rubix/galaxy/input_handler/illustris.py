@@ -204,21 +204,16 @@ class IllustrisHandler(BaseHandler):
         # Get the attributes to convert values from Coordinates field
         # attributes_coords = f["PartType4"]["Coordinates"].attrs
 
-        present_fields = set(f.keys())
         attributes_coords = None
 
         # for part_type in present_fields:
         #        attributes_coords = f[part_type]["Coordinates"].attrs
         #        break  # Stop after finding the first match
 
-        for part_type in present_fields:
-            if "Coordinates" in f[part_type]:
-                attributes_coords = f[part_type]["Coordinates"].attrs
-                break  # Found 'Coordinates', stop the loop
-            else:
-                raise ValueError(
-                    "Coordinates field not found in any particle type for unit conversion."
-                )
+        if "Coordinates" in f["PartType4"]:
+            attributes_coords = f["PartType4"]["Coordinates"].attrs
+        else:
+            raise ValueError("Coordinates not found in stars particle type")
 
         # attributes_coords = f[present_fields[0]]["Coordinates"].attrs
 
@@ -255,10 +250,6 @@ class IllustrisHandler(BaseHandler):
             if "Coordinates" in f[part_type]:
                 attributes_coords = f[part_type]["Coordinates"].attrs
                 break  # Found 'Coordinates', stop the loop
-            else:
-                raise ValueError(
-                    "Coordinates field not found in any particle type for unit conversion."
-                )
 
         # attributes_coords = f[present_fields[0]]["Coordinates"].attrs
 
