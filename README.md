@@ -6,7 +6,6 @@
 
 [![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/AstroAI-Lab/rubix/blob/main/docs/CONTRIBUTING.md)
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/AstroAI-Lab/rubix/ci.yml?branch=main)](https://github.com/AstroAI-Lab/rubix/actions/workflows/ci.yml)
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/AstroAI-Lab/rubix/CI?label=build)](https://github.com/AstroAI-Lab/rubix/actions/workflows/ci.yml)
 [![Documentation Status](https://readthedocs.org/projects/rubix/badge/)](https://astro-rubix.web.app)
 [![codecov](https://codecov.io/gh/AstroAI-Lab/rubix/branch/main/graph/badge.svg)](https://codecov.io/gh/AstroAI-Lab/rubix)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
