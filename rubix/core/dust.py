@@ -13,23 +13,22 @@ from .telescope import get_telescope
 
 
 @jaxtyped(typechecker=typechecker)
-def get_extinction(config: dict) -> Callable:
-    """
-    Get the function to apply the dust extinction to the spaxel data.
+def get_extinction(config: dict) -> Callable[[RubixData], RubixData]:
+    """Return a callable that applies dust extinction to a Rubix dataset.
 
-    Parameters
-    ----------
-    config : dict
-        The configuration dictionary.
+    Args:
+        config (dict): Configuration holding ``ssp`` and ``dust`` settings.
 
-    Returns
-    -------
-    Callable
-        The function to apply the dust extinction to the spaxel data.
+    Returns:
+        Callable[[RubixData], RubixData]:
+            Function that applies extinction to a Rubix dataset.
+
+    Raises:
+        ValueError: When the ``ssp.dust`` block or extinction model is missing.
     """
     logger = get_logger(config.get("logger", None))
 
-    # check if dust key exists in config file to ensure we really want to apply dust extinction
+    # Check if the dust key exists so we only apply extinction when requested
     if "dust" not in config["ssp"]:
         raise ValueError("Dust configuration not found in config file.")
     if "extinction_model" not in config["ssp"]["dust"]:
@@ -53,7 +52,14 @@ def get_extinction(config: dict) -> Callable:
     spaxel_area = spatial_bin_size**2
 
     def calculate_extinction(rubixdata: RubixData) -> RubixData:
-        """Apply the dust extinction to the spaxel data."""
+        """Apply the configured extinction model to the stars component.
+
+        Args:
+            rubixdata (RubixData): Particle data to augment with extinction.
+
+        Returns:
+            RubixData: Same RubixData with ``stars.extinction`` populated.
+        """
         logger.info("Applying dust extinction to the spaxel data...")
 
         rubixdata.stars.extinction = apply_spaxel_extinction(

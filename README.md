@@ -4,12 +4,17 @@
 
 # Welcome to RUBIX
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/ufuk-cakir/rubix/ci.yml?branch=main)](https://github.com/ufuk-cakir/rubix/actions/workflows/ci.yml)
-[![Documentation Status](https://readthedocs.org/projects/rubix/badge/)](https://rubix.readthedocs.io/)
-[![codecov](https://codecov.io/gh/ufuk-cakir/rubix/branch/main/graph/badge.svg)](https://codecov.io/gh/ufuk-cakir/rubix)
+[![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/AstroAI-Lab/rubix/blob/main/docs/CONTRIBUTING.md)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/AstroAI-Lab/rubix/ci.yml?branch=main)](https://github.com/AstroAI-Lab/rubix/actions/workflows/ci.yml)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/AstroAI-Lab/rubix/CI?label=build)](https://github.com/AstroAI-Lab/rubix/actions/workflows/ci.yml)
+[![Documentation Status](https://readthedocs.org/projects/rubix/badge/)](https://astro-rubix.web.app)
+[![codecov](https://codecov.io/gh/AstroAI-Lab/rubix/branch/main/graph/badge.svg)](https://codecov.io/gh/AstroAI-Lab/rubix)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
-[![All Contributors](https://img.shields.io/github/all-contributors/ufuk-cakir/rubix?color=ee8449&style=flat-square)](#contributors)
+[![All Contributors](https://img.shields.io/github/all-contributors/AstroAI-Lab/rubix?color=ee8449&style=flat-square)](#contributors)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
+[![Type checking](https://github.com/beartype/beartype-assets/blob/main/badge/bear-ified.svg)](https://github.com/beartype/beartype)
 
 RUBIX is a versatile Integral Field Unit (IFU) tool designed for astrophysical simulations. It transforms any particle based galaxy model (e.g. cosmological hydrodynamical simulation outputs) into realistic mock IFU cubes, enabling both forward and inverse modeling. Built on JAX, RUBIX leverages GPU acceleration and automatic differentiation, allowing users to perform gradient-based optimization for inverse modeling alongside traditional forward modeling.
 
@@ -58,39 +63,51 @@ Sphinx Documentation of all the functions is currently available under [this lin
 Contributions to `rubix` are welcome and greatly appreciated!
 Whether you're fixing bugs, improving documentation, or suggesting new features, your help is valuable to us.
 
-
-### 1. File your issue
-
-If you find a bug or think of an enhancement, please open an issue on GitHub. For example, you might write an issue like:
-
-- **Title:** Fix incorrect galaxy rotation calculation
-- **Description:**
-  The galaxy rotation function (rotate_galaxy) does not properly convert angle inputs, causing unexpected behavior when non-scalar JAX arrays are passed. Please investigate and fix this conversion so that it accepts a Python float.
-
-### 2. Create a branch for your issue
-
-After creating the issue, create a new branch from `main` following a clear naming convention - e.g. name it such that the following sentence makes sense: ```If applied, this branch does/adds/ *name-of-branch*.```
-For example:
-
-```bash
-git checkout -b fix/rotate-galaxy-angle
-```
-
-Work on your changes in this branch. Make sure to write tests and update documentation if necessary.
-
-### 3. Submit a pull request
-
-Once your changes pass all tests locally and the branch is up to date with `main`, create a pull request (PR) on GitHub. Describe the problem, your approach, and link the original issue so that the issue is automatically closed upon merge.
-
-### 4. Merge and get recognition
-
-After your PR is reviewed and merged into `main`, your contributions will be recognized automatically. Thanks to our All Contributors setup, a bot or a maintainer will add you to the contributors list in the README file. You'll then appear in the All Contributors section below.
+Please see [here](source/CONTRIBUTING.md) for contribution guidelines.
 
 Thank you for helping improve `rubix`!
 
-## Acknowledgments
+## Citation & Acknowledgement
 
-This repository was set up using the [SSC Cookiecutter for Python Packages](https://github.com/ssciwr/cookiecutter-python-package).
+Please cite **both** of the following papers ([Cakir et al. 2024](https://arxiv.org/abs/2412.08265), [Schaible et al. 2025](https://arxiv.org/abs/2511.17110)) if you use Rubix in your research:
+
+@ARTICLE{2024arXiv241208265C,
+       author = {{{\c{C}}ak{\i}r}, Ufuk and {Schaible}, Anna Lena and {Buck}, Tobias},
+        title = "{Fast GPU-Powered and Auto-Differentiable Forward Modeling of IFU Data Cubes}",
+      journal = {arXiv e-prints},
+     keywords = {Astrophysics - Instrumentation and Methods for Astrophysics, Astrophysics - Astrophysics of Galaxies, Physics - Computational Physics, Physics - Data Analysis, Statistics and Probability},
+         year = 2024,
+        month = dec,
+          eid = {arXiv:2412.08265},
+        pages = {arXiv:2412.08265},
+          doi = {10.48550/arXiv.2412.08265},
+archivePrefix = {arXiv},
+       eprint = {2412.08265},
+ primaryClass = {astro-ph.IM},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2024arXiv241208265C},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+
+@ARTICLE{2025arXiv251117110S,
+       author = {{Schaible}, Anna Lena and {{\c{C}}ak{\i}r}, Ufuk and {Buck}, Tobias and {Mack}, Harald and {Obreja}, Aura and {Oguz}, Nihat and {Oliver}, William H. and {C{\u{a}}r{\u{a}}mizaru}, Horea-Alexandru},
+        title = "{RUBIX: Differentiable forward modelling of galaxy spectral data cubes for gradient-based parameter estimation}",
+      journal = {arXiv e-prints},
+     keywords = {Astrophysics of Galaxies},
+         year = 2025,
+        month = nov,
+          eid = {arXiv:2511.17110},
+        pages = {arXiv:2511.17110},
+          doi = {10.48550/arXiv.2511.17110},
+archivePrefix = {arXiv},
+       eprint = {2511.17110},
+ primaryClass = {astro-ph.GA},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2025arXiv251117110S},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+
+
+
+
 
 
 ## Contributors
@@ -114,3 +131,11 @@ This repository was set up using the [SSC Cookiecutter for Python Packages](http
 <!-- prettier-ignore-end -->
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
+
+## Licence
+
+[GNU General Public License v3.0](https://github.com/synthesizer-project/synthesizer/blob/main/LICENSE.md)
+
+## Acknowledgments
+
+This repository was set up using the [SSC Cookiecutter for Python Packages](https://github.com/ssciwr/cookiecutter-python-package).

@@ -1,6 +1,6 @@
 """
 Mainly reimplmented from SimSpin:
-https://github.com/kateharborne/SimSpin/blob/4e8f0af0ebc0e43cc31729978deb3a554e039f6b/R/utilities.R#L570
+https (//github.com/kateharborne/SimSpin/blob/4e8f0af0ebc0e43cc31729978deb3a554e039f6b/R/utilities.R#L570):
 """
 
 import jax.numpy as jnp
@@ -32,29 +32,20 @@ def apply_lsf_spectra(
     wave_resolution: float,
     extend_factor: int = 12,
 ) -> Float[Array, "n_spectra wave_bins"]:
-    """Apply the Line Spread Function (LSF) to multiple spectra.
+    """
+    Apply the Line Spread Function (LSF) to multiple spectra.
 
-    This function applies the LSF to multiple spectra in parallel using JAX's vmap.
-    Currently only supports a Gaussian kernel and fixed wave resolution across all spectra and wavelenghts.
+        This function applies the LSF to multiple spectra in parallel using JAX's vmap.
+        Currently only supports a Gaussian kernel and fixed wave resolution across all spectra and wavelenghts.
 
-    Parameters
-    ----------
-    spectra : ndarray
-        The input spectra to apply the LSF to.
-    lsf_sigma : float
-        The sigma of the LSF. Currently a Gaussian kernel.
+    Args:
+        spectra (Float[Array, "n_spectra wave_bins"]): The input spectra to apply the LSF to.
+        lsf_sigma (float): The sigma of the LSF. Currently a Gaussian kernel.
+        wave_resolution (float): The wave resolution of the spectra.
+        extend_factor (int): The factor to extend the kernel by.
 
-    wave_resolution : float
-        The wave resolution of the spectra.
-
-    extend_factor : int
-        The factor to extend the kernel by.
-
-    Returns
-    -------
-    convolved : ndarray
-        The convolved spectra.
-
+    Returns:
+        convolved (ndarray): The convolved spectra.
     """
     kernel = _get_kernel(lsf_sigma, wave_resolution, factor=extend_factor)
 
@@ -71,27 +62,19 @@ def apply_lsf(
     wave_resolution: float,
     extend_factor: int = 12,
 ) -> Float[Array, "n1 n2 wave_bins"]:
-    """Apply the Line Spread Function (LSF) to a datacube.
+    """
+    Apply the Line Spread Function (LSF) to a datacube.
 
-    This function first flattens the datacube, applies the LSF to the spectra, and then reshapes the datacube back to the original shape.
+        This function first flattens the datacube, applies the LSF to the spectra, and then reshapes the datacube back to the original shape.
 
-    Parameters
-    ----------
-    datacube : ndarray
-        The input datacube to apply the LSF to.
-    lsf_sigma : float
-        The sigma of the LSF. Currently a Gaussian kernel.
+    Args:
+        datacube (Float[Array, "n1 n2 wave_bins"]): The input datacube to apply the LSF to.
+        lsf_sigma (float): The sigma of the LSF. Currently a Gaussian kernel.
+        wave_resolution (float): The wave resolution of the spectra inside the datacube.
+        extend_factor (int): The factor to extend the kernel by.
 
-    wave_resolution : float
-        The wave resolution of the spectra inside the datacube.
-
-    extend_factor : int
-        The factor to extend the kernel by.
-
-    Returns
-    -------
-    convolved : ndarray
-        The convolved datacube.
+    Returns:
+        convolved (ndarray): The convolved datacube.
     """
     dimensions = datacube.shape
 

@@ -4,56 +4,50 @@ import jax.numpy as jnp
 from beartype import beartype as typechecker
 from jaxtyping import Array, Float, jaxtyped
 
-from .helpers import poly_map_domain
+from .helpers import N_AXIS, N_PARAMS_AXIS, N_WAVE_AXIS, poly_map_domain
 
 # TODO: add runtime type checking for valid x ranges
 # can be achieved by using chekify...
 # from .dust_baseclasses import test_valid_x_range
-
-
 # TODO: Implement functions as classes?
 
 
 @jaxtyped(typechecker=typechecker)
 def PowerLaw1d(
-    x: Float[Array, "n_wave"], amplitude: float, x_0: float, alpha: float
-) -> Float[Array, "n_wave"]:
-    """
-    Calculate a power law function.
-    Function inspired by astropy.modeling.functional_models.PowerLaw1D.
+    x: Float[Array, N_WAVE_AXIS],
+    amplitude: float,
+    x_0: float,
+    alpha: float,
+) -> Float[Array, N_WAVE_AXIS]:
+    r"""
+    Calculate a power law function inspired by
+    :mod:`astropy.modeling.functional_models.PowerLaw1D`.
 
-    Parameters
-    ----------
-    x : Float[Array, "n_wave"]
-        Input array.
-    amplitude : float
-        Amplitude of the power law.
-    x_0 : float
-        Reference x value.
-    alpha : float
-        Power law index.
+    Args:
+        x (Float[Array, N_WAVE_AXIS]): Input array.
+        amplitude (float): Amplitude of the power law.
+        x_0 (float): Reference x value.
+        alpha (float): Power law index.
 
-    Returns
-    -------
-    Float[Array, "n_wave"]
-        Output array after applying the power law.
+    Returns:
+        Float[Array, N_WAVE_AXIS]: Output array after applying the power law.
 
-    Notes
-    -----
-    Model formula (with :math:`A` for ``amplitude`` and :math:`\\alpha` for ``alpha``):
+    Notes:
+        Model formula (with :math:`A` for ``amplitude`` and :math:`\alpha` for
+        ``alpha``)::
 
-        .. math:: f(x) = A (x / x_0) ^ {-\\alpha}
+        f(x) = A (x / x_0) ^ {-\alpha}
     """
     xx = x / x_0
     return amplitude * xx ** (-alpha)
 
 
 def Polynomial1d(
-    x: Float[Array, "n"],
-    coeffs: Float[Array, "m"],
+    x: Float[Array, N_AXIS],
+    coeffs: Float[Array, N_PARAMS_AXIS],
     domain: Tuple[float, float] = (-1.0, 1.0),
     window: Tuple[float, float] = (-1.0, 1.0),
-) -> Float[Array, "n"]:
+) -> Float[Array, N_AXIS]:
     r"""
     Evaluate a 1D polynomial model defined as
 
@@ -61,26 +55,25 @@ def Polynomial1d(
 
         P = \sum_{i=0}^{i=n}C_{i} * x^{i}
 
-    This function inspired by astropy.modelling.polynomial.Polynomial1D.
+    This function is inspired by
+    :mod:`astropy.modelling.polynomial.Polynomial1D`.
 
-    Parameters
-    ----------
-    x : ndarray
-        Input values.
-    coeffs : ndarray
-        Coefficients of the polynomial, ordered from the constant term to the highest degree term.
-    domain : tuple, optional
-        Domain of the input values. Default is (-1, 1).
-    window : tuple, optional
-        Window to which the domain is mapped. Default is (-1, 1).
+    Args:
+        x (Float[Array, N_AXIS]): Input values.
+        coeffs (Float[Array, N_PARAMS_AXIS]): Coefficients of the polynomial
+            ordered from the constant term to the highest-degree term.
+        domain (Tuple[float, float], optional): Domain of the input values.
+            Default is (-1, 1).
+        window (Tuple[float, float], optional): Window to which the domain is
+            mapped. Default is (-1, 1).
 
-    Returns
-    -------
-    result : ndarray
-        Evaluated polynomial values.
+    Returns:
+        Float[Array, N_AXIS]: Evaluated polynomial values.
     """
 
-    def horner(x: Float[Array, "n"], coeffs: Float[Array, "m"]) -> Float[Array, "n"]:
+    def horner(
+        x: Float[Array, N_AXIS], coeffs: Float[Array, N_PARAMS_AXIS]
+    ) -> Float[Array, N_AXIS]:
         """
         Evaluate polynomial using Horner's method.
         """
@@ -98,34 +91,32 @@ def Polynomial1d(
 
 @jaxtyped(typechecker=typechecker)
 def Drude1d(
-    x: Float[Array, "n"], amplitude: float = 1.0, x_0: float = 1.0, fwhm: float = 1.0
-):
+    x: Float[Array, N_AXIS],
+    amplitude: float = 1.0,
+    x_0: float = 1.0,
+    fwhm: float = 1.0,
+) -> Float[Array, N_AXIS]:
     r"""
-    Evaluate the Drude model function.
-    This function is inspired by astropy.modeling.functional_models.Drude1D.
+    Evaluate the Drude model function inspired by
+    :mod:`astropy.modeling.functional_models.Drude1D`.
 
-    Model formula:
+    Model formula::
 
-        .. math:: f(x) = A \\frac{(fwhm/x_0)^2}{((x/x_0 - x_0/x)^2 + (fwhm/x_0)^2}
+        f(x) = A \frac{(fwhm/x_0)^2}{((x/x_0 - x_0/x)^2 + (fwhm/x_0)^2}
 
-    Parameters
-    ----------
-    x : ndarray
-        Input values.
-    amplitude : float, optional
-        Peak value. Default is 1.0.
-    x_0 : float, optional
-        Position of the peak. Default is 1.0.
-    fwhm : float, optional
-        Full width at half maximum. Default is 1.0.
+    Args:
+        x (Float[Array, N_AXIS]): Input values.
+        amplitude (float, optional): Peak value. Default is 1.0.
+        x_0 (float, optional): Position of the peak. Default is 1.0.
+        fwhm (float, optional): Full width at half maximum. Default is 1.0.
 
-    Returns
-    -------
-    result : ndarray
-        Evaluated Drude model values.
+    Returns:
+        Float[Array, N_AXIS]: Evaluated Drude model values.
 
-    Examples
-    --------
+    Raises:
+        ValueError: If ``x_0`` is zero.
+
+    Examples:
     .. plot::
         :include-source:
 
@@ -156,8 +147,12 @@ def Drude1d(
 
 @jaxtyped(typechecker=typechecker)
 def _modified_drude(
-    x: Float[Array, "n"], scale: float, x_o: float, gamma_o: float, asym: float
-) -> Float[Array, "n"]:
+    x: Float[Array, N_AXIS],
+    scale: float,
+    x_o: float,
+    gamma_o: float,
+    asym: float,
+) -> Float[Array, N_AXIS]:
     """
     Modified Drude function to have a variable asymmetry.  Drude profiles
     are intrinsically asymmetric with the asymmetry fixed by specific central
@@ -165,27 +160,15 @@ def _modified_drude(
     parameter that allows for variable asymmetry at fixed central wavelength
     and width.
 
-    Parameters
-    ----------
-    x : ndarray
-        input wavelengths
+    Args:
+        x (Float[Array, N_AXIS]): Input wavelengths.
+        scale (float): Central amplitude.
+        x_o (float): Central wavelength.
+        gamma_o (float): Full-width at half maximum of the profile.
+        asym (float): Asymmetry parameter; 0 yields a standard Drude profile.
 
-    scale : float
-        central amplitude
-
-    x_o : float
-        central wavelength
-
-    gamma_o : float
-        full-width-half-maximum of profile
-
-    asym : float
-        asymmetry where a value of 0 results in a standard Drude profile
-
-    Returns
-    -------
-    y : ndarray
-        output profile
+    Returns:
+        Float[Array, N_AXIS]: Output profile.
     """
     gamma = 2.0 * gamma_o / (1.0 + jnp.exp(asym * (x - x_o)))
     y = scale * ((gamma / x_o) ** 2) / ((x / x_o - x_o / x) ** 2 + (gamma / x_o) ** 2)
@@ -195,99 +178,84 @@ def _modified_drude(
 
 @jaxtyped(typechecker=typechecker)
 def FM90(
-    x: Float[Array, "n"],
+    x: Float[Array, N_AXIS],
     C1: float = 0.10,
     C2: float = 0.70,
     C3: float = 3.23,
     C4: float = 0.41,
     xo: float = 4.59,
     gamma: float = 0.95,
-) -> Float[Array, "n"]:
+) -> Float[Array, N_AXIS]:
     r"""
-    Fitzpatrick & Massa (1990) 6 parameter ultraviolet shape model
+    Fitzpatrick & Massa (1990) six-parameter ultraviolet shape model.
 
-    Parameters
-    ----------
-    x: float
-        wavenumber x in units of [1/micron]
+    Args:
+        x (Float[Array, N_AXIS]): Wavenumber in units of [1/micron].
+        C1 (float): Y-intercept of the linear term.
+        C2 (float): Slope of the linear term.
+        C3 (float): Strength of the 2175 Å bump (true amplitude is
+            C3/\gamma^2).
+        C4 (float): Amplitude of the FUV rise.
+        xo (float): Centroid of the 2175 Å bump.
+        gamma (float): Width of the 2175 Å bump.
 
-    C1: float
-       y-intercept of linear term
+    Returns:
+        Float[Array, N_AXIS]: E(x-V)/E(B-V) extinction curve.
 
-    C2: float
-       slope of liner term
+    Raises:
+        ValueError: If any input parameter lies outside the supported bounds.
 
-    C3: float
-       strength of "2175 A" bump (true amplitude is C3/gamma^2)
+    Notes:
 
-    C4: float
-       amplitude of FUV rise
+        From Fitzpatrick & Massa (1990, ApJS, 72, 163)
 
-    xo: float
-       centroid of "2175 A" bump
+        Only applicable at UV wavelengths
 
-    gamma: float
-       width of "2175 A" bump
+    Examples:
 
-    Returns
-        -------
-        exvebv: np array (float)
-            E(x-V)/E(B-V) extinction curve [mag]
+        Example showing a FM90 curve with components identified.
+        ::
 
-    Raises
-    ------
-        ValueError
-           Input x values outside of defined range
+        .. plot::
+            :include-source:
 
-    Notes
-    -----
-    From Fitzpatrick & Massa (1990, ApJS, 72, 163)
+            import numpy as np
+            import matplotlib.pyplot as plt
+            import astropy.units as u
 
-    Only applicable at UV wavelengths
+            from rubix.spectra.dust.extinction_models import FM90
 
-    Example showing a FM90 curve with components identified.
+            fig, ax = plt.subplots()
 
-    .. plot::
-        :include-source:
+            # generate the curves and plot them
+            x = np.arange(3.8,8.6,0.1)/u.micron
 
-        import numpy as np
-        import matplotlib.pyplot as plt
-        import astropy.units as u
+            ext_model = FM90(x=x)
+            ax.plot(x,ext_model,label='total')
 
-        from rubix.spectra.dust.extinction_models import FM90
+            ext_model = FM90(x=x, C3=0.0, C4=0.0)
+            ax.plot(x,ext_model,label='linear term')
+            ext_model = FM90(x=x, C1=0.0, C2=0.0, C4=0.0)
+            ax.plot(x,ext_model,label='bump term')
 
-        fig, ax = plt.subplots()
+            ext_model = FM90(x=x, C1=0.0, C2=0.0, C3=0.0)
+            ax.plot(x,ext_model,label='FUV rise term')
 
-        # generate the curves and plot them
-        x = np.arange(3.8,8.6,0.1)/u.micron
+            ax.set_xlabel(r'$x$ [$\mu m^{-1}$]')
+            ax.set_ylabel(r'$E(\lambda - V)/E(B - V)$')
 
-        ext_model = FM90(x=x)
-        ax.plot(x,ext_model,label='total')
+            # for 2nd x-axis with lambda values
+            axis_xs = np.array([0.12, 0.15, 0.2, 0.3])
+            new_ticks = 1 / axis_xs
+            new_ticks_labels = ["%.2f" % z for z in axis_xs]
+            tax = ax.twiny()
+            tax.set_xlim(ax.get_xlim())
+            tax.set_xticks(new_ticks)
+            tax.set_xticklabels(new_ticks_labels)
+            tax.set_xlabel(r"$\lambda$ [$\mu$m]")
 
-        ext_model = FM90(x=x, C3=0.0, C4=0.0)
-        ax.plot(x,ext_model,label='linear term')
-
-        ext_model = FM90(x=x, C1=0.0, C2=0.0, C4=0.0)
-        ax.plot(x,ext_model,label='bump term')
-
-        ext_model = FM90(x=x, C1=0.0, C2=0.0, C3=0.0)
-        ax.plot(x,ext_model,label='FUV rise term')
-
-        ax.set_xlabel(r'$x$ [$\mu m^{-1}$]')
-        ax.set_ylabel(r'$E(\lambda - V)/E(B - V)$')
-
-        # for 2nd x-axis with lambda values
-        axis_xs = np.array([0.12, 0.15, 0.2, 0.3])
-        new_ticks = 1 / axis_xs
-        new_ticks_labels = ["%.2f" % z for z in axis_xs]
-        tax = ax.twiny()
-        tax.set_xlim(ax.get_xlim())
-        tax.set_xticks(new_ticks)
-        tax.set_xticklabels(new_ticks_labels)
-        tax.set_xlabel(r"$\lambda$ [$\mu$m]")
-
-        ax.legend(loc='best')
-        plt.show()
+            ax.legend(loc='best')
+            plt.show()
     """
 
     # Define bounds based on Gordon et al. (2024) results
@@ -314,7 +282,7 @@ def FM90(
     if not (bounds["gamma"][0] <= gamma <= bounds["gamma"][1]):
         raise ValueError(f"gamma is out of bounds: {gamma}")
 
-    x_range = [1 / 0.35, 1 / 0.09]
+    # x_range = [1 / 0.35, 1 / 0.09]
     # test_valid_x_range(x, x_range, "FM90")
 
     # linear term

@@ -22,13 +22,13 @@ def calculate_spatial_bin_edges(
     Calculate the bin edges for the spatial bins.
 
     Args:
-        fov (float): field of view of the telescope.
-        spatial_bins (float): number of spatial bins.
-        dist_z (float): redshift of the galaxy.
-        cosmology (BaseCosmology): cosmology object.
+        fov (float): Field of view of the telescope (arcsec).
+        spatial_bins (np.int64): Number of spatial bins (integer).
+        dist_z (Union[float, jnp.float64, Float[Array, "..."]]): Redshift(s).
+        cosmology (BaseCosmology): Cosmology object.
 
     Returns:
-        The bin edges for the spatial bins and the spatial bin size as jnp.array.
+        Tuple[jnp.array, float]: The spatial bin edges and the spatial bin size.
     """
     ang_size = cosmology.angular_scale(dist_z)  # kpc/arcsec
     # fov in arcsec
@@ -47,11 +47,11 @@ def calculate_wave_seq(wave_range: List[float], wave_res: float) -> Float[Array,
     Calculate the wavelength sequence for the wavelength bins.
 
     Args:
-        wave_range (Tuple[float, float]): The range of the wavelength bins.
-        wave_res (float): The resolution of the wavelength bins.
+        wave_range (List[float]): The wavelength range as [min, max].
+        wave_res (float): The wavelength step/resolution.
 
     Returns:
-        The bin edges for the wavelength bins as jnp.array.
+        Float[Array, "..."]: The wavelength sequence as a jnp.array.
     """
     return jnp.arange(wave_range[0], wave_range[1], wave_res)
 
@@ -64,11 +64,11 @@ def calculate_wave_edges(
     Calculate the bin edges for the wavelength bins.
 
     Args:
-        wave_bin_edges (jnp.array): The bin edges for the wavelength bins.
-        wave_res (float): The resolution of the wavelength bins.
+        wave_bin_edges (Float[Array, "..."]): The bin edges of the wavelength bins.
+        wave_res (float): The wavelength resolution/step.
 
     Returns:
-        The bin edges for the wavelength bins as jnp.array.
+        Float[Array, "..."]: The wavelength bin edges as a jnp.array.
     """
 
     wave_start = wave_bin_edges[0] - (wave_res / 2)
@@ -92,11 +92,13 @@ def square_spaxel_assignment(
     The returned indexes are the pixel assignments of the particles. Indexing starts at 0.
 
     Args:
-        coords (jnp.array): The particle coordinates.
-        spatial_bin_edges (jnp.array): The bin edges for the spatial bins.
+        coords (Union[Int[Array, "..."], Float[Array, "..."]]): Particle
+            coordinates as an array of shape (N, 2).
+        spatial_bin_edges (Union[Int[Array, "..."], Float[Array, "..."]]):
+            Spatial bin edges array.
 
     Returns:
-        The flat pixel assignments of the particles as jnp.array. Indexing starts at 0.
+        Int[Array, "..."]: Flat pixel assignments for each particle.
 
     Example (Assing two particles to the spatial matching bins)
     -----------------------------------------------------------
@@ -164,11 +166,13 @@ def mask_particles_outside_aperture(
     Mask the particles that are outside the aperture.
 
     Args:
-        coords (jnp.array): The particle coordinates.
-        spatial_bin_edges (jnp.array): The bin edges for the spatial bins.
+        coords (Union[Float[Array, " * 3"], Int[Array, " * 3"]]): Particle
+            coordinates array (N x 3).
+        spatial_bin_edges (Union[Float[Array, "..."], Int[Array, "..."]]):
+            Spatial bin edges array.
 
     Returns:
-        A boolean mask as jnp.array that is True for particles that are inside the aperture and False for particles that are outside the aperture.
+        Bool[Array, "..."]: Boolean mask True for particles inside aperture.
     """
     min_value = spatial_bin_edges.min()
     max_value = spatial_bin_edges.max()

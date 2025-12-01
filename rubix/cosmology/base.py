@@ -16,32 +16,34 @@ YEAR = 31556925.2  # year in seconds
 
 
 class BaseCosmology(eqx.Module):
-    """Class to handle cosmological calculations.
+    """
+    Handle cosmological calculations using JAX-backed implementations.
 
-    The methods in this class are mainly taken from https://github.com/ArgonneCPAC/dsps/blob/main/dsps/cosmology/flat_wcdm.py.
-    Here they are wrapped in a class to be used in JAX.
+    The implementations follow the DSPS ``flat_wcdm`` module
+    (https://github.com/ArgonneCPAC/dsps/blob/main/dsps/cosmology/flat_wcdm.py.)
+    but are wrapped in a dataclass-style container so that the parameters are stored as ``jax``
+    arrays and can be reused safely in other JAX workflows.
 
-    Once initialized with the cosmological parameters, the class can be used to calculate various cosmological quantities.
+    Once initialized with the cosmological parameters, the class can be used to calculate
+    various cosmological quantities.
 
-    Parameters
-    ----------
-    Om0 : float
-        The present day matter density.
-    w0 : float
-        The present day dark energy equation of state.
-    wa : float
-        The dark energy equation of state parameter.
-    h : float
-        The Hubble constant.
+    Args:
+        Om0 (float): The present day matter density.
+        w0 (float): The present day dark energy equation of state.
+        wa (float): The dark energy equation of state parameter.
+        h (float): The dimensionless Hubble constant.
 
-    Returns
-    -------
-        A Cosmology instance.
+    Attributes:
+        Om0 (jnp.float32): Stored matter density parameter.
+        w0 (jnp.float32): Dark energy equation of state today.
+        wa (jnp.float32): Evolution of the dark energy equation of state.
+        h (jnp.float32): Dimensionless Hubble constant.
 
-    Example
-    --------
-    >>> # Create Planck15 cosmology
-    >>> cosmo = Cosmology(0.3089, -1.0, 0.0, 0.6774)
+    Example:
+        ::
+            >>> # Create Planck15 cosmology
+            >>> from rubix.cosmology import COSMOLOGY
+            >>> cosmo = COSMOLOGY(0.3089, -1.0, 0.0, 0.6774)
     """
 
     Om0: jnp.float32
@@ -62,19 +64,19 @@ class BaseCosmology(eqx.Module):
         self, a: Union[Float[Array, "..."], float]
     ) -> Float[Array, "..."]:
         """
-        The function converts the scale factor to redshift.
+        Convert the scale factor to redshift.
 
         Args:
-            a (float): The scale factor.
+            a (Union[Float[Array, "..."], float]): Scale factor.
 
         Returns:
-            The redshift (float).
+            Float[Array, "..."]: Redshift ``1/a - 1``.
 
-        Example
-        --------
-        >>> from rubix.cosmology import PLANCK15 as cosmo
-        >>> # Convert scale factor 0.5 to redshift
-        >>> cosmo.scale_factor_to_redshift(jnp.array(0.5))
+        Example:
+            ::
+                >>> from rubix.cosmology import PLANCK15 as cosmo
+                >>> # Convert scale factor 0.5 to redshift
+                >>> cosmo.scale_factor_to_redshift(jnp.array(0.5))
         """
         z = 1.0 / a - 1.0
         return z
@@ -110,19 +112,19 @@ class BaseCosmology(eqx.Module):
         self, redshift: Union[Float[Array, "..."], float]
     ) -> Float[Array, "..."]:
         """
-        The function calculates the comoving distance to a given redshift.
+        Calculate the comoving distance to the input redshift.
 
         Args:
-            redshift (float): The redshift.
+            redshift (Union[Float[Array, "..."], float]): Redshift value(s).
 
         Returns:
-            The comoving distance to a given redshift (float).
+            Float[Array, "..."]: Comoving distance in Mpc.
 
-        Example
-        --------
-        >>> from rubix.cosmology import PLANCK15 as cosmo
-        >>> # Calculate the comoving distance to redshift 0.5
-        >>> cosmo.comoving_distance_to_z(0.5)
+        Example:
+            ::
+                >>> from rubix.cosmology import PLANCK15 as cosmo
+                >>> # Calculate comoving distance to redshift 0.5
+                >>> cosmo.comoving_distance_to_z(0.5)
         """
         z_table = jnp.linspace(0, redshift, 256)
         integrand = self._integrand_oneOverEz(z_table)
@@ -134,19 +136,19 @@ class BaseCosmology(eqx.Module):
         self, redshift: Union[Float[Array, "..."], float]
     ) -> Float[Array, "..."]:
         """
-        The function calculates the luminosity distance to a given redshift.
+        Compute the luminosity distance at the requested redshift.
 
         Args:
-            redshift (float): The redshift.
+            redshift (Union[Float[Array, "..."], float]): Redshift value(s).
 
         Returns:
-            The luminosity distance to the redshift (float).
+            Float[Array, "..."]: Luminosity distance in Mpc.
 
-        Example
-        --------
-        >>> from rubix.cosmology import PLANCK15 as cosmo
-        >>> # Calculate the luminosity distance to redshift 0.5
-        >>> cosmo.luminosity_distance_to_z(0.5)
+        Example:
+            ::
+                >>> from rubix.cosmology import PLANCK15 as cosmo
+                >>> # Compute the luminosity distance to redshift 0.5
+                >>> cosmo.luminosity_distance_to_z(0.5)
         """
         return self.comoving_distance_to_z(redshift) * (1 + redshift)
 
@@ -156,19 +158,19 @@ class BaseCosmology(eqx.Module):
         self, redshift: Union[Float[Array, "..."], float]
     ) -> Float[Array, "..."]:
         """
-        The function calculates the angular diameter distance to a given redshift.
+        Compute the angular diameter distance for the given redshift.
 
         Args:
-            redshift (float): The redshift.
+            redshift (Union[Float[Array, "..."], float]): Redshift value(s).
 
         Returns:
-            The angular diameter distance to the redshift (float).
+            Float[Array, "..."]: Angular diameter distance in Mpc.
 
-        Example
-        --------
-        >>> from rubix.cosmology import PLANCK15 as cosmo
-        >>> # Calculate the angular diameter distance to redshift 0.5
-        >>> cosmo.angular_diameter_distance_to_z(0.5)
+        Example:
+            ::
+                >>> from rubix.cosmology import PLANCK15 as cosmo
+                >>> # Compute the angular diameter distance to redshift 0.5
+                >>> cosmo.angular_diameter_distance_to_z(0.5)
         """
         return self.comoving_distance_to_z(redshift) / (1 + redshift)
 
@@ -178,19 +180,19 @@ class BaseCosmology(eqx.Module):
         self, redshift: Union[Float[Array, "..."], float]
     ) -> Float[Array, "..."]:
         """
-        The function calculates the distance modulus to a given redshift.
+        Compute the distance modulus for the requested redshift.
 
         Args:
-            redshift (float): The redshift.
+            redshift (Union[Float[Array, "..."], float]): Redshift value(s).
 
         Returns:
-            The distance modulus to the redshift (float).
+            Float[Array, "..."]: Distance modulus.
 
-        Example
-        --------
-        >>> from rubix.cosmology import PLANCK15 as cosmo
-        >>> # Calculate the distance modulus to redshift 0.5
-        >>> cosmo.distance_modulus_to_z(0.5)
+        Example:
+            ::
+                >>> from rubix.cosmology import PLANCK15 as cosmo
+                >>> # Compute the distance modulus to redshift 0.5
+                >>> cosmo.distance_modulus_to_z(0.5)
         """
         d_lum = self.luminosity_distance_to_z(redshift)
         mu = 5.0 * jnp.log10(d_lum * 1e5)
@@ -199,6 +201,21 @@ class BaseCosmology(eqx.Module):
     @jit
     @jaxtyped(typechecker=typechecker)
     def _hubble_time(self, z: Union[Float[Array, "..."], float]) -> Float[Array, "..."]:
+        """
+        Calculate the Hubble time at the given redshift.
+
+        Args:
+            z (Union[Float[Array, "..."], float]): Redshift value(s).
+
+        Returns:
+            Float[Array, "..."]: Hubble time in seconds.
+
+        Example:
+            ::
+                >>> from rubix.cosmology import PLANCK15 as cosmo
+                >>> # Calculate the Hubble time at redshift 0.5
+                >>> cosmo._hubble_time(0.5)
+        """
         E0 = self._Ez(z)
         htime = 1e-16 * MPC / YEAR / self.h / E0
         return htime
@@ -209,19 +226,19 @@ class BaseCosmology(eqx.Module):
         self, redshift: Union[Float[Array, "..."], float]
     ) -> Float[Array, "..."]:
         """
-        The function calculates the lookback time to a given redshift.
+        Calculate the lookback time to the requested redshift.
 
         Args:
-            redshift (float): The redshift.
+            redshift (Union[Float[Array, "..."], float]): Redshift value(s).
 
         Returns:
-            The lookback time to the redshift (float).
+            Float[Array, "..."]: Lookback time in seconds.
 
-        Example
-        --------
-        >>> from rubix.cosmology import PLANCK15 as cosmo
-        >>> # Calculate the lookback time to redshift 0.5
-        >>> cosmo.lookback_to_z(0.5)
+        Example:
+            ::
+                >>> from rubix.cosmology import PLANCK15 as cosmo
+                >>> # Calculate the lookback time to redshift 0.5
+                >>> cosmo.lookback_to_z(0.5)
         """
         z_table = jnp.linspace(0, redshift, 512)
         integrand = 1 / self._Ez(z_table) / (1 + z_table)
@@ -238,11 +255,11 @@ class BaseCosmology(eqx.Module):
         Returns:
             The age of the universe at redshift 0 (float).
 
-        Example
-        --------
-        >>> from rubix.cosmology import PLANCK15 as cosmo
-        >>> # Calculate the age of the universe at redshift 0
-        >>> cosmo.age_at_z0()
+        Example:
+            ::
+                >>> from rubix.cosmology import PLANCK15 as cosmo
+                >>> # Calculate the age of the universe at redshift 0
+                >>> cosmo.age_at_z0()
         """
         z_table = jnp.logspace(0, 3, 512) - 1.0
         integrand = 1 / self._Ez(z_table) / (1 + z_table)
@@ -259,31 +276,31 @@ class BaseCosmology(eqx.Module):
         tlook = self.lookback_to_z(redshift)
         return t0 - tlook
 
+    def _age_at_z_vmap(self):
+        return jit(vmap(self._age_at_z_kern))
+
     @jit
     @jaxtyped(typechecker=typechecker)
     def age_at_z(
         self, redshift: Union[Float[Array, "..."], float]
     ) -> Float[Array, "..."]:
         """
-        The function calculates the age of the universe at a given redshift.
+        Return the age of the universe at the provided redshift.
 
         Args:
-            redshift (float): The redshift.
+            redshift (Union[Float[Array, "..."], float]): Redshift value(s).
 
         Returns:
-            The age of the universe at the redshift (float).
+            Float[Array, "..."]: Age in seconds.
 
-        Example
-        --------
-        >>> from rubix.cosmology import PLANCK15 as cosmo
-        >>> # Calculate the age of the universe at redshift 0.5
-        >>> cosmo.age_at_z(0.5)
+        Example:
+            ::
+                >>> from rubix.cosmology import PLANCK15 as cosmo
+                >>> # Calculate the age of the universe at redshift 0.5
+                >>> cosmo.age_at_z(0.5)
         """
         fun = self._age_at_z_vmap()
         return fun(jnp.atleast_1d(redshift))
-
-    def _age_at_z_vmap(self):
-        return jit(vmap(self._age_at_z_kern))
 
     @jit
     @jaxtyped(typechecker=typechecker)
@@ -291,19 +308,19 @@ class BaseCosmology(eqx.Module):
         self, z: Union[Float[Array, "..."], float]
     ) -> Float[Array, "..."]:
         """
-        Angular scale in kpc/arcsec at redshift z.
+        Angular scale in kpc/arcsec at redshift ``z``.
 
         Args:
-            z (float): Redshift
+            z (Union[Float[Array, "..."], float]): Redshift value(s).
 
         Returns:
-            Angular scale in kpc/arcsec at redshift z (float).
+            Float[Array, "..."]: Angular scale in kpc/arcsec.
 
-        Example
-        --------
-        >>> from rubix.cosmology import PLANCK15 as cosmo
-        >>> # Calculate the angular scale at redshift 0.5
-        >>> cosmo.angular_scale(0.5)
+        Example:
+            ::
+                >>> from rubix.cosmology import PLANCK15 as cosmo
+                >>> # Calculate the angular scale at redshift 0.5
+                >>> cosmo.angular_scale(0.5)
         """
         # Angular scale in kpc/arcsec at redshift z.
         D_A = self.angular_diameter_distance_to_z(z)  # in Mpc

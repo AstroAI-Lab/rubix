@@ -1,12 +1,12 @@
 import logging
 import os
 from abc import ABC, abstractmethod
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 import astropy.units as u
 import h5py
 from beartype import beartype as typechecker
-from jaxtyping import Array, Float, jaxtyped
+from jaxtyping import jaxtyped
 
 from rubix import config
 from rubix.logger import get_logger
@@ -21,7 +21,7 @@ def create_rubix_galaxy(
     units: dict,
     config: dict,
     logger: logging.Logger,
-):
+) -> None:
     """
     Create a Rubix file with the given data.
 
@@ -80,12 +80,11 @@ class BaseHandler(ABC):
     Base class for handling input data and converting it to Rubix format.
 
     Args:
-        config (dict): Configuration for the BaseHandler.
-        _logger (logging.Logger): Logger object to log messages.
+        logger_config (Optional[Union[dict, logging.Logger]]): Optional
+            logger configuration passed to the internal get_logger helper.
     """
 
-    def __init__(self, logger_config=None):
-        """Initializes the BaseHandler class"""
+    def __init__(self, logger_config: Optional[Union[dict, logging.Logger]] = None):
         self.config = config["BaseHandler"]
         self._logger = get_logger(logger_config)
 

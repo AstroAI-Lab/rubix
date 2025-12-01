@@ -1,6 +1,5 @@
-from typing import Callable, Dict
+from typing import Callable
 
-import jax.numpy as jnp
 from beartype import beartype as typechecker
 from jaxtyping import jaxtyped
 
@@ -13,31 +12,42 @@ from .data import RubixData
 # TODO: add option to disable PSF convolution
 @jaxtyped(typechecker=typechecker)
 def get_convolve_psf(config: dict) -> Callable:
-    """
-    Get the point spread function (PSF) kernel based on the configuration.
+    """Return a callable that applies the configured PSF kernel.
 
     Args:
-        config (dict): Configuration dictionary.
+        config (dict): Pipeline configuration that must include ``telescope``
+            settings. The ``telescope.psf`` block requires ``name`` and, when
+            using the Gaussian kernel, ``size`` and ``sigma`` fields to define
+            the kernel dimensions and width.
 
     Returns:
-        The function to convolve the datacube with the PSF kernel.
+        Callable[[RubixData], RubixData]: Callable that convolves the stars
+            datacube with the generated PSF kernel.
 
-    Example
-    -------
-    >>> config = {
-    ...     ...
-    ...     "telescope": {
-    ...         "name": "MUSE",
-    ...         "psf": {"name": "gaussian", "size": 5, "sigma": 0.6},
-    ...         "lsf": {"sigma": 0.5},
-    ...         "noise": {"signal_to_noise": 1,"noise_distribution": "normal"},
-    ...    },
-    ...     ...
-    ... }
+    Raises:
+        ValueError: When the PSF settings are missing or reference an unknown
+            kernel type.
 
-    >>> from rubix.core.psf import get_convolve_psf
-    >>> convolve_psf = get_convolve_psf(config)
-    >>> rubixdata = convolve_psf(rubixdata)
+    Example:
+        ::
+
+            >>> config = {
+            ...     ...
+            ...     "telescope": {
+            ...         "name": "MUSE",
+            ...         "psf": {"name": "gaussian", "size": 5, "sigma": 0.6},
+            ...         "lsf": {"sigma": 0.5},
+            ...         "noise": {
+            ...             "signal_to_noise": 1,
+            ...             "noise_distribution": "normal",
+            ...         },
+            ...    },
+            ...     ...
+            ... }
+
+            >>> from rubix.core.psf import get_convolve_psf
+            >>> convolve_psf = get_convolve_psf(config)
+            >>> rubixdata = convolve_psf(rubixdata)
     """
 
     logger = get_logger(config.get("logger", None))
@@ -56,7 +66,8 @@ def get_convolve_psf(config: dict) -> Callable:
         if "sigma" not in config["telescope"]["psf"]:
             raise ValueError("PSF sigma not found in telescope configuration")
 
-        m, n = config["telescope"]["psf"]["size"], config["telescope"]["psf"]["size"]
+        size = config["telescope"]["psf"]["size"]
+        m, n = size, size
         sigma = config["telescope"]["psf"]["sigma"]
         psf_kernel = get_psf_kernel("gaussian", m, n, sigma=sigma)
 
@@ -67,9 +78,19 @@ def get_convolve_psf(config: dict) -> Callable:
 
     # Define the function to convolve the datacube with the PSF kernel
     def convolve_psf(rubixdata: RubixData) -> RubixData:
-        """Convolve the input datacube with the PSF kernel."""
+        """Convolve the stars datacube with the predetermined PSF kernel.
+
+        Args:
+            rubixdata (RubixData): Dataset whose ``stars.datacube`` field is
+                convolved in-place.
+
+        Returns:
+            RubixData: The same dataset with ``stars.datacube`` replaced by the
+                convolved result.
+        """
         logger.info("Convolving with PSF...")
-        rubixdata.stars.datacube = apply_psf(rubixdata.stars.datacube, psf_kernel)
+        datacube = rubixdata.stars.datacube
+        rubixdata.stars.datacube = apply_psf(datacube, psf_kernel)
         return rubixdata
 
     return convolve_psf

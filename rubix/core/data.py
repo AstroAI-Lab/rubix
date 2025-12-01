@@ -21,13 +21,12 @@ from rubix.utils import load_galaxy_data, read_yaml
 @partial(jax.tree_util.register_pytree_node_class)
 @dataclass
 class Galaxy:
-    """
-    Dataclass for storing the galaxy data
+    """Dataclass for storing galaxy metadata.
 
-    Args:
-        redshift: Redshift of the galaxy
-        center: Center coordinates of the galaxy
-        halfmassrad_stars: Half mass radius of the stars in the galaxy
+    Attributes:
+        redshift (Optional[Any]): Redshift of the galaxy.
+        center (Optional[Any]): Center coordinates of the galaxy.
+        halfmassrad_stars (Optional[Any]): Half mass radius of the stars.
     """
 
     redshift: Optional[Any] = None
@@ -48,30 +47,14 @@ class Galaxy:
         return "\n\t".join(representationString)
 
     def tree_flatten(self):
-        """
-        Flattens the Galaxy object into a tuple of children and auxiliary data
-
-        Returns:
-            children (tuple) - A tuple containing the redshift, center, and halfmassrad_stars
-
-            aux_data (dict) - An empty dictionary (no auxiliary data)
-        """
+        """Flatten the Galaxy object into a tuple of children and auxiliary data for JAX traversal."""
         children = (self.redshift, self.center, self.halfmassrad_stars)
         aux_data = {}
         return children, aux_data
 
     @classmethod
-    def tree_unflatten(cls, aux_data, children):
-        """
-        Reconstructs the Galaxy object from children and auxiliary data
-
-        Args:
-            aux_data (dict): An empty dictionary (no auxiliary data)
-            children (tuple): A tuple containing the redshift, center, and halfmassrad_stars
-
-        Returns:
-            The reconstructed Galaxy object.
-        """
+    def tree_unflatten(cls, aux_data: dict, children: tuple) -> "Galaxy":
+        """Reconstruct the Galaxy object from the flattened tuple of children and auxiliary data."""
         return cls(*children)
 
 
@@ -79,21 +62,20 @@ class Galaxy:
 @partial(jax.tree_util.register_pytree_node_class)
 @dataclass
 class StarsData:
-    """
-    Dataclass for storing the stars data
+    """Dataclass for storing the stellar component data.
 
-    Args:
-        coords: Coordinates of the stars
-        velocity: Velocities of the stars
-        mass: Mass of the stars
-        metallicity: Metallicity of the stars
-        age: Age of the stars
-        pixel_assignment: Pixel assignment of the stars in the IFU grid
-        spatial_bin_edges: Spatial bin edges of the IFU grid
-        mask: Mask for the stars
-        spectra: Spectra for each stellar particle
-        datacube: IFU datacube for the stellar component
-
+    Attributes:
+        coords (Optional[Any]): Coordinates of the stars.
+        velocity (Optional[Any]): Velocities of the stars.
+        mass (Optional[Any]): Mass of the stars.
+        metallicity (Optional[Any]): Metallicity of the stars.
+        age (Optional[Any]): Age of the stars.
+        pixel_assignment (Optional[Any]): Pixel assignment in the IFU grid.
+        spatial_bin_edges (Optional[Any]): Spatial bin edges.
+        mask (Optional[Any]): Mask for the stars.
+        extinction (Optional[Any]): Extinction per particle.
+        spectra (Optional[Any]): Spectra for each stellar particle.
+        datacube (Optional[Any]): IFU datacube of the stellar component.
     """
 
     coords: Optional[Any] = None
@@ -122,14 +104,7 @@ class StarsData:
         return "\n\t".join(representationString)
 
     def tree_flatten(self):
-        """
-        Flattens the Stars object into a tuple of children and auxiliary data
-
-        Returns:
-            children (tuple) - A tuple containing the coordinates, velocity, mass, metallicity, age, pixel_assignment, spatial_bin_edges, mask, spectra, and datacube
-
-            aux_data (dict) - An empty dictionary (no auxiliary data)
-        """
+        """Flatten the StarsData object for JAX tree traversal."""
         children = (
             self.coords,
             self.velocity,
@@ -147,17 +122,8 @@ class StarsData:
         return children, aux_data
 
     @classmethod
-    def tree_unflatten(cls, aux_data, children):
-        """
-        Reconstructs the Stars object from children and auxiliary data
-
-        Args:
-            aux_data (dict): An empty dictionary (no auxiliary data)
-            children (tuple): A tuple containing the coordinates, velocity, mass, metallicity, age, pixel_assignment, spatial_bin_edges, mask, spectra, and datacube
-
-        Returns:
-            The reconstructed Stars object.
-        """
+    def tree_unflatten(cls, aux_data: dict, children: tuple) -> "StarsData":
+        """Reconstruct the StarsData object from the flattened data."""
         return cls(*children)
 
 
@@ -165,23 +131,23 @@ class StarsData:
 @partial(jax.tree_util.register_pytree_node_class)
 @dataclass
 class GasData:
-    """
-    Dataclass for storing Gas data
+    """Dataclass for storing the gas component data.
 
-    Args:
-        coords: Coordinates of the gas particles
-        velocity: Velocities of the gas particles
-        mass: Mass of the gas particles
-        density: Density of the gas particles
-        internal_energy: Internal energy of the gas particles
-        metallicity: Metallicity of the gas particles
-        sfr: Star formation rate of the gas particles
-        electron_abundance: Electron abundance of the gas particles
-        pixel_assignment: Pixel assignment of the gas particles in the IFU grid
-        spatial_bin_edges: Spatial bin edges of the IFU grid
-        mask: Mask for the gas particles
-        spectra: Spectra for each gas particle
-        datacube: IFU datacube for the gas component
+    Attributes:
+        coords (Optional[Any]): Coordinates of the gas particles.
+        velocity (Optional[Any]): Velocities of the gas particles.
+        mass (Optional[Any]): Mass of the gas particles.
+        density (Optional[Any]): Density of the gas particles.
+        internal_energy (Optional[Any]): Internal energy values.
+        metallicity (Optional[Any]): Metallicity of the gas particles.
+        metals (Optional[Any]): Metal tracers attached to the particles.
+        sfr (Optional[Any]): Star formation rate values.
+        electron_abundance (Optional[Any]): Electron abundance values.
+        pixel_assignment (Optional[Any]): Pixel assignment in the IFU grid.
+        spatial_bin_edges (Optional[Any]): Spatial bin edges.
+        mask (Optional[Any]): Mask data for the gas.
+        spectra (Optional[Any]): Spectra for each gas particle.
+        datacube (Optional[Any]): IFU datacube of the gas component.
     """
 
     coords: Optional[Any] = None
@@ -217,9 +183,9 @@ class GasData:
         Flattens the Gas object into a tuple of children and auxiliary data
 
         Returns:
-            children (tuple) - A tuple containing the coordinates, velocity, mass, density, internal_energy, metallicity, sfr, electron_abundance, pixel_assignment, spatial_bin_edges, mask, spectra, and datacube
+            children (tuple): A tuple containing the coordinates, velocity, mass, density, internal_energy, metallicity, sfr, electron_abundance, pixel_assignment, spatial_bin_edges, mask, spectra, and datacube.
 
-            aux_data (dict) - An empty dictionary (no auxiliary data)
+            aux_data (dict): An empty dictionary (no auxiliary data).
         """
         children = (
             self.coords,
@@ -241,17 +207,8 @@ class GasData:
         return children, aux_data
 
     @classmethod
-    def tree_unflatten(cls, aux_data, children):
-        """
-        Reconstructs the Gas object from children and auxiliary data
-
-        Args:
-            aux_data (dict): An empty dictionary (no auxiliary data)
-            children (tuple): A tuple containing the coordinates, velocity, mass, density, internal_energy, metallicity, sfr, electron_abundance, pixel_assignment, spatial_bin_edges, mask, spectra, and datacube
-
-        Returns:
-            The reconstructed Gas object.
-        """
+    def tree_unflatten(cls, aux_data: dict, children: tuple) -> "GasData":
+        """Reconstruct the GasData object from the flattened data."""
         return cls(*children)
 
 
@@ -262,10 +219,10 @@ class RubixData:
     """
     Dataclass for storing Rubix data. The RubixData object contains the galaxy, stars, and gas data.
 
-    Args:
-        galaxy: Galaxy object containing the galaxy data
-        stars: StarsData object containing the stars data
-        gas: GasData object containing the gas data
+    Attributes:
+        galaxy (Optional[Galaxy]): Galaxy metadata.
+        stars (Optional[StarsData]): Stellar part data.
+        gas (Optional[GasData]): Gas part data.
     """
 
     galaxy: Optional[Galaxy] = None
@@ -279,30 +236,14 @@ class RubixData:
         return "\n\t".join(representationString)
 
     def tree_flatten(self):
-        """
-        Flattens the RubixData object into a tuple of children and auxiliary data
-
-        Returns:
-            children (tuple) - A tuple containing the galaxy, stars, and gas objects
-
-            aux_data (dict) - An empty dictionary (no auxiliary data)
-        """
+        """Flatten the RubixData object into children and aux data."""
         children = (self.galaxy, self.stars, self.gas)
         aux_data = {}
         return children, aux_data
 
     @classmethod
-    def tree_unflatten(cls, aux_data, children):
-        """
-        Reconstructs the RubixData object from children and auxiliary data
-
-        Args:
-            aux_data (dict): An empty dictionary (no auxiliary data)
-            children (tuple): A tuple containing the galaxy, stars, and gas objects
-
-        Returns:
-            The reconstructed RubixData object.
-        """
+    def tree_unflatten(cls, aux_data: dict, children: tuple) -> "RubixData":
+        """Reconstruct the RubixData object from the flattened data."""
         return cls(*children)
 
 
@@ -315,54 +256,55 @@ def convert_to_rubix(config: Union[dict, str]):
     If the file already exists, the conversion is skipped.
 
     Args:
-        config (dict or str): The configuration for the conversion. This can be a dictionary or a path to a YAML file containing the configuration.
+        config (Union[dict, str]): Configuration dict or path to a YAML file describing the conversion.
 
     Returns:
-        The configuration used for the conversion. This can be used to pass the output path to the next step in the pipeline.
+        str: The output directory where `rubix_galaxy.h5` is written.
 
-    Example
-    -------
+    Raises:
+        ValueError: When ``config['data']['name']`` is unsupported.
 
-    >>> import os
-    >>> from rubix.core.data import convert_to_rubix
+    Example:
+        ::
+            >>> import os
+            >>> from rubix.core.data import convert_to_rubix
 
-    >>> # Define the configuration (example configuration)
-    >>> config = {
-    ...    "logger": {
-    ...        "log_level": "DEBUG",
-    ...        "log_file_path": None,
-    ...        "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    ...    },
-    ...    "data": {
-    ...        "name": "IllustrisAPI",
-    ...        "args": {
-    ...            "api_key": os.environ.get("ILLUSTRIS_API_KEY"),
-    ...            "particle_type": ["stars","gas"],
-    ...            "simulation": "TNG50-1",
-    ...            "snapshot": 99,
-    ...            "save_data_path": "data",
-    ...        },
-    ...        "load_galaxy_args": {
-    ...            "id": 12,
-    ...            "reuse": True,
-    ...        },
-    ...        "subset": {
-    ...            "use_subset": True,
-    ...            "subset_size": 1000,
-    ...        },
-    ...    },
-    ...    "simulation": {
-    ...        "name": "IllustrisTNG",
-    ...        "args": {
-    ...            "path": "data/galaxy-id-12.hdf5",
-    ...        },
-    ...    },
-    ...    "output_path": "output",
-    ... }
+            >>> # Define the configuration (example configuration)
+            >>> config = {
+            ...    "logger": {
+            ...        "log_level": "DEBUG",
+            ...        "log_file_path": None,
+            ...        "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            ...    },
+            ...    "data": {
+            ...        "name": "IllustrisAPI",
+            ...        "args": {
+            ...            "api_key": os.environ.get("ILLUSTRIS_API_KEY"),
+            ...            "particle_type": ["stars","gas"],
+            ...            "simulation": "TNG50-1",
+            ...            "snapshot": 99,
+            ...            "save_data_path": "data",
+            ...        },
+            ...        "load_galaxy_args": {
+            ...            "id": 12,
+            ...            "reuse": True,
+            ...        },
+            ...        "subset": {
+            ...            "use_subset": True,
+            ...            "subset_size": 1000,
+            ...        },
+            ...    },
+            ...    "simulation": {
+            ...        "name": "IllustrisTNG",
+            ...        "args": {
+            ...            "path": "data/galaxy-id-12.hdf5",
+            ...        },
+            ...    },
+            ...    "output_path": "output",
+            ... }
 
-    >>> # Convert the data to Rubix format
-    >>> convert_to_rubix(config)
-
+            >>> # Convert the data to Rubix format
+            >>> convert_to_rubix(config)
     """
     # Check if the file already exists
     # Create the input handler based on the config and create rubix galaxy data
@@ -378,13 +320,12 @@ def convert_to_rubix(config: Union[dict, str]):
     # If the simulationtype is IllustrisAPI, get data from IllustrisAPI
 
     # TODO: we can do this more elgantly
-
     if "data" in config:
         if config["data"]["name"] == "IllustrisAPI":
             logger.info("Loading data from IllustrisAPI")
             api = IllustrisAPI(**config["data"]["args"], logger=logger)
             api.load_galaxy(**config["data"]["load_galaxy_args"])
-        elif config["data"]["name"] == "NihaoHandler":
+        elif config["data"]["name"] == "NihaoHandler":  # pragma no cover
             logger.info("Loading data from Nihao simulation")
         else:
             raise ValueError(f"Unknown data source: {config['data']['name']}.")
@@ -401,17 +342,16 @@ def convert_to_rubix(config: Union[dict, str]):
 
 @jaxtyped(typechecker=typechecker)
 def reshape_array(arr: jax.Array) -> jax.Array:
-    """Reshapes an array to be compatible with JAX parallelization
+    """Reshape an array so it can be sharded across devices.
 
-    The function reshapes an array of shape (n_particles, n_features) to an array of shape (n_gpus, particles_per_gpu, n_features).
-
-    Padding with zero is added if necessary to ensure that the number of particles per GPU is the same for all GPUs.
+        The function reshapes an array of shape (n_particles, n_features) to an array of shape (n_gpus, particles_per_gpu, n_features).
+        Padding with zero is added if necessary to ensure that the number of particles per GPU is the same for all GPUs.
 
     Args:
-        arr (jnp.ndarray): The array to reshape
+        arr (jax.Array): Array of shape ``(n_particles, n_features)`` that should be spread over devices.
 
     Returns:
-        The reshaped array as jnp.ndarray
+        jax.Array: Array shaped as ``(n_gpus, particles_per_gpu, ...)`` suitable for JAX parallelism.
     """
 
     n_gpus = jax.device_count()
@@ -445,32 +385,34 @@ def reshape_array(arr: jax.Array) -> jax.Array:
 
 @jaxtyped(typechecker=typechecker)
 def prepare_input(config: Union[dict, str]) -> RubixData:
-    """
-    This function prepares the input data for the pipeline. It loads the data from the file and converts it to Rubix format.
+    """Load the converted Rubix dataset into Python objects.
 
     Args:
-        config (dict or str): The configuration for the conversion. This can be a dictionary or a path to a YAML file containing the configuration.
+        config (Union[dict, str]): Configuration dict or path describing the conversion.
 
     Returns:
-        The RubixData object containing the galaxy, stars, and gas data.
+        RubixData: The dataset containing galaxy, stars, and gas objects.
 
-    Example
-    -------
-    >>> import os
-    >>> from rubix.core.data import convert_to_rubix, prepare_input
+    Raises:
+        ValueError: When subset mode is enabled but neither stars nor gas coordinates exist.
 
-    >>> # Define the configuration (example configuration)
-    >>> config = {
-    >>>            ...
-    >>>           }
+    Example:
+        ::
+            >>> import os
+            >>> from rubix.core.data import convert_to_rubix, prepare_input
 
-    >>> # Convert the data to Rubix format
-    >>> convert_to_rubix(config)
+            >>> # Define the configuration (example configuration)
+            >>> config = {
+            >>>            ...
+            >>>           }
 
-    >>> # Prepare the input data
-    >>> rubixdata = prepare_input(config)
-    >>> # Access the galaxy data, e.g. the stellar coordintates
-    >>> rubixdata.stars.coords
+            >>> # Convert the data to Rubix format
+            >>> convert_to_rubix(config)
+
+            >>> # Prepare the input data
+            >>> rubixdata = prepare_input(config)
+            >>> # Access the galaxy data, e.g. the stellar coordintates
+            >>> rubixdata.stars.coords
     """
 
     logger_config = config["logger"] if "logger" in config else None  # type:ignore
@@ -562,15 +504,16 @@ def prepare_input(config: Union[dict, str]) -> RubixData:
 @jaxtyped(typechecker=typechecker)
 def get_rubix_data(config: Union[dict, str]) -> RubixData:
     """
-    Returns the Rubix data
-
+    Returns the Rubix data.
     First the function converts the data to Rubix format (``convert_to_rubix(config)``) and then prepares the input data (``prepare_input(config)``).
 
     Args:
-        config (dict or str): The configuration for the conversion. This can be a dictionary or a path to a YAML file containing the configuration.
+        config (Union[dict, str]):
+            Configuration dict or YAML file path for conversion.
 
     Returns:
-        The RubixData object containing the galaxy, stars, and gas data.
+        RubixData:
+            RubixData object containing the galaxy, stars, and gas data.
     """
     convert_to_rubix(config)
     return prepare_input(config)
@@ -599,16 +542,18 @@ def get_reshape_data(config: Union[dict, str]) -> Callable:
     Maps the `reshape_array` function to the input data dictionary.
 
     Args:
-        config (dict or str): The configuration for the conversion. This can be a dictionary or a path to a YAML file containing the configuration.
+        config (Union[dict, str]):
+            Configuration dict or path to the YAML file describing the conversion.
 
     Returns:
-        A function to reshape the data.
+        Callable[[RubixData], RubixData]:
+            Function that reshapes a `RubixData` instance.
 
-    Example
-    -------
-    >>> from rubix.core.data import get_reshape_data
-    >>> reshape_data = get_reshape_data(config)
-    >>> rubixdata = reshape_data(rubixdata)
+    Example:
+        ::
+            >>> from rubix.core.data import get_reshape_data
+            >>> reshape_data = get_reshape_data(config)
+            >>> rubixdata = reshape_data(rubixdata)
     """
     # Setup a logger based on the config
     logger_config = config["logger"] if "logger" in config else None

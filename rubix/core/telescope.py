@@ -16,27 +16,31 @@ from rubix.telescope.utils import (
 from .cosmology import get_cosmology
 from .data import RubixData
 
+n_bins = "n_bins"
+
 
 @jaxtyped(typechecker=typechecker)
 def get_telescope(config: Union[str, dict]) -> BaseTelescope:
-    """
-    Get the telescope object based on the configuration.
+    """Return the configured telescope instance.
 
     Args:
-        config (dict): Configuration dictionary.
+        config (Union[str, dict]):
+            Configuration dictionary or path that includes ``telescope.name``.
 
     Returns:
-        The telescope object.
+        BaseTelescope: Concrete telescope object assembled by the factory.
 
-    Example
-    -------
-    >>> from rubix.core.telescope import get_telescope
-    >>> config = {
-    ...     "telescope":
-    ...         {"name": "MUSE"},
-    ...     }
-    >>> telescope = get_telescope(config)
-    >>> print(telescope)
+    Raises:
+        TypeError: If the factory does not return a :class:`BaseTelescope`.
+
+    Example:
+        ::
+            >>> from rubix.core.telescope import get_telescope
+            >>> config = {
+            ...     "telescope": {"name": "MUSE"},
+            ... }
+            >>> telescope = get_telescope(config)
+            >>> print(telescope)
     """
     # TODO: this currently only loads telescope that are supported.
     # add support for custom telescopes
@@ -48,15 +52,15 @@ def get_telescope(config: Union[str, dict]) -> BaseTelescope:
 
 
 @jaxtyped(typechecker=typechecker)
-def get_spatial_bin_edges(config: dict) -> Float[Array, "n_bins"]:
-    """
-    Get the spatial bin edges based on the configuration.
+def get_spatial_bin_edges(config: dict) -> Float[Array, n_bins]:
+    """Compute the spatial bin edges that map particles into spaxels.
 
     Args:
-        config (dict): Configuration dictionary.
+        config (dict):
+            Configuration dictionary containing telescope and galaxy data.
 
     Returns:
-        The spatial bin edges.
+        Float[Array, n_bins]: Array of spatial bin edges.
     """
     logger = get_logger(config.get("logger", None))
 
@@ -66,7 +70,8 @@ def get_spatial_bin_edges(config: dict) -> Float[Array, "n_bins"]:
     galaxy_dist_z = config["galaxy"]["dist_z"]
     cosmology = get_cosmology(config)
     # Calculate the spatial bin edges
-    # TODO: check if we need the spatial bin size somewhere? For now we dont use it
+    # TODO: check if we need the spatial bin size somewhere?
+    # For now we dont use it
     spatial_bin_edges, spatial_bin_size = calculate_spatial_bin_edges(
         fov=telescope.fov,
         spatial_bins=telescope.sbin,
@@ -79,24 +84,27 @@ def get_spatial_bin_edges(config: dict) -> Float[Array, "n_bins"]:
 
 @jaxtyped(typechecker=typechecker)
 def get_spaxel_assignment(config: dict) -> Callable:
-    """
-    Get the spaxel assignment function based on the configuration.
+    """Return a particles-to-spaxels assignment function.
 
     Args:
         config (dict): Configuration dictionary.
 
     Returns:
-        The spaxel assignment function.
+        Callable[[RubixData], RubixData]:
+            Function that assigns particles to spaxels.
 
-    Example
-    -------
-    >>> from rubix.core.telescope import get_spaxel_assignment
-    >>> bin_particles = get_spaxel_assignment(config)
+    Raises:
+        ValueError: If the telescope pixel type is unsupported.
 
-    >>> rubixdata = bin_particles(rubixdata)
+    Example:
+        ::
+            >>> from rubix.core.telescope import get_spaxel_assignment
+            >>> bin_particles = get_spaxel_assignment(config)
 
-    >>> print(rubixdata.stars.pixel_assignment)
-    >>> print(rubixdata.stars.spatial_bin_edges)
+            >>> rubixdata = bin_particles(rubixdata)
+
+            >>> print(rubixdata.stars.pixel_assignment)
+            >>> print(rubixdata.stars.spatial_bin_edges)
     """
     logger = get_logger(config.get("logger", None))
 
@@ -106,6 +114,14 @@ def get_spaxel_assignment(config: dict) -> Callable:
     spatial_bin_edges = get_spatial_bin_edges(config)
 
     def spaxel_assignment(rubixdata: RubixData) -> RubixData:
+        """Assign coordinates to spatial bins for stars and gas.
+
+        Args:
+            rubixdata (RubixData): Particle data to bin.
+
+        Returns:
+            RubixData: Input data updated with pixel assignments.
+        """
         logger.info("Assigning particles to spaxels...")
         if rubixdata.stars.coords is not None:
             pixel_assignment = square_spaxel_assignment(
@@ -128,27 +144,34 @@ def get_spaxel_assignment(config: dict) -> Callable:
 
 @jaxtyped(typechecker=typechecker)
 def get_filter_particles(config: dict) -> Callable:
-    """
-    Get the function to filter particles outside the aperture.
+    """Return a callable that masks particles outside the aperture.
 
     Args:
         config (dict): Configuration dictionary.
 
     Returns:
-        The filter particles function
+        Callable[[RubixData], RubixData]: Function that filters particles.
 
-    Example
-    -------
-    >>> from rubix.core.telescope import get_filter_particles
-    >>> filter_particles = get_filter_particles(config)
+    Example:
+        ::
+            >>> from rubix.core.telescope import get_filter_particles
+            >>> filter_particles = get_filter_particles(config)
 
-    >>> rubixdata = filter_particles(rubixdata)
+            >>> rubixdata = filter_particles(rubixdata)
     """
     logger = get_logger(config.get("logger", None))
 
     spatial_bin_edges = get_spatial_bin_edges(config)
 
     def filter_particles(rubixdata: RubixData) -> RubixData:
+        """Mask any particles located outside the configured aperture.
+
+        Args:
+            rubixdata (RubixData): Particle data structure to filter.
+
+        Returns:
+            RubixData: Updated particle data with masked attributes.
+        """
         logger.info("Filtering particles outside the aperture...")
         if "stars" in config["data"]["args"]["particle_type"]:
             # if rubixdata.stars.coords is not None:
@@ -168,7 +191,9 @@ def get_filter_particles(config: dict) -> Callable:
                 # Apply mask only if current_attr_value is an ndarray
                 if isinstance(current_attr_value, jnp.ndarray):
                     setattr(
-                        rubixdata.stars, attr, jnp.where(mask, current_attr_value, 0)
+                        rubixdata.stars,
+                        attr,
+                        jnp.where(mask, current_attr_value, 0),
                     )
             mask_jax = jnp.array(mask)
             setattr(rubixdata.stars, "mask", mask_jax)
@@ -188,12 +213,19 @@ def get_filter_particles(config: dict) -> Callable:
             for attr in attributes:
                 current_attr_value = getattr(rubixdata.gas, attr)
                 if isinstance(current_attr_value, jnp.ndarray):
-                    setattr(rubixdata.gas, attr, jnp.where(mask, current_attr_value, 0))
-                # rubixdata.gas.__setattr__(attr, jnp.where(mask, rubixdata.gas.__getattribute__(attr), 0))
+                    setattr(
+                        rubixdata.gas,
+                        attr,
+                        jnp.where(mask, current_attr_value, 0),
+                    )
             mask_jax = jnp.array(mask)
             setattr(rubixdata.gas, "mask", mask_jax)
             # rubixdata.gas.mask = mask
-            # masked_metals = jnp.where(mask_jax[:, jnp.newaxis], rubixdata.gas.metals, 0)
+            # masked_metals = jnp.where(
+            #     mask_jax[:, jnp.newaxis],
+            #     rubixdata.gas.metals,
+            #     0,
+            # )
             # setattr(rubixdata.gas, "metals", masked_metals)
 
         return rubixdata

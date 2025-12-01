@@ -10,17 +10,16 @@ from rubix.core.telescope import get_telescope
 from rubix.logger import get_logger
 
 
-def store_fits(config, data, filepath):
-    """
-    Store the datacube in a FITS file.
+def store_fits(config: dict, data: np.ndarray, filepath: str) -> None:
+    """Write the provided datacube as a FITS file.
 
-    Parameters:
-        config (dict): The configuration dictionary
-        data (dict): The data dictionary
-        filepath (str): The path to save the FITS file
+    Args:
+        config (dict): Simulation and pipeline configuration.
+        data (np.ndarray): Datacube array to serialize.
+        filepath (str): Directory path where the FITS file will be stored.
 
     Returns:
-        None
+        None: Always returns ``None`` after writing the file.
     """
     logger_config = config.get("logger", None)
     logger = get_logger(logger_config)
@@ -92,7 +91,7 @@ def store_fits(config, data, filepath):
 
     output_filename = (
         f"{filepath}{config['simulation']['name']}_id{galaxy_id}_snap{snapshot}_"
-        f'{config["telescope"]["name"]}_{config["pipeline"]["name"]}.fits'
+        f"{config['telescope']['name']}_{config['pipeline']['name']}.fits"
     )
 
     os.makedirs(os.path.dirname(output_filename), exist_ok=True)
@@ -101,15 +100,14 @@ def store_fits(config, data, filepath):
     logger.info(f"Datacube saved to {output_filename}")
 
 
-def load_fits(filepath):
-    """
-    Load a FITS file and return the datacube.
+def load_fits(filepath: str) -> Cube:
+    """Load a FITS file and return the associated mpdaf cube.
 
-    Parameters:
-        filepath (str): The path to the FITS file
+    Args:
+        filepath (str): Path to the FITS file to open.
 
     Returns:
-        The cube object from mpdaf
+        Cube: Loaded mpdaf cube instance.
     """
     cube = Cube(filename=filepath)
     return cube
