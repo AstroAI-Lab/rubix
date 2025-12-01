@@ -134,7 +134,7 @@ archivePrefix = {arXiv},
 
 ## Licence
 
-[GNU General Public License v3.0](https://github.com/synthesizer-project/synthesizer/blob/main/LICENSE.md)
+[MIT License](https://github.com/AstroAI-Lab/rubix/blob/main/LICENSE.md)
 
 ## Acknowledgments
 
