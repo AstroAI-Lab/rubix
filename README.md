@@ -70,6 +70,7 @@ Thank you for helping improve `rubix`!
 
 Please cite **both** of the following papers ([Cakir et al. 2024](https://arxiv.org/abs/2412.08265), [Schaible et al. 2025](https://arxiv.org/abs/2511.17110)) if you use Rubix in your research:
 
+```
   @ARTICLE{2024arXiv241208265C,
        author = {{{\c{C}}ak{\i}r}, Ufuk and {Schaible}, Anna Lena and {Buck}, Tobias},
         title = "{Fast GPU-Powered and Auto-Differentiable Forward Modeling of IFU Data Cubes}",
@@ -103,7 +104,7 @@ Please cite **both** of the following papers ([Cakir et al. 2024](https://arxiv.
        adsurl = {https://ui.adsabs.harvard.edu/abs/2025arXiv251117110S},
       adsnote = {Provided by the SAO/NASA Astrophysics Data System}
   }
-
+```
 
 
 
