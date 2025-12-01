@@ -70,7 +70,7 @@ Thank you for helping improve `rubix`!
 
 Please cite **both** of the following papers ([Cakir et al. 2024](https://arxiv.org/abs/2412.08265), [Schaible et al. 2025](https://arxiv.org/abs/2511.17110)) if you use Rubix in your research:
 
-@ARTICLE{2024arXiv241208265C,
+  @ARTICLE{2024arXiv241208265C,
        author = {{{\c{C}}ak{\i}r}, Ufuk and {Schaible}, Anna Lena and {Buck}, Tobias},
         title = "{Fast GPU-Powered and Auto-Differentiable Forward Modeling of IFU Data Cubes}",
       journal = {arXiv e-prints},
@@ -80,14 +80,14 @@ Please cite **both** of the following papers ([Cakir et al. 2024](https://arxiv.
           eid = {arXiv:2412.08265},
         pages = {arXiv:2412.08265},
           doi = {10.48550/arXiv.2412.08265},
-archivePrefix = {arXiv},
+        archivePrefix = {arXiv},
        eprint = {2412.08265},
- primaryClass = {astro-ph.IM},
+        primaryClass = {astro-ph.IM},
        adsurl = {https://ui.adsabs.harvard.edu/abs/2024arXiv241208265C},
       adsnote = {Provided by the SAO/NASA Astrophysics Data System}
-}
+  }
 
-@ARTICLE{2025arXiv251117110S,
+  @ARTICLE{2025arXiv251117110S,
        author = {{Schaible}, Anna Lena and {{\c{C}}ak{\i}r}, Ufuk and {Buck}, Tobias and {Mack}, Harald and {Obreja}, Aura and {Oguz}, Nihat and {Oliver}, William H. and {C{\u{a}}r{\u{a}}mizaru}, Horea-Alexandru},
         title = "{RUBIX: Differentiable forward modelling of galaxy spectral data cubes for gradient-based parameter estimation}",
       journal = {arXiv e-prints},
@@ -97,12 +97,12 @@ archivePrefix = {arXiv},
           eid = {arXiv:2511.17110},
         pages = {arXiv:2511.17110},
           doi = {10.48550/arXiv.2511.17110},
-archivePrefix = {arXiv},
+        archivePrefix = {arXiv},
        eprint = {2511.17110},
- primaryClass = {astro-ph.GA},
+      primaryClass = {astro-ph.GA},
        adsurl = {https://ui.adsabs.harvard.edu/abs/2025arXiv251117110S},
       adsnote = {Provided by the SAO/NASA Astrophysics Data System}
-}
+  }
 
 
 
