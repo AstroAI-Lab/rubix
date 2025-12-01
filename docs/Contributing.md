@@ -49,6 +49,7 @@ at the root of the repo to activate the pre-commit hooks.
 
 If you would like to test whether it works you can run `pre-commit run --all-files` to run the pre-commit hook on the whole repo. You should see each stage complete without issue in a clean clone.
 
+
 ## Using Black
 
 We use [Black](https://black.readthedocs.io/en/stable/) for code formatting. Assuming you installed the development dependencies (if not you can install `black` with pip: `pip install black`), you can run the linting with `black {source_file_or_directory}`. For more details see the [Black documentation](https://black.readthedocs.io/en/stable/usage_and_configuration/the_basics.html).
