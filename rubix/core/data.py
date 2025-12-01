@@ -320,7 +320,6 @@ def convert_to_rubix(config: Union[dict, str]):
     # If the simulationtype is IllustrisAPI, get data from IllustrisAPI
 
     # TODO: we can do this more elgantly
-
     if "data" in config:
         if config["data"]["name"] == "IllustrisAPI":
             logger.info("Loading data from IllustrisAPI")

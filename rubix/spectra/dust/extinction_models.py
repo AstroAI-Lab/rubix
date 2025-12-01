@@ -14,12 +14,6 @@ RV_MODELS = [
     "Gordon23",
 ]  # "O94", "F99", "F04", "VCG04", "GCC09", "M14", "G16", "F19", "D22", "G23"]
 
-wave_range_CCM89 = [0.3, 10.0]
-Rv_range_CCM89 = [2.0, 6.0]
-
-wave_range_G23 = [0.0912, 32.0]
-Rv_range_G23 = [2.3, 5.6]
-
 
 @equinox.filter_jit
 @jaxtyped(typechecker=typechecker)
@@ -87,12 +81,8 @@ class Cardelli89(BaseExtRvModel):
     #     static=True,
     #     default_factory=lambda: jnp.array(wave_range_CCM89),
     # )
-    wave_range_l: float = equinox.field(
-        converter=float, static=True, default=wave_range_CCM89[0]
-    )
-    wave_range_h: float = equinox.field(
-        converter=float, static=True, default=wave_range_CCM89[1]
-    )
+    wave_range_l: float = equinox.field(converter=float, static=True, default=0.3)
+    wave_range_h: float = equinox.field(converter=float, static=True, default=10.0)
 
     Rv: float = equinox.field(converter=float, static=True, default=3.1)
     # Rv_range: Float[Array, "2"] = equinox.field(
@@ -100,12 +90,8 @@ class Cardelli89(BaseExtRvModel):
     #     static=True,
     #     default_factory=lambda: jnp.array(Rv_range_CCM89),
     # )
-    Rv_range_l: float = equinox.field(
-        converter=float, static=True, default=Rv_range_CCM89[0]
-    )
-    Rv_range_h: float = equinox.field(
-        converter=float, static=True, default=Rv_range_CCM89[1]
-    )
+    Rv_range_l: float = equinox.field(converter=float, static=True, default=2.0)
+    Rv_range_h: float = equinox.field(converter=float, static=True, default=6.0)
 
     def evaluate(self, wave: Float[Array, N_WAVE_AXIS]) -> Float[Array, N_WAVE_AXIS]:
         """
@@ -268,12 +254,8 @@ class Gordon23(BaseExtRvModel):
     #     default=jnp.array(Rv_range_G23),
     # )
 
-    wave_range_l: float = equinox.field(
-        converter=float, static=True, default=wave_range_G23[0]
-    )
-    wave_range_h: float = equinox.field(
-        converter=float, static=True, default=wave_range_G23[1]
-    )
+    wave_range_l: float = equinox.field(converter=float, static=True, default=0.0912)
+    wave_range_h: float = equinox.field(converter=float, static=True, default=32.0)
 
     Rv: float = equinox.field(converter=float, static=True, default=3.1)
     # Rv_range: Float[Array, "2"] = equinox.field(
@@ -281,12 +263,8 @@ class Gordon23(BaseExtRvModel):
     #     static=True,
     #     default_factory=lambda: jnp.array(Rv_range_CCM89),
     # )
-    Rv_range_l: float = equinox.field(
-        converter=float, static=True, default=Rv_range_G23[0]
-    )
-    Rv_range_h: float = equinox.field(
-        converter=float, static=True, default=Rv_range_G23[1]
-    )
+    Rv_range_l: float = equinox.field(converter=float, static=True, default=2.3)
+    Rv_range_h: float = equinox.field(converter=float, static=True, default=5.6)
 
     def evaluate(self, wave: Float[Array, N_WAVE_AXIS]) -> Float[Array, N_WAVE_AXIS]:
         """
