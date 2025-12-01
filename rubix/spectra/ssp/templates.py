@@ -1,8 +1,7 @@
 """
 This module contains the supported templates for the SSP grid.
 
-Example
--------
+Example:
 >>> from rubix.spectra.ssp.templates import BruzualCharlot2003
 >>> BruzualCharlot2003
 >>> print(BruzualCharlot2003.age)

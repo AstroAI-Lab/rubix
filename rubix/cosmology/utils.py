@@ -2,31 +2,47 @@ from typing import Union
 
 import jax.numpy as jnp
 from beartype import beartype as typechecker
+from beartype.typing import Tuple
 from jax import jit
 from jax.lax import scan
 from jaxtyping import Array, Float, jaxtyped
 
+CarryoverState = Tuple[
+    Float[Array, "..."],
+    Float[Array, "..."],
+    Float[Array, "..."],
+]
+ElementPair = Tuple[Float[Array, "..."], Float[Array, "..."]]
 
-# Source: https://github.com/ArgonneCPAC/dsps/blob/b81bac59e545e2d68ccf698faba078d87cfa2dd8/dsps/utils.py#L247C1-L256C1
+
+# Source:
+#   https://github.com/ArgonneCPAC/dsps/blob/b81bac59e545e2d68ccf698faba078d87cfa2dd8/dsps/utils.py#L247C1-L256C1
 @jit
 @jaxtyped(typechecker=typechecker)
-def _cumtrapz_scan_func(carryover, el):
+def _cumtrapz_scan_func(
+    carryover: CarryoverState,
+    el: ElementPair,
+) -> Tuple[
+    CarryoverState,
+    Float[Array, "..."],
+]:
     """
-    Integral helper function, which uses the formula for trapezoidal integration.
+    Integral helper that implements the trapezoidal rule step.
 
     Args:
-        carryover (tuple): Tuple of (a, fa, cumtrapz)
-        a: current value of x-coordinate
-        fa: current value of function at a
-        cumtrapz: cumulative sum of trapezoidal integration so far
-        el (tuple): Tuple of (b, fb)
-        b: next value of x-coordinate
-        fb: next value of function at b
+        carryover (CarryoverState): Current ``(a, fa, cumtrapz)`` state values.
+        el (ElementPair): Next ``(b, fb)`` pair.
+
+    Note:
+        a: current value of x-coordinate.
+        fa: current value of function at a.
+        cumtrapz: cumulative sum of trapezoidal integration so far.
+        b: next value of x-coordinate.
+        fb: next value of function at b.
 
     Returns:
-        The carryover tuple, which contain (b, fb, cumtrapz)
-
-        The accumulated integral value
+        Tuple[CarryoverState, Float[Array, "..."]]:
+            Updated carryover and accumulated integral.
     """
     b, fb = el
     a, fa, cumtrapz = carryover
@@ -36,31 +52,32 @@ def _cumtrapz_scan_func(carryover, el):
     return carryover, accumulated
 
 
-# Source: https://github.com/ArgonneCPAC/dsps/blob/b81bac59e545e2d68ccf698faba078d87cfa2dd8/dsps/utils.py#L278C1-L298C1
+# Source:
+#   https://github.com/ArgonneCPAC/dsps/blob/b81bac59e545e2d68ccf698faba078d87cfa2dd8/dsps/utils.py#L278C1-L298C1
 @jit
 @jaxtyped(typechecker=typechecker)
 def trapz(
-    xarr: Union[jnp.ndarray, Float[Array, "n"]],
-    yarr: Union[jnp.ndarray, Float[Array, "n"]],
+    xarr: Union[jnp.ndarray, Float[Array, "..."]],
+    yarr: Union[jnp.ndarray, Float[Array, "..."]],
 ) -> jnp.ndarray:
     """
-    The function performs the trapezoidal integration using the ``_cumtrapz_scan_func`` helper function.
+    Perform trapezoidal integration using ``_cumtrapz_scan_func``.
 
     Args:
-        xarr (ndarray): The x-coordinates of the data points in shape (n, ).
-        yarr (ndarray): The y-coordinates of the data points in shape (n, ).
+        xarr (Union[jnp.ndarray, Float[Array, "..."]]): The x-coordinates.
+        yarr (Union[jnp.ndarray, Float[Array, "..."]]): The y-values.
 
     Returns:
-        The result of the trapezoidal integration.
+        jnp.ndarray: Scalar results collected from the scan.
 
-    Example
-    -------
-    >>> from rubix.cosmology.utils import trapz
-    >>> import jax.numpy as jnp
+    Example:
+        ::
+            >>> from rubix.cosmology.utils import trapz
+            >>> import jax.numpy as jnp
 
-    >>> x = jnp.array([0, 1, 2, 3])
-    >>> y = jnp.array([0, 1, 4, 9])
-    >>> print(trapz(x, y))
+            >>> x = jnp.array([0, 1, 2, 3])
+            >>> y = jnp.array([0, 1, 4, 9])
+            >>> print(trapz(x, y))
     """
     res_init = xarr[0], yarr[0], 0.0
     scan_data = xarr, yarr

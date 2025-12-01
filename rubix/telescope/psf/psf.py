@@ -12,17 +12,19 @@ def _convolve_plane(plane, kernel):
 
 
 def get_psf_kernel(name: str, m: int, n: int, **kwargs) -> Float[Array, "m n"]:
-    """Get a point spread function (PSF) kernel.
-    Parameters
-    ----------
-    name : str
-        The name of the PSF kernel to get.
-    **kwargs
-        Additional keyword arguments to pass to the PSF kernel function.
-    Returns
-    -------
-    Float[Array, "m n"]
-        The PSF kernel.
+    """
+    Get a point spread function (PSF) kernel.
+    Args:
+        name (str): The name of the PSF kernel to get.
+        m (int): Kernel height in pixels.
+        n (int): Kernel width in pixels.
+        **kwargs: Additional keyword arguments to pass to the PSF kernel function.
+
+    Returns:
+        Float[Array, "m n"]: The PSF kernel.
+
+    Raises:
+        ValueError: If ``name`` is not a supported kernel type.
     """
     if name == "gaussian":
         return gaussian_kernel_2d(m=m, n=n, **kwargs)
@@ -33,23 +35,19 @@ def get_psf_kernel(name: str, m: int, n: int, **kwargs) -> Float[Array, "m n"]:
 def apply_psf(
     datacube: Float[Array, "n_pixel n_pixel wave_bins"], psf_kernel: Float[Array, "m n"]
 ) -> Float[Array, "n_pixel n_pixel wave_bins"]:
-    """Apply a point spread function (PSF) to the spectral datacube.
+    """
+    Apply a point spread function (PSF) to the spectral datacube.
 
-    The PSF kernel is convolved with each spectral plane of the datacube to simulate the
-    blurring effect of the telescope.
+        The PSF kernel is convolved with each spectral plane of the datacube to simulate the
+        blurring effect of the telescope.
 
 
-    Parameters
-    ----------
-    datacube : Float[Array, "n_pixel n_pixel wave_bins"]
-        The spectral datacube to convolve with the PSF kernel.
-    psf_kernel : Float[Array, "m n"]
-        The 2D PSF kernel to apply to the datacube.
+    Args:
+        datacube (Float[Array, "n_pixel n_pixel wave_bins"]): The spectral datacube to convolve with the PSF kernel.
+        psf_kernel (Float[Array, "m n"]): The 2D PSF kernel to apply to the datacube.
 
-    Returns
-    -------
-    Float[Array, "n_pixel n_pixel wave_bins"]
-        The datacube convolved with the PSF kernel.
+    Returns:
+        (Float[Array, "n_pixel n_pixel wave_bins"]): The datacube convolved with the PSF kernel.
     """
     # Convolve each plane of the datacube with the PSF kernel
     # Vmap the convolution operation over the spectral dimension

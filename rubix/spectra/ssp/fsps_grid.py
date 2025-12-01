@@ -1,5 +1,6 @@
-"""Use python-fsps to retrieve a block of Simple Stellar Population (SSP) data
-adapted from https://github.com/ArgonneCPAC/dsps/blob/main/dsps/data_loaders/retrieve_fsps_data.py
+"""Use python-fsps to retrieve a block of Simple Stellar Population data.
+
+Adapted from the DSPS ``retrieve_fsps_data.py`` workflow.
 """
 
 import importlib
@@ -8,7 +9,7 @@ import os
 import h5py
 import numpy as np
 from beartype import beartype as typechecker
-from jaxtyping import Array, Float, jaxtyped
+from jaxtyping import jaxtyped
 
 from rubix import config as rubix_config
 from rubix.logger import get_logger
@@ -20,11 +21,11 @@ from .grid import SSPGrid
 logger = get_logger()
 
 HAS_FSPS = importlib.util.find_spec("fsps") is not None
-if HAS_FSPS:
-    import fsps
-else:
+if not HAS_FSPS:
     logger.warning(
-        "python-fsps is not installed. Please install it to use this function. Install using pip install fsps and check the installation page: https://dfm.io/python-fsps/current/installation/ for more details. Especially, make sure to set all necessary environment variables."
+        "python-fsps is not installed. Install it via `pip install fsps` "
+        "and see https://dfm.io/python-fsps/current/installation/ for "
+        "details, including required environment variables."
     )
 
 
@@ -32,66 +33,58 @@ else:
 def retrieve_ssp_data_from_fsps(
     add_neb_emission: bool = True,
     imf_type: int = 2,
-    zmet=None,
+    zmet: int | None = None,
     tage: float = 0.0,
     peraa: bool = True,
     **kwargs,
 ) -> "SSPGrid":
-    """Use python-fsps to populate arrays and matrices of data
+    r"""
+    Use python-fsps to populate arrays and matrices of data
     for the default simple stellar populations (SSPs) in the shapes expected by DSPS
     adapted from https://github.com/ArgonneCPAC/dsps/blob/main/dsps/data_loaders/retrieve_fsps_data.py
 
-    Parameters
-    ----------
-    add_neb_emission : bool, optional
-        Argument passed to fsps.StellarPopulation. Default is True.
+    Args:
+        add_neb_emission (bool, optional): Whether to enable nebular emission
+            in ``fsps.StellarPopulation``. Defaults to ``True``.
+        imf_type (int, optional): IMF type identifier passed to
+            ``fsps.StellarPopulation``. Defaults to ``2`` (Chabrier 2003).
+            See https://dfm.io/python-fsps/current/stellarpop_api/#example for more details.
+        zmet (int | None, optional): Metallicity index for
+            ``fsps.StellarPopulation``. When ``None`` the default FSPS grid is
+            used.
+        tage (float, optional): SSP age in Gyr. Defaults to ``0.0``.
+        peraa (bool, optional): If ``True`` return spectra in
+            L$\_\{\odot\}$/\AA, otherwise L$\_\{\odot\}$/Hz. Defaults to
+            ``True``.
+        **kwargs: Additional keyword arguments forwarded to
+            ``fsps.StellarPopulation``.
 
-    imf_type : int, optional
-        Argument passed to fsps.StellarPopulation to specify the IMF type. Default is 2 and specifies Chabrier (2003).
-        See https://dfm.io/python-fsps/current/stellarpop_api/#example for more details.
+    Returns:
+        SSPGrid: Grid containing age, metallicity, wavelength, and flux arrays
+            in the shapes expected by downstream DSPS consumers.
 
-    zmet : int, optional
-        Argument passed to fsps.StellarPopulation to specify the metallicity index. Default is None.
+    Raises:
+        AssertionError: If ``python-fsps`` is not installed.
 
-    tage : float, optional
-        Argument passed to fsps.StellarPopulation to specify the age of the SSP. Default is 0.0.
+    Notes:
+        The retrieve_ssp_data_from_fsps function is just a wrapper around
+        python-fsps without any other dependencies. This standalone function
+        should be straightforward to modify to use python-fsps to build
+        alternate SSP data blocks.
 
-    peraa : bool, optional
-        Argument passed to fsps.StellarPopulation to specify whether the spectrum should be returned in Lsun/Angstrom (True) or Lsun/Hz (False). Default is True.
-
-    kwargs : optional
-        Any keyword arguments passed to the retrieve_ssp_data_from_fsps function will be
-        passed on to fsps.StellarPopulation.
-
-    Returns
-    -------
-    ssp_lgmet : ndarray of shape (n_met, )
-        Array of log10(Z) of the SSP templates
-        where dimensionless Z is the mass fraction of elements heavier than He
-
-    ssp_lg_age_gyr : ndarray of shape (n_ages, )
-        Array of log10(age/Gyr) of the SSP templates
-
-    ssp_wave : ndarray of shape (n_wave, )
-
-    ssp_flux : ndarray of shape (n_met, n_ages, n_wave)
-        SED of the SSP in units of Lsun/Hz/Msun
-
-    Notes
-    -----
-    The retrieve_ssp_data_from_fsps function is just a wrapper around
-    python-fsps without any other dependencies. This standalone function
-    should be straightforward to modify to use python-fsps to build
-    alternate SSP data blocks.
-
-    All DSPS functions operate on plain ndarrays, so user-supplied data
-    storing alternate SSP models is supported. You will just need to
-    pack your SSP data into arrays with shapes matching the shapes of
-    the arrays returned by this function.
-
+        All DSPS functions operate on plain ndarrays, so user-supplied data
+        storing alternate SSP models is supported. You will just need to
+        pack your SSP data into arrays with shapes matching the shapes of
+        the arrays returned by this function.
     """
-    assert HAS_FSPS, "Must have python-fsps installed to use this function"
-    import fsps
+
+    if not HAS_FSPS:
+        raise AssertionError(
+            "python-fsps is required to retrieve SSP data. Install the "
+            "`fsps` package and configure the necessary environment "
+            "variables."
+        )
+    fsps = importlib.import_module("fsps")
 
     config = rubix_config["ssp"]["templates"]["FSPS"]
 
@@ -112,11 +105,10 @@ def retrieve_ssp_data_from_fsps(
         _wave, _fluxes = sp.get_spectrum(zmet=zmet, tage=tage, peraa=peraa)
         spectrum_collector.append(_fluxes)
     ssp_wave = np.array(_wave)
-    # Adjust the wavelength grid to the bin centers:
-    # The offset is calculated as half the difference between _wave[1] and _wave[0],
-    # which dynamically depends on the input spectrum. For example, if the difference is 3 Å,
-    # the offset would be 1.5 Å. To test that the centering is correct, we can look at the
-    # position of the Halpha line at 6563 Å.
+    # Adjust the wavelength grid to the bin centers. The offset equals half
+    # the spacing between the first two wavelength samples, so it adapts to
+    # the spectrum resolution (e.g., 1.5 Å when the spacing is 3 Å). This
+    # keeps known lines such as Hα at 6563 Å centered after interpolation.
     offset = (_wave[1] - _wave[0]) / 2.0
     ssp_wave_centered = ssp_wave - offset
     ssp_flux = np.array(spectrum_collector)
@@ -129,28 +121,40 @@ def retrieve_ssp_data_from_fsps(
 @jaxtyped(typechecker=typechecker)
 def write_fsps_data_to_disk(
     outname: str,
-    file_location=TEMPLATE_PATH,
+    file_location: str | os.PathLike = TEMPLATE_PATH,
     add_neb_emission: bool = True,
     imf_type: int = 2,
     peraa: bool = True,
     **kwargs,
-):
+) -> None:
     """
     Write FSPS ssp template data to disk in HDF5 format.
     adapted from https://github.com/ArgonneCPAC/dsps/blob/main/scripts/write_fsps_data_to_disk.py
 
     Args:
-        outname (str): The name of the output file.
-        file_location (str, optional): The location where the file will be saved. Defaults to TEMPLATE_PATH.
+        outname (str): Output filename, relative to ``file_location``.
+        file_location (str | os.PathLike, optional): Directory for the generated file.
+            Defaults to ``TEMPLATE_PATH``.
+        add_neb_emission (bool, optional): Passed through to
+            :func:`retrieve_ssp_data_from_fsps`. Defaults to ``True``.
+        imf_type (int, optional): IMF type forwarded to
+            :func:`retrieve_ssp_data_from_fsps`. Defaults to ``2``.
+        peraa (bool, optional): Spectral units flag forwarded to
+            :func:`retrieve_ssp_data_from_fsps`. Defaults to ``True``.
+        **kwargs: Additional parameters forwarded to
+            :func:`retrieve_ssp_data_from_fsps`.
 
     Returns:
         None
     """
 
     ssp_data = retrieve_ssp_data_from_fsps(
-        add_neb_emission=True, imf_type=2, peraa=True, **kwargs
+        add_neb_emission=add_neb_emission,
+        imf_type=imf_type,
+        peraa=peraa,
+        **kwargs,
     )
-    file_path = os.path.join(file_location, outname)
+    file_path = os.path.join(str(file_location), outname)
 
     logger.info(
         f"Writing created FSPS data to disk under the following path: {file_path}."

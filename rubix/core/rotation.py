@@ -1,4 +1,3 @@
-import jax.numpy as jnp
 from beartype import beartype as typechecker
 from jaxtyping import jaxtyped
 
@@ -10,29 +9,36 @@ from .data import RubixData
 
 @jaxtyped(typechecker=typechecker)
 def get_galaxy_rotation(config: dict):
-    """
-    Get the function to rotate the galaxy based on the configuration.
+    """Return a rotation function configured for the provided galaxy settings.
 
     Args:
-        config (dict): Configuration dictionary.
+        config (dict): Pipeline configuration containing
+            ``galaxy.rotation`` with either ``type`` (``face-on``, ``edge-on``,
+            ``matrix``) or explicit ``alpha``, ``beta``, ``gamma`` angles.
 
     Returns:
-        The function to rotate the galaxy.
+        Callable[[RubixData], RubixData]:
+            Function that applies the requested rotation.
 
-    Example
-    --------
-    >>> config = {
-    ...     ...
-    ...     "galaxy":
-    ...         {"dist_z": 0.1,
-    ...         "rotation": {"type": "edge-on"},
-    ...         },
-    ...     ...
-    ... }
+    Raises:
+        ValueError:
+            When the rotation configuration or required fields are invalid
+            or missing.
 
-    >>> from rubix.core.rotation import get_galaxy_rotation
-    >>> rotate_galaxy = get_galaxy_rotation(config)
-    >>> rubixdata = rotate_galaxy(rubixdata)
+    Example:
+        ::
+            >>> config = {
+            ...     ...
+            ...     "galaxy": {
+            ...         "dist_z": 0.1,
+            ...         "rotation": {"type": "edge-on"},
+            ...     },
+            ...     ...
+            ... }
+
+            >>> from rubix.core.rotation import get_galaxy_rotation
+            >>> rotate_galaxy = get_galaxy_rotation(config)
+            >>> rubixdata = rotate_galaxy(rubixdata)
     """
 
     # Check if rotation information is provided under galaxy config
@@ -42,8 +48,9 @@ def get_galaxy_rotation(config: dict):
     logger = get_logger()
     # Check if type is provided
     if "type" in config["galaxy"]["rotation"]:
+        valid_rotation_types = ("face-on", "edge-on", "matrix")
         # Check if type is valid: face-on or edge-on
-        if config["galaxy"]["rotation"]["type"] not in ["face-on", "edge-on", "matrix"]:
+        if config["galaxy"]["rotation"]["type"] not in valid_rotation_types:
             raise ValueError("Invalid type provided in rotation information")
 
         # if type is face on, alpha = beta = gamma = 0
@@ -75,17 +82,17 @@ def get_galaxy_rotation(config: dict):
 
     @jaxtyped(typechecker=typechecker)
     def rotate_galaxy(rubixdata: RubixData) -> RubixData:
-        logger.info(f"Rotating galaxy with alpha={alpha}, beta={beta}, gamma={gamma}")
-        """
-        Rotates the galaxy particle data based on the specified rotation angles.
+        """Rotate the galaxy particle data based on the specified angles.
 
         Args:
-            rubixdata (RubixData): The RubixData object containing particle data.
+            rubixdata (RubixData): The RubixData object containing
+                particle data.
 
         Returns:
             RubixData: The rotated RubixData object.
         """
-        logger.info("Rotating galaxy for simulation: " + config["simulation"]["name"])
+        logger.info(f"Rotating galaxy with alpha={alpha}, beta={beta}, gamma={gamma}.")
+        logger.info(f"Rotating galaxy for simulation: {config['simulation']['name']}.")
         # Rotate gas
         if "gas" in config["data"]["args"]["particle_type"]:
             logger.info("Rotating gas")

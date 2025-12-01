@@ -2,7 +2,7 @@ import os
 from dataclasses import dataclass, fields
 from typing import List, Tuple, Union
 
-import equinox as eqx
+# import equinox as eqx
 import h5py
 import jax.numpy as jnp
 import requests
@@ -17,6 +17,12 @@ from rubix import config as rubix_config
 from rubix.logger import get_logger
 
 SSP_UNITS = rubix_config["ssp"]["units"]
+AGE_AXIS = "age_bins"
+METALLICITY_AXIS = "metallicity_bins"
+WAVELENGTH_AXIS = "wavelength_bins"
+FLUX_AXES = "metallicity_bins age_bins wavelength_bins"
+SSP_CUBE_AXES = "num_spaxels num_spaxels n_wave_bins"
+ExtrapValue = Union[int, float, bool, Tuple[float, float]]
 
 
 @dataclass
@@ -25,11 +31,12 @@ class SSPGrid:
     Base class for all SSP models.
     """
 
-    age: Float[Array, " age_bins"]
-    metallicity: Float[Array, " metallicity_bins"]
-    wavelength: Float[Array, " wavelength_bins"]
-    flux: Float[Array, "metallicity_bins age_bins wavelength_bins"]
-    # This does not work with jax.jit, gives error that str is not valid Jax type
+    age: Float[Array, AGE_AXIS]
+    metallicity: Float[Array, METALLICITY_AXIS]
+    wavelength: Float[Array, WAVELENGTH_AXIS]
+    flux: Float[Array, FLUX_AXES]
+    # This line below does not work with jax.jit,
+    # gives error that str is not a valid JAX type.
     # units: Dict[str, str] = eqx.field(default_factory=dict)
 
     def __init__(self, age, metallicity, wavelength, flux, _logger=None):
@@ -41,17 +48,7 @@ class SSPGrid:
 
     @jaxtyped(typechecker=typechecker)
     def keys(self) -> List[str]:
-        """
-        Returns the keys of the dataclass.
-
-        Parameters
-        ----------
-        Args:
-            None
-
-        Returns:
-            List of keys of the dataclass.
-        """
+        """Return the dataclass field names in declaration order."""
         return [f.name for f in fields(self)]
 
     def __iter__(self):
@@ -59,54 +56,54 @@ class SSPGrid:
 
     @jaxtyped(typechecker=typechecker)
     def get_lookup_interpolation(
-        self, method: str = "cubic", extrap: int = 0
+        self,
+        method: str = "cubic",
+        extrap: ExtrapValue = 0,
     ) -> Partial:
-        """
-        Returns a 2D interpolation function for the SSP grid.
+        """Return a 2D interpolation function for the SSP grid.
 
-        The function can be called with metallicity and age as arguments to get the flux at that metallicity and age.
+        The function can be called with metallicity and age arguments to
+        get the flux at that metallicity and age.
 
-        Parameters
-        ----------
-        method : str
-            The method to use for interpolation. Default is "cubic".
-        extrap: float, bool or tuple
-            The value to return for points outside the interpolation domain. Default is 0.
-            See https://interpax.readthedocs.io/en/latest/_api/interpax.Interpolator2D.html#interpax.Interpolator2D
+        Args:
+            method (str): Interpolation kernel passed to :func:`interp2d`.
+                Defaults to ``"cubic"``.
+            extrap (ExtrapValue): Value returned for points outside the
+                interpolation domain. Defaults to ``0``. Refer to the
+                :class:`interpax.Interpolator2D` documentation for details
+                (https://interpax.readthedocs.io/en/latest/_api/interpax.Interpolator2D.html#interpax.Interpolator2D).
 
         Returns:
-            The 2D interpolation function `Interp2D`.
+            Partial: Interpolation function ``f(metallicity, age)``.
 
-        Example 1
-        ----------
-        >>> grid = SSPGrid(...)
-        >>> lookup = grid.get_lookup_interpolation()
-        >>> metallicity = 0.02
-        >>> age = 1e9
-        >>> flux = lookup(metallicity, age)
+        Examples:
+            ::
+                >>> grid = SSPGrid(...)
+                >>> lookup = grid.get_lookup_interpolation()
+                >>> metallicity = 0.02
+                >>> age = 1e9
+                >>> flux = lookup(metallicity, age)
 
-        Example 2
-        ----------
-        >>> import matplotlib.pyplot as plt
-        >>> from rubix.spectra.ssp.templates import BruzualCharlot2003
-        >>> from jax import jit
-
-        >>> ssp = BruzualCharlot2003
-        >>> wave = ssp.wavelength
-
-        >>> age_index = 0
-        >>> met_index = 3
-        >>> target_age = ssp.age[age_index] + 0.5*(ssp.age[age_index+1] - ssp.age[age_index])
-        >>> target_met = ssp.metallicity[met_index] + 0.5*(ssp.metallicity[met_index+1] - ssp.metallicity[met_index])
-
-        >>> lookup = ssp.get_lookup_interpolation()
-        >>> spec_calc = lookup(target_met, target_age)
-        >>> spec_true = ssp.flux[met_index, age_index, :]
-
-        >>> plt.plot(wave, spec_calc, label='calc')
-        >>> plt.plot(wave, spec_true, label='true')
-        >>> plt.legend()
-        >>> plt.yscale('log')
+                >>> import matplotlib.pyplot as plt
+                >>> from rubix.spectra.ssp.templates import BruzualCharlot2003
+                >>> ssp = BruzualCharlot2003
+                >>> wave = ssp.wavelength
+                >>> age_index = 0
+                >>> met_index = 3
+                >>> delta_age = ssp.age[age_index + 1] - ssp.age[age_index]
+                >>> target_age = ssp.age[age_index] + 0.5 * delta_age
+                >>> delta_met = (
+                ...     ssp.metallicity[met_index + 1]
+                ...     - ssp.metallicity[met_index]
+                ... )
+                >>> target_met = ssp.metallicity[met_index] + 0.5 * delta_met
+                >>> lookup = ssp.get_lookup_interpolation()
+                >>> spec_calc = lookup(target_met, target_age)
+                >>> spec_true = ssp.flux[met_index, age_index, :]
+                >>> plt.plot(wave, spec_calc, label="calc")
+                >>> plt.plot(wave, spec_true, label="true")
+                >>> plt.legend()
+                >>> plt.yscale("log")
         """
 
         # Bind the SSP grid to the interpolation function
@@ -130,18 +127,16 @@ class SSPGrid:
         from_units: str,
         to_units: str,
     ) -> Float[Array, "..."]:
-        """
-        Convert the units of the data from `from_units` to `to_units`.
+        """Convert ``data`` from ``from_units`` to ``to_units``.
 
-        Parameters
-        ----------
         Args:
-            data (array-like): The data to convert.
-            from_units (str): The units of the data.
-            to_units (str): The units to convert to.
+            data (Union[Float[Array, "..."], Int[Array, "..."]]): Values to
+                convert.
+            from_units (str): Original unit string understood by Astropy.
+            to_units (str): Target unit string.
 
         Returns:
-            The data converted to the new units.
+            Float[Array, "..."]: Converted data.
         """
         quantity = u.Quantity(data, from_units)
         return jnp.array(quantity.to(to_units).value, dtype=jnp.float32)
@@ -153,67 +148,65 @@ class SSPGrid:
         Check if the SSP template exists on disk, if not download it
         from the given URL in the configuration dictionary.
 
-        Parameters
-        ----------
-        config : dict
-            Configuration dictionary.
-
-        file_location : str
-            Location to save the template file.
+        Args:
+            config (dict): Configuration dictionary.
+            file_location (str): Location to save the template file.
 
         Returns:
             The path to the file as str.
+
+        Raises:
+            FileNotFoundError: If the template file cannot be found or downloaded.
         """
 
         _logger = get_logger()
         file_path = os.path.join(file_location, config["file_name"])
         source = config["source"]
-        if not config["source"].endswith("/"):
+        if not source.endswith("/"):
             source += "/"
+        file_url = f"{source}{config['file_name']}"
+        download_error = (
+            f"Could not download file {config['file_name']} from url {source}."
+        )
 
-        if not os.path.exists(file_path):
-            _logger.info(
-                f'[SSPModels] File {file_path} not found. Downloading it from {config["source"]}'
+        if os.path.exists(file_path):
+            return file_path
+
+        _logger.info(
+            f"[SSPModels] File {file_path} not found. "
+            f"Downloading from {config['source']}"
+        )
+
+        try:
+            response = requests.get(file_url)
+        except requests.exceptions.SSLError as ssl_error:
+            _logger.warning(f"[SSPModels] SSL error: {ssl_error}")
+            _logger.warning(
+                f"[SSPModels] Retrying {config['file_name']} download "
+                f"without SSL verification",
             )
             try:
-                response = requests.get(source + config["file_name"])
-            except requests.exceptions.SSLError as SSLerr:
-                _logger.warning(f"[SSPModels] Error: {SSLerr}")
-                _logger.warning(
-                    f"[SSPModels] Trying to download file {config['file_name']} from url {source} without SSL verification."
-                )
-                try:
-                    response = requests.get(source + config["file_name"], verify=False)
-                except requests.exceptions.RequestException as err:
-                    _logger.error(f"[SSPModels] Error: {err}")
-                    # except requests.exceptions.HTTPError as errh:
-                    #    print("Http Error:",errh)
-                    raise FileNotFoundError(
-                        f"Could not download file {config['file_name']} from url {source}."
-                    )
-            except requests.exceptions.RequestException as err:
-                _logger.error(f"[SSPModels] Error: {err}")
-                # except requests.exceptions.HTTPError as errh:
-                #    print("Http Error:",errh)
-                raise FileNotFoundError(
-                    f"Could not download file {config['file_name']} from url {source}."
-                )
+                response = requests.get(file_url, verify=False)
+            except requests.exceptions.RequestException as exc:
+                _logger.error(f"[SSPModels] Request error: {exc}")
+                raise FileNotFoundError(download_error) from exc
+        except requests.exceptions.RequestException as exc:
+            _logger.error(f"[SSPModels] Request error: {exc}")
+            raise FileNotFoundError(download_error) from exc
 
+        try:
             response.raise_for_status()
+        except requests.exceptions.HTTPError as exc:
+            raise FileNotFoundError(download_error) from exc
+        if response.status_code != 200:
+            raise FileNotFoundError(download_error)
 
-            if response.status_code == 200:
-                with open(file_path, "wb") as f:
-                    f.write(response.content)
-                    _logger.info(
-                        f'[SSPModels] File {config["file_name"]} downloaded successfully!'
-                    )
-                return file_path
-            else:
-                raise FileNotFoundError(
-                    f"Could not download file {config['file_name']} from url {source}."
-                )
-        else:
-            return file_path
+        with open(file_path, "wb") as file_handle:
+            file_handle.write(response.content)
+            _logger.info(
+                f"[SSPModels] File {config['file_name']} " f"downloaded successfully"
+            )
+        return file_path
 
     @jaxtyped(typechecker=typechecker)
     @classmethod
@@ -221,8 +214,7 @@ class SSPGrid:
         """
         Template function to load a SSP grid from a file.
 
-        Parameters
-        ----------
+        Args:
             config (dict): Configuration dictionary.
             file_location (str): Location of the file.
 
@@ -232,7 +224,8 @@ class SSPGrid:
 
         # Initialize an empty zero length array for each field
         # in the SSP configuration.
-        # Actual loading of templates needs to be implemented in the subclasses.
+        # Actual loading of templates needs to be implemented in the
+        # subclasses.
 
         ssp_data = {}
         for field_name, field_info in config["fields"].items():
@@ -246,57 +239,70 @@ class SSPGrid:
 class HDF5SSPGrid(SSPGrid):
     """
     Class for SSP models stored in HDF5 format.
-    Mainly used for custom collection of Bruzual & Charlot 2003 models and MILES models.
+    Useful for custom collections of Bruzual & Charlot (2003) and MILES models.
 
-    Example
-    -------
-    >>> config = {
-    ...     "name": "Bruzual & Charlot (2003)",
-    ...     "format": "HDF5",
-    ...     "source": "https://www.bruzual.org/bc03/",
-    ...     "file_name": "BC03lr.h5",
-    ...     "fields": {
-    ...         "age": {
-    ...             "name": "age",
-    ...             "units": "Gyr",
-    ...             "in_log": False
-    ...         },
-    ...         "metallicity": {
-    ...             "name": "metallicity",
-    ...             "units": "",
-    ...             "in_log": False
-    ...         },
-    ...         "wavelength": {
-    ...             "name": "wavelength",
-    ...             "units": "Angstrom",
-    ...             "in_log": False
-    ...         },
-    ...         "flux": {
-    ...             "name": "flux",
-    ...             "units": "Lsun/Angstrom",
-    ...             "in_log": False
-    ...         }
-    ...     }
-    ... }
+    Attributes:
+        age (Float[Array, AGE_AXIS]): SSP ages in Gyr.
+        metallicity (Float[Array, METALLICITY_AXIS]): SSP metallicities.
+        wavelength (Float[Array, WAVELENGTH_AXIS]):
+            Wavelength grid in Angstrom.
+        flux (Float[Array, FLUX_AXES]): SSP fluxes in Lsun/Angstrom.
 
-    >>> from rubix.spectra.ssp.grid import HDF5SSPGrid
-    >>> ssp = HDF5SSPGrid.from_file(config, file_location="../rubix/spectra/ssp/templates")
+    Args:
+        age (Float[Array, AGE_AXIS]): SSP ages in Gyr.
+        metallicity (Float[Array, METALLICITY_AXIS]): SSP metallicities.
+        wavelength (Float[Array, WAVELENGTH_AXIS]):
+            Wavelength grid in Angstrom.
+        flux (Float[Array, FLUX_AXES]): SSP fluxes in Lsun/Angstrom.
 
-    >>> ssp.age.shape
-    >>> ssp.metallicity.shape
-    >>> ssp.wavelength.shape
-    >>> ssp.flux.shape
+    Example:
+        ::
+
+            >>> config = {
+            ...     "name": "Bruzual & Charlot (2003)",
+            ...     "format": "HDF5",
+            ...     "source": "https://www.bruzual.org/bc03/",
+            ...     "file_name": "BC03lr.h5",
+            ...     "fields": {
+            ...         "age": {"name": "age", "units": "Gyr",
+            ...                  "in_log": False},
+            ...         "metallicity": {"name": "metallicity", "units": "",
+            ...                          "in_log": False},
+            ...         "wavelength": {"name": "wavelength",
+            ...                        "units": "Angstrom", "in_log": False},
+            ...         "flux": {"name": "flux", "units": "Lsun/Angstrom",
+            ...                   "in_log": False}
+            ...     }
+            ... }
+            >>> from rubix.spectra.ssp.grid import HDF5SSPGrid
+            >>> ssp = HDF5SSPGrid.from_file(
+            ...     config, file_location="../rubix/spectra/ssp/templates"
+            ... )
+
+            >>> ssp.age.shape
+            >>> ssp.metallicity.shape
+            >>> ssp.wavelength.shape
+            >>> ssp.flux.shape
     """
 
-    # Do we need this again or is this taken care of by inheriting from SSPGrid?
-    age: Float[Array, " age_bins"]
-    metallicity: Float[Array, " metallicity_bins"]
-    wavelength: Float[Array, " wavelength_bins"]
-    flux: Float[Array, "metallicity_bins age_bins wavelength_bins"]
-    # This does not work with jax.jit, gives error that str is not valid Jax type
+    # Do we need this again or is this handled by inheriting from SSPGrid?
+    age: Float[Array, AGE_AXIS]
+    metallicity: Float[Array, METALLICITY_AXIS]
+    wavelength: Float[Array, WAVELENGTH_AXIS]
+    flux: Float[Array, FLUX_AXES]
+    # This line below does not work with jax.jit,
+    # gives error that str is not a valid JAX type
     # units: Dict[str, str] = eqx.field(default_factory=dict)
 
-    def __init__(self, age, metallicity, wavelength, flux):
+    def __init__(
+        self,
+        age: Float[Array, AGE_AXIS],
+        metallicity: Float[Array, METALLICITY_AXIS],
+        wavelength: Float[Array, WAVELENGTH_AXIS],
+        flux: Float[Array, FLUX_AXES],
+    ):
+        # Initialization for HDF5-backed SSP grid. See class docstring for
+        # attribute descriptions.
         super().__init__(age, metallicity, wavelength, flux)
 
     @jaxtyped(typechecker=typechecker)
@@ -305,15 +311,16 @@ class HDF5SSPGrid(SSPGrid):
         """
         Load a SSP grid from a HDF5 file.
 
-        Parameters
-        ----------
+        Args:
             config (dict): Configuration dictionary.
             file_location (str): Location of the file.
 
         Returns:
-            The SSP grid `SSPGrid` in the correct units.
-        """
+            SSPGrid: The SSP grid in the correct units.
 
+        Raises:
+            ValueError: If the configured file format is not HDF5.
+        """
         if config.get("format", "").lower() not in ["hdf5", "fsps"]:
             raise ValueError("Configured file format is not HDF5.")
 
@@ -323,7 +330,8 @@ class HDF5SSPGrid(SSPGrid):
         with h5py.File(file_path, "r") as f:
             for field_name, field_info in config["fields"].items():
                 data = f[field_info["name"]][:]  # type: ignore
-                data = jnp.power(10, data) if field_info["in_log"] else data  # type: ignore
+                if field_info["in_log"]:  # type: ignore[truthy-function]
+                    data = jnp.power(10, data)  # type: ignore[arg-type]
                 data = jnp.array(data, dtype=jnp.float32)
                 data = cls.convert_units(
                     data, field_info["units"], SSP_UNITS[field_name]
@@ -340,74 +348,93 @@ class pyPipe3DSSPGrid(SSPGrid):
     Class for all SSP models supported by the pyPipe3D project.
     See http://ifs.astroscu.unam.mx/pyPipe3D/templates/ for more information.
 
-    Example
-    -------
-    >>> config = {
-    ...     "name": "Mastar Charlot & Bruzual (2019)",
-    ...     "format": "pyPipe3D",
-    ...     "source": "https://ifs.astroscu.unam.mx/pyPipe3D/templates/",
-    ...     "file_name": "MaStar_CB19.slog_1_5.fits.gz",
-    ...     "fields": {
-    ...         "age": {
-    ...             "name": "age",
-    ...             "units": "Gyr",
-    ...             "in_log": False
-    ...         },
-    ...         "metallicity": {
-    ...             "name": "metallicity",
-    ...             "units": "",
-    ...             "in_log": False
-    ...         },
-    ...         "wavelength": {
-    ...             "name": "wavelength",
-    ...             "units": "Angstrom",
-    ...             "in_log": False
-    ...         },
-    ...         "flux": {
-    ...             "name": "flux",
-    ...             "units": "Lsun/Angstrom",
-    ...             "in_log": False
-    ...         }
-    ...     }
-    ... }
+    Attributes:
+        age (Float[Array, AGE_AXIS]): SSP ages in Gyr.
+        metallicity (Float[Array, METALLICITY_AXIS]): SSP metallicities.
+        wavelength (Float[Array, WAVELENGTH_AXIS]):
+            Wavelength grid in Angstrom.
+        flux (Float[Array, FLUX_AXES]): SSP fluxes in Lsun/Angstrom.
 
-    >>> from rubix.spectra.ssp.grid import pyPipe3DSSPGrid
-    >>> ssp = pyPipe3DSSPGrid.from_file(config, file_location="../rubix/spectra/ssp/templates")
+    Args:
+        age (Float[Array, AGE_AXIS]): SSP ages in Gyr.
+        metallicity (Float[Array, METALLICITY_AXIS]): SSP metallicities.
+        wavelength (Float[Array, WAVELENGTH_AXIS]):
+            Wavelength grid in Angstrom.
+        flux (Float[Array, FLUX_AXES]): SSP fluxes in Lsun/Angstrom.
+
+    Example:
+        ::
+
+            >>> config = {
+            ...     "name": "Mastar Charlot & Bruzual (2019)",
+            ...     "format": "pyPipe3D",
+            ...     "source":
+            ...         "https://ifs.astroscu.unam.mx/pyPipe3D/templates/",
+            ...     "file_name": "MaStar_CB19.slog_1_5.fits.gz",
+            ...     "fields": {
+            ...         "age": {"name": "age", "units": "Gyr",
+            ...                  "in_log": False},
+            ...         "metallicity": {"name": "metallicity", "units": "",
+            ...                          "in_log": False},
+            ...         "wavelength": {"name": "wavelength",
+            ...                        "units": "Angstrom", "in_log": False},
+            ...         "flux": {"name": "flux", "units": "Lsun/Angstrom",
+            ...                   "in_log": False}
+            ...     }
+            ... }
+
+            >>> from rubix.spectra.ssp.grid import pyPipe3DSSPGrid
+            >>> ssp = pyPipe3DSSPGrid.from_file(
+            ...     config, file_location="../rubix/spectra/ssp/templates"
+            ... )
     """
 
-    age: Float[Array, " age_bins"]
-    metallicity: Float[Array, " metallicity_bins"]
-    wavelength: Float[Array, " wavelength_bins"]
-    flux: Float[Array, "metallicity_bins age_bins wavelength_bins"]
-    # This does not work with jax.jit, gives error that str is not valid Jax type
+    age: Float[Array, AGE_AXIS]
+    metallicity: Float[Array, METALLICITY_AXIS]
+    wavelength: Float[Array, WAVELENGTH_AXIS]
+    flux: Float[Array, FLUX_AXES]
+    # This line below does not work with jax.jit,
+    # gives error that str is not a valid JAX type
     # units: Dict[str, str] = eqx.field(default_factory=dict)
 
-    def __init__(self, age, metallicity, wavelength, flux):
+    def __init__(
+        self,
+        age: Float[Array, AGE_AXIS],
+        metallicity: Float[Array, METALLICITY_AXIS],
+        wavelength: Float[Array, WAVELENGTH_AXIS],
+        flux: Float[Array, FLUX_AXES],
+    ):
+        # Initialization for pyPipe3D-backed SSP grid. See class docstring
+        # for attribute descriptions.
         super().__init__(age, metallicity, wavelength, flux)
 
     @jaxtyped(typechecker=typechecker)
     @staticmethod
-    def get_wavelength_from_header(header, wave_axis=None) -> Array:
-        """
-        Generates a wavelength array using `header`, a :class:`astropy.io.fits.header.Header`
-        instance, at axis `wave_axis`.
+    def get_wavelength_from_header(
+        header: Union[fits.Header, dict], wave_axis: int | None = None
+    ) -> Array:
+        """Generate a wavelength array using ``header`` (an
+        :class:`astropy.io.fits.header.Header` instance) at axis ``wave_axis``.
 
-        wavelengths = CRVAL + CDELT*([0, 1, ..., NAXIS] + 1 - CRPIX)
+        The calculation follows::
 
-        adapted from https://github.com/reginasar/TNG_MaNGA_mocks/blob/3229dd47b441aef380ef7dbfdf110f39e5c5a77c/sin_ifu_clean.py#L1466
+            wavelengths = CRVAL + CDELT * ([0, 1, ..., NAXIS] + 1 - CRPIX)
 
-        Parameters
-        ----------
-        header : :class:`astropy.io.fits.header.Header`
-            FITS header with spectral data.
-
-        wave_axis : int, optional
-            The axis where the wavelength information is stored in `header`,
-            (CRVAL, CDELT, NAXIS, CRPIX).
-            Defaults to 1.
+        Args:
+            header (Union[fits.Header, dict]): FITS header (or dict-like)
+                with spectral data.
+            wave_axis (int | None, optional): Axis storing the wavelength
+                metadata (CRVAL, CDELT, NAXIS, CRPIX). If ``None`` the
+                function will default to axis 1.
 
         Returns:
-            Wavelengths array: wavelengths = CRVAL + CDELT*([0, 1, ..., NAXIS] + 1 - CRPIX)
+            Array: ``CRVAL + CDELT * ([0, 1, ..., NAXIS] + 1 - CRPIX)``.
+
+        Notes:
+            Adapted from the ``TNG_MaNGA_mocks`` ``sin_ifu_clean.py`` script.
+            See https://github.com/reginasar/TNG_MaNGA_mocks/
+            blob/3229dd47b441aef380ef7dbfdf110f39e5c5a77c/sin_ifu_clean.py#L1466
+
         """
         if wave_axis is None:
             wave_axis = 1
@@ -422,7 +449,8 @@ class pyPipe3DSSPGrid(SSPGrid):
         return crval + cdelt * (jnp.arange(naxis) + 1 - crpix)
 
     # @staticmethod
-    # def get_normalization_wavelength(header, wavelength, flux_models, n_models):
+    # def get_normalization_wavelength(header, wavelength, flux_models,
+    #                                  n_models):
     #    """
     #    Search for the normalization wavelength at the FITS header.
     #    If the key WAVENORM does not exists in the header, sweeps all the
@@ -432,7 +460,8 @@ class pyPipe3DSSPGrid(SSPGrid):
     #    TODO: defines a better normalization wavelength if it's not present
     #    in the header.
     #
-    #    adapted from https://github.com/reginasar/TNG_MaNGA_mocks/blob/3229dd47b441aef380ef7dbfdf110f39e5c5a77c/sin_ifu_clean.py#L1466
+    #    Adapted from https://github.com/reginasar/TNG_MaNGA_mocks/
+    #    blob/3229dd47b441aef380ef7dbfdf110f39e5c5a77c/sin_ifu_clean.py#L1466
     #
     #    Parameters
     #    ----------
@@ -454,39 +483,37 @@ class pyPipe3DSSPGrid(SSPGrid):
     #        wave_norm = header['WAVENORM']
     #    except Exception as ex:
     #        _closer = 1e-6
-    #        probable_wavenorms = jnp.hstack([wavelength[(jnp.abs(flux_models[i] - 1) < _closer)]
+    #        probable_wavenorms = jnp.hstack([
+    #            wavelength[(jnp.abs(flux_models[i] - 1) < _closer)]
     #                                    for i in range(n_models)])
     #        wave_norm = jnp.median(probable_wavenorms)
     #        print(f'[SSPModels] {ex}')
-    #        print(f'[SSPModels] setting normalization wavelength to {wave_norm} A')
+    #        print(f'[SSPModels] setting normalization wavelength to "
+    #              {wave_norm} A')
     #    return wave_norm
 
     @jaxtyped(typechecker=typechecker)
     @staticmethod
     def get_tZ_models(
-        header, n_models: int
+        header: Union[fits.Header, dict], n_models: int
     ) -> Tuple[Float[Array, "..."], Float[Array, "..."], Float[Array, "..."]]:
-        """
-        Reads the values of age, metallicity and mass-to-light at the
-        normalization flux from the SSP models FITS file.
+        """Read age, metallicity, and mass-to-light ratio at the
+        normalization flux from a FITS file.
 
-        adapted from https://github.com/reginasar/TNG_MaNGA_mocks/blob/3229dd47b441aef380ef7dbfdf110f39e5c5a77c/sin_ifu_clean.py#L1466
-
-        Parameters
-        ----------
-        header : :class:`astropy.io.fits.header.Header`
-            FITS header with spectral data.
-        n_models : int, number of models in the SSP grid.
+        Args:
+            header (Union[fits.Header, dict]): FITS header (or dict-like)
+                with spectral data.
+            n_models (int): Number of models in the SSP grid.
 
         Returns:
-        array like
-            Ages, in Gyr, in the sequence as they appear in FITS data.
+            Tuple[Array, Array, Array]: Unique ages (Gyr), metallicities, and
+            mass-to-light ratios at the normalization wavelength.
 
-        array like
-            Metallicities in the sequence as they appear in FITS data.
+        Notes:
+            Adapted from the ``TNG_MaNGA_mocks`` ``sin_ifu_clean.py`` script.
+            See https://github.com/reginasar/TNG_MaNGA_mocks/
+            blob/3229dd47b441aef380ef7dbfdf110f39e5c5a77c/sin_ifu_clean.py#L1466
 
-        array like
-            Mass-to-light value at the normalization wavelength.
         """
         ages = jnp.zeros(n_models, dtype=jnp.float32)
         Zs = jnp.zeros(n_models, dtype=jnp.float32)
@@ -519,13 +546,15 @@ class pyPipe3DSSPGrid(SSPGrid):
         """
         Load a SSP grid from a fits file in pyPipe3D format.
 
-        Parameters
-        ----------
+        Args:
             config (dict): Configuration dictionary.
             file_location (str): Location of the file.
 
         Returns:
-            The SSP grid SSPGrid in the correct units.
+            SSPGrid: The SSP grid in the correct units.
+
+        Raises:
+            ValueError: If the configured file format is not pyPipe3D.
         """
         if config.get("format", "").lower() != "pypipe3d":
             raise ValueError("Configured file format is not fits.")
@@ -537,21 +566,24 @@ class pyPipe3DSSPGrid(SSPGrid):
             _header = f[0].header
             # n_wave = _header['NAXIS1']
             n_models = _header["NAXIS2"]
-            # pyPIPE3D uses the key WAVENORM to store the normalization wavelength
-            # not sure what this is actually used for in the end.
-            # Here we enable reading it, but we should make sure we understand what it is used for.
-            # normalization_wavelength = get_normalization_wavelength(_header, wavelength, flux_models, n_models)
+            # pyPIPE3D uses the key WAVENORM to store the
+            # normalization wavelength. It is not clear what this is
+            # used for in the end, but we enable reading it here.
+            # normalization_wavelength = (
+            #     get_normalization_wavelength(
+            #         _header, wavelength, flux_models, n_models
+            #     )
+            # )
             ages, metallicities, m2l = cls.get_tZ_models(_header, n_models)
             wavelength = cls.get_wavelength_from_header(_header)
 
-            # read in the flux of the models and multiply by the mass-to-light ratio to get the flux in Lsun/Msun
-            # see also eq. A1 here https://arxiv.org/pdf/1811.04856.pdf
-            template_flux = jnp.array(f[0].data, dtype=jnp.float32) / m2l[:, None]
-            # reshape and bring into the correct order of metallcity, age, wavelength
-            # to conform with the SSPGrid dataclass
-            flux_models = template_flux.reshape(
-                len(metallicities), len(ages), len(wavelength)
-            )
+            # Read in the flux of the models and multiply by the
+            # mass-to-light ratio to get the flux in Lsun/Msun.
+            # See also eq. A1 here: https://arxiv.org/pdf/1811.04856.pdf
+            _tmp = jnp.array(f[0].data, dtype=jnp.float32)
+            template_flux = _tmp / m2l[:, None]
+            # Reshape to match the (metallicity, age, wavelength) ordering
+            # expected by the ``SSPGrid`` dataclass.
 
             flux_models = template_flux.reshape(
                 len(metallicities), len(ages), len(wavelength)
@@ -569,7 +601,8 @@ class pyPipe3DSSPGrid(SSPGrid):
                 else:
                     raise ValueError(f"Field {field_name} not recognized")
 
-                data = jnp.power(10, data) if field_info["in_log"] else data  # type: ignore
+                if field_info["in_log"]:  # type: ignore[truthy-function]
+                    data = jnp.power(10, data)  # type: ignore[arg-type]
                 data = cls.convert_units(
                     data, field_info["units"], SSP_UNITS[field_name]
                 )
@@ -580,6 +613,7 @@ class pyPipe3DSSPGrid(SSPGrid):
         return grid
 
 
-# TODO: build another class that handles eMILES, sMILES templates that are also used by the GECKOS survey.
-# those will also have alpha enhancement and not only metallicity dependence. might need some changes to the
-# interpolation function further down the pipeline...
+# TODO: build another class that handles eMILES/sMILES templates used by
+# the GECKOS survey. Those models also include alpha enhancement rather
+# than pure metallicity dependence, which might require updates to the
+# downstream interpolation logic.

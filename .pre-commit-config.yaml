@@ -1,7 +1,7 @@
 
 repos:
   - repo: https://github.com/kynan/nbstripout
-    rev: 0.8.1
+    rev: 0.8.2
     hooks:
     - id: nbstripout
       files: ".ipynb"
@@ -11,8 +11,10 @@ repos:
     -   id: check-yaml
     -   id: end-of-file-fixer
     -   id: trailing-whitespace
+    -   id: check-merge-conflict # Check for files that contain merge conflict strings.
+    -   id: check-added-large-files # Prevent large files from being added to the repository.
   - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 25.9.0
+    rev: 25.11.0
     hooks:
     - id: black
   - repo: https://github.com/pycqa/isort
@@ -20,3 +22,8 @@ repos:
     hooks:
       - id: isort
         name: isort (python)
+  - repo: https://github.com/jsh9/pydoclint
+    rev: 0.8.3
+    hooks:
+    - id: pydoclint
+      args: [--style=google, --check-return-types=False]

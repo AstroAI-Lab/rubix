@@ -1,5 +1,6 @@
 import logging
 import os
+from typing import Optional
 
 import astropy.units as u
 import numpy as np
@@ -14,17 +15,29 @@ from .base import BaseHandler
 
 
 class PynbodyHandler(BaseHandler):
+    """
+    Handler implementation that loads a galaxy using the pynbody library.
+
+    Args:
+        path (str): Path to the snapshot file.
+        halo_path (Optional[str]): Optional halo file path.
+        rotation_path (str): Path to store rotation matrix.
+        logger (Optional[logging.Logger]): Optional logger instance.
+        config (Optional[dict]): Optional configuration dict.
+        dist_z (Optional[float]): Optional redshift override.
+        halo_id (Optional[int]): Optional halo identifier.
+    """
+
     def __init__(
         self,
-        path,
-        halo_path=None,
-        rotation_path="./data",
-        logger=None,
-        config=None,
-        dist_z=None,
-        halo_id=None,
+        path: str,
+        halo_path: Optional[str] = None,
+        rotation_path: str = "./data",
+        logger: Optional[logging.Logger] = None,
+        config: Optional[dict] = None,
+        dist_z: Optional[float] = None,
+        halo_id: Optional[int] = None,
     ):
-        """Initialize handler with paths to snapshot and halo files."""
         self.metallicity_unit = Zsun
         self.path = path
         self.halo_path = halo_path
