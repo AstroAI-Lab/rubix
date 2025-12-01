@@ -12,8 +12,8 @@ sys.path.insert(0, os.path.abspath("../"))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "rubix"
-copyright = "2025, AstroAI Lab"
-author = "Anna Lena Schaible, Ufuk Çakır, Tobias Buck"
+copyright = "2024, Ufuk, Tobias, Anna Lena"
+author = "Ufuk, Tobias, Anna Lena"
 release = "0.1"
 
 # -- General configuration ---------------------------------------------------
@@ -25,16 +25,13 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
 ]
-
-nb_execution_mode = "off"
-
 source_suffix = {
     ".rst": "restructuredtext",
     ".ipynb": "myst-nb",
     ".myst": "myst-nb",
 }
 
-# nb_execution_mode = "off"
+nb_execution_mode = "off"
 
 templates_path = ["_templates"]
 exclude_patterns = []
@@ -46,7 +43,7 @@ exclude_patterns = []
 html_theme = "sphinx_book_theme"
 # Optional: You can add theme options to customize your documentation
 html_theme_options = {
-    "repository_url": "https://github.com/ufuk-cakir/rubix",
+    "repository_url": "https://github.com/AstroAI-Lab/rubix",
     "use_repository_button": True,
 }
 
