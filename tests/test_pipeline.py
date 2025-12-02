@@ -435,6 +435,73 @@ def test_pad_particles_extends_arrays():
     assert padded.stars.mass[-3:].sum() == 0
 
 
+def test_run_sharded_triggers_padding(simple_pipeline, monkeypatch):
+    pipeline, _ = simple_pipeline
+    data = _make_rubix_data(star_count=3, gas_count=1)
+
+    mock_pad = MagicMock(side_effect=lambda inp, pad: inp)
+    monkeypatch.setattr("rubix.core.pipeline._pad_particles", mock_pad)
+
+    monkeypatch.setattr(RubixPipeline, "_get_pipeline_functions", lambda self: [])
+
+    class DummyLinearPipeline:
+        def __init__(self, cfg, functions):
+            self.config = cfg
+
+        def assemble(self):
+            pass
+
+        def compile_expression(self):
+            class DummyOutput:
+                def __init__(self):
+                    self.stars = MagicMock(datacube=jnp.zeros((1, 1, 1)))
+
+            return lambda *_: DummyOutput()
+
+    monkeypatch.setattr(
+        "rubix.core.pipeline.pipeline.LinearTransformerPipeline",
+        DummyLinearPipeline,
+    )
+    monkeypatch.setattr(
+        "rubix.core.pipeline.Mesh",
+        lambda devices, axis_names: None,
+    )
+
+    class DummyNamedSharding:
+        def __init__(self, mesh, spec):
+            self.spec = spec
+
+    monkeypatch.setattr(
+        "rubix.core.pipeline.NamedSharding",
+        DummyNamedSharding,
+    )
+    monkeypatch.setattr(
+        "rubix.core.pipeline.P",
+        lambda *args, **kwargs: (args, kwargs),
+    )
+    monkeypatch.setattr(
+        "rubix.core.pipeline.jax.device_put",
+        lambda data, spec: data,
+    )
+    monkeypatch.setattr(
+        "rubix.core.pipeline.lax.psum",
+        lambda value, axis_name: value,
+    )
+    monkeypatch.setattr(
+        "rubix.core.pipeline.shard_map",
+        lambda func, mesh, in_specs, out_specs, check_rep: (
+            lambda inputdata: func(inputdata)
+        ),
+    )
+
+    result = pipeline.run_sharded(data, devices=[object(), object()])
+
+    assert mock_pad.call_count == 1
+    _, pad_arg = mock_pad.call_args[0]
+    assert pad_arg == 1
+    assert isinstance(result, jnp.ndarray)
+
+
 def test_gradient_calls_jax_grad(simple_pipeline, monkeypatch):
     pipeline, _ = simple_pipeline
     expected = MagicMock()

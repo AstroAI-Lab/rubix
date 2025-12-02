@@ -7,7 +7,7 @@ import jax.numpy as jnp
 import yaml
 from astropy.cosmology import Planck15 as cosmo
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from rubix.core.data import RubixData
 
 

@@ -34,8 +34,10 @@ class DummyCube:
         self.shape = (4, 3, 3)
         self.data = np.arange(np.prod(self.shape)).reshape(self.shape)
         self.wave = DummyWave()
+        self.slice_calls = []
 
     def __getitem__(self, key):
+        self.slice_calls.append(key)
         sliced = self.data[key]
         if sliced.ndim == 3:
             return DummyCubeSlice(sliced)
@@ -51,13 +53,45 @@ class DummyCubeSlice:
 
 
 def test_plot_cube_slice_and_spectrum(monkeypatch):
+    cube, interact_data, ax1, ax2, ax3 = _prepare_visualize_plot(monkeypatch)
+    plot_fn = interact_data["func"]
+    plot_fn(wave_index=1, wave_range=1, x=1, y=1, radius=1)
+
+    ax1.scatter.assert_called_once()
+    ax1.imshow.assert_called_once()
+    ax2.plot.assert_called()
+    ax3.plot.assert_called_once()
+    ax2.axvspan.assert_called_once()
+    ax2.set_xlabel.assert_called_once()
+    ax2.set_ylabel.assert_called_once()
+    ax2.grid.assert_called_once()
+    ax2.legend.assert_called_once()
+    ax3.set_ylabel.assert_called_once()
+    ax3.legend.assert_called_once()
+    ax2.set_ylim.assert_called_with(bottom=0)
+    ax3.set_ylim.assert_called_with(bottom=0)
+    ax3.vlines.assert_called_once()
+
+
+def test_plot_cube_slice_and_spectrum_clamps_start(monkeypatch):
+    cube, interact_data, _, _, _ = _prepare_visualize_plot(monkeypatch)
+    plot_fn = interact_data["func"]
+
+    plot_fn(wave_index=1, wave_range=2, x=1, y=1, radius=1)
+
+    assert cube.slice_calls
+    first_slice = cube.slice_calls[0]
+    assert isinstance(first_slice, tuple)
+    slice_axis = first_slice[0]
+    assert isinstance(slice_axis, slice)
+    assert slice_axis.start == 0
+
+
+def _prepare_visualize_plot(monkeypatch):
     cube = DummyCube()
     monkeypatch.setattr(visualisation, "Cube", lambda filename: cube)
 
-    sliders = []
-
     def fake_slider(**kwargs):
-        sliders.append(kwargs)
         return SimpleNamespace(description=kwargs.get("description", ""))
 
     monkeypatch.setattr(visualisation.widgets, "IntSlider", fake_slider)
@@ -85,23 +119,7 @@ def test_plot_cube_slice_and_spectrum(monkeypatch):
 
     visualisation.visualize_rubix("/tmp/cube.fits")
 
-    plot_fn = interact_data["func"]
-    plot_fn(wave_index=1, wave_range=1, x=1, y=1, radius=1)
-
-    ax1.scatter.assert_called_once()
-    ax1.imshow.assert_called_once()
-    ax2.plot.assert_called()
-    ax3.plot.assert_called_once()
-    ax2.axvspan.assert_called_once()
-    ax2.set_xlabel.assert_called_once()
-    ax2.set_ylabel.assert_called_once()
-    ax2.grid.assert_called_once()
-    ax2.legend.assert_called_once()
-    ax3.set_ylabel.assert_called_once()
-    ax3.legend.assert_called_once()
-    ax2.set_ylim.assert_called_with(bottom=0)
-    ax3.set_ylim.assert_called_with(bottom=0)
-    ax3.vlines.assert_called_once()
+    return cube, interact_data, ax1, ax2, ax3
 
 
 def _create_star_h5(tmp_path):

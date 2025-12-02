@@ -68,7 +68,7 @@ def test_age_at_z(z):
 @pytest.mark.parametrize("z", [0.1, 0.2, 0.5, 1.0, 2.0])
 def test_angular_scale(z):
     rubix_scale = rubix_cosmo.angular_scale(z)
-    # Compute the scale using Astropy's angular diameter distance in Mpc and converting to kpc/arcsec
+    # Use Astropy's angular diameter distance (Mpc) to get kpc/arcsec
     astropy_scale = (
         astropy_cosmo.angular_diameter_distance(z).value
         * (jnp.pi / (180 * 60 * 60))
