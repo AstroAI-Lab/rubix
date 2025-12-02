@@ -112,6 +112,46 @@
       ]
     },
     {
+      "login": "aobr",
+      "name": "Aura Obreja",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7265091?v=4",
+      "profile": "https://github.com/aobr",
+      "contributions": [
+        "question",
+        "review",
+        "tool"
+         ]
+    },
+    {
+      "login": "MaHaWo",
+      "name": "Harald Mack",
+      "avatar_url": "https://avatars.githubusercontent.com/u/39521902?v=4",
+      "profile": "https://github.com/MaHaWo",
+      "contributions": [
+        "code",
+        "doc",
+        "design",
+        "infra",
+        "question",
+        "review",
+        "tool",
+        "test",
+        "userTesting"
+      ]
+    },
+    {
+      "login": "nashmit",
+      "name": "Horea Caramizaru",
+      "avatar_url": "https://avatars.githubusercontent.com/u/5146294?v=4",
+      "profile": "https://horea.caramizaru.xyz",
+      "contributions": [
+        "code",
+        "design",
+        "infra",
+        "question"
+         ]
+    },
+    {
       "login": "william-h-oliver",
       "name": "Will",
       "avatar_url": "https://avatars.githubusercontent.com/u/144013301?v=4",
@@ -120,6 +160,6 @@
         "question",
         "userTesting"
       ]
-    }
+    },
   ]
 }
