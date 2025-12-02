@@ -1,6 +1,6 @@
 {
   "projectName": "rubix",
-  "projectOwner": "ufuk-cakir",
+  "projectOwner": "AstroAI-Lab",
   "files": [
     "README.md"
   ],
@@ -109,6 +109,18 @@
         "review",
         "test",
         "userTesting"
+      ]
+    },
+    {
+      "login": "nashmit",
+      "name": "Horea Caramizaru",
+      "avatar_url": "https://avatars.githubusercontent.com/u/5146294?v=4",
+      "profile": "https://horea.caramizaru.xyz",
+      "contributions": [
+        "code",
+        "design",
+        "infra",
+        "question"
       ]
     }
   ]
