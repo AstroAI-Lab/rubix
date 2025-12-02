@@ -151,5 +151,15 @@
         "question"
          ]
     },
+    {
+      "login": "william-h-oliver",
+      "name": "Will",
+      "avatar_url": "https://avatars.githubusercontent.com/u/144013301?v=4",
+      "profile": "https://github.com/william-h-oliver",
+      "contributions": [
+        "question",
+        "userTesting"
+      ]
+    },
   ]
 }
