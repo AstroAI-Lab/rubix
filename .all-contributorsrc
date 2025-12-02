@@ -1,6 +1,6 @@
 {
   "projectName": "rubix",
-  "projectOwner": "ufuk-cakir",
+  "projectOwner": "AstroAI-Lab",
   "files": [
     "README.md"
   ],
@@ -107,6 +107,23 @@
         "example",
         "research",
         "review",
+        "test",
+        "userTesting"
+      ]
+    },
+    {
+      "login": "MaHaWo",
+      "name": "Harald Mack",
+      "avatar_url": "https://avatars.githubusercontent.com/u/39521902?v=4",
+      "profile": "https://github.com/MaHaWo",
+      "contributions": [
+        "code",
+        "doc",
+        "design",
+        "infra",
+        "question",
+        "review",
+        "tool",
         "test",
         "userTesting"
       ]
