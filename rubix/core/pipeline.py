@@ -40,12 +40,14 @@ class RubixPipeline:
 
             >>> from rubix.core.pipeline import RubixPipeline
             >>> config = "path/to/config.yml"
+            >>> target_datacube = ...  # Load or define your target datacube here
             >>> pipe = RubixPipeline(config)
             >>> inputdata = pipe.prepare_data()
-            >>> output = pipe.run(inputdata)
             >>> final_datacube = pipe.run_sharded(inputdata)
-            >>> ssp_model = pipeline.ssp
-            >>> telescope = pipeline.telescope
+            >>> ssp_model = pipe.ssp
+            >>> telescope = pipe.telescope
+            >>> loss_value = pipe.loss(inputdata, target_datacube)
+            >>> gradient_data = pipe.gradient(inputdata, target_datacube)
     """
 
     def __init__(self, user_config: Union[dict, str]):
@@ -304,6 +306,6 @@ class RubixPipeline:
             jnp.ndarray:
                 Scalar mean squared error value.
         """
-        output = self.run(rubixdata)
+        output = self.run_sharded(rubixdata)
         loss_value = jnp.sum((output - targetdata) ** 2)
         return loss_value
