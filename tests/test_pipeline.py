@@ -538,10 +538,10 @@ def test_loss_uses_run(simple_pipeline):
     target = jnp.array([1.0, 2.0])
     output = jnp.array([3.0, 4.0])
 
-    pipeline.run = MagicMock(return_value=output)
+    pipeline.run_sharded = MagicMock(return_value=output)
 
     loss_value = pipeline.loss(rubixdata, target)
 
-    pipeline.run.assert_called_once_with(rubixdata)
+    pipeline.run_sharded.assert_called_once_with(rubixdata)
     expected = jnp.sum((output - target) ** 2)
     assert jnp.allclose(loss_value, expected)

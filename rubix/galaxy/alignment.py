@@ -1,7 +1,6 @@
-from typing import Tuple, Union
-
 import jax.numpy as jnp
 from beartype import beartype as typechecker
+from beartype.typing import Tuple, Union
 from jax.scipy.spatial.transform import Rotation
 from jaxtyping import Array, Float, jaxtyped
 

@@ -1,6 +1,5 @@
-from typing import Callable
-
 from beartype import beartype as typechecker
+from beartype.typing import Callable
 from jaxtyping import jaxtyped
 
 from rubix.logger import get_logger

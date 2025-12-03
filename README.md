@@ -43,7 +43,7 @@ the following editable installation from this repository:
 ```
 git clone https://github.com/AstroAI-Lab/rubix.git
 cd rubix
-python -m pip install --editable .[tests]
+python -m pip install --editable .[cpu,tests]
 ```
 
 Having done so, the test suite can be run using `pytest`:
@@ -52,8 +52,9 @@ Having done so, the test suite can be run using `pytest`:
 python -m pytest
 ```
 
-This project depends on [jax](https://github.com/google/jax). It only installed for cpu computations with the testing dependencies. For installation instructions with gpu support,
-please refer to [here](https://github.com/google/jax?tab=readme-ov-file#installation).
+This project depends on [jax](https://github.com/google/jax). For the pytests we only test the `cpu` version.
+For installation instructions with gpu support,
+please refer to [here](https://github.com/google/jax?tab=readme-ov-file#installation) or simply use the `cuda` option when pip installing.
 
 ## Configuration overview
 

@@ -1,6 +1,5 @@
 import os
 from dataclasses import dataclass, fields
-from typing import List, Tuple, Union
 
 # import equinox as eqx
 import h5py
@@ -9,6 +8,7 @@ import requests
 from astropy import units as u
 from astropy.io import fits
 from beartype import beartype as typechecker
+from beartype.typing import List, Tuple, Union
 from interpax import interp2d
 from jax.tree_util import Partial
 from jaxtyping import Array, Float, Int, jaxtyped

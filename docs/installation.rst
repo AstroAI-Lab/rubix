@@ -6,7 +6,7 @@ Installation
 Clone the repository and navigate to the root directory of the repository. Then run
 
 ```
-pip install .
+pip install .[cpu]
 ```
 
 If you want to contribute to the development of `RUBIX`, we recommend the following editable installation from this repository:
@@ -14,7 +14,7 @@ If you want to contribute to the development of `RUBIX`, we recommend the follow
 ```
 git clone https://github.com/AstroAI-Lab/rubix
 cd rubix
-pip install -e .
+pip install -e .[cpu,tests,dev]
 ```
 Having done so, the test suit can be run unsing `pytest`:
 
@@ -22,9 +22,9 @@ Having done so, the test suit can be run unsing `pytest`:
 python -m pytest
 ```
 
-Note that if `JAX` is not yet installed, only the CPU version of `JAX` will be installed
+Note that if `JAX` is not yet installed, with the `cpu` option only the CPU version of `JAX` will be installed
 as a dependency. For a GPU-compatible installation of `JAX`, please refer to the
-[JAX installation guide](https://jax.readthedocs.io/en/latest/installation.html).
+[JAX installation guide](https://jax.readthedocs.io/en/latest/installation.html) or use the option `cuda`.
 
 Get started with this simple example notebooks/rubix_pipeline_single_function_shard_map.ipynb.
 

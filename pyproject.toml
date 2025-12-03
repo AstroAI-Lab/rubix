@@ -91,7 +91,6 @@ tests = [
     "pytest-mock",
     "requests-mock",
     "nbval",
-    "jax[cpu]>0.5.1",
     "pre-commit",
 ]
 docs = [

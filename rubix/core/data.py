@@ -2,12 +2,12 @@ import logging
 import os
 from dataclasses import dataclass
 from functools import partial
-from typing import Any, Callable, Optional, Union
 
 import jax
 import jax.numpy as jnp
 import numpy as np
 from beartype import beartype as typechecker
+from beartype.typing import Any, Callable, Optional, Union
 from jaxtyping import jaxtyped
 
 from rubix.galaxy import IllustrisAPI, get_input_handler
@@ -430,7 +430,7 @@ def prepare_input(config: Union[dict, str]) -> RubixData:
     # Set the galaxy attributes
     rubixdata.galaxy.redshift = jnp.float64(data["redshift"])
     rubixdata.galaxy.redshift_unit = units["galaxy"]["redshift"]
-    rubixdata.galaxy.center = jnp.array(data["subhalo_center"], dtype=jnp.float64)
+    rubixdata.galaxy.center = jnp.array(data["subhalo_center"], dtype=jnp.float32)
     rubixdata.galaxy.center_unit = units["galaxy"]["center"]
     rubixdata.galaxy.halfmassrad_stars = jnp.float64(data["subhalo_halfmassrad_stars"])
     rubixdata.galaxy.halfmassrad_stars_unit = units["galaxy"]["halfmassrad_stars"]

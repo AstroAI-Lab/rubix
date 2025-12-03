@@ -1,8 +1,7 @@
-from typing import List, Optional, Union
-
 import equinox as eqx
 import numpy as np
 from beartype import beartype as typechecker
+from beartype.typing import List, Optional, Union
 from jaxtyping import Array, Float, Int, jaxtyped
 
 
