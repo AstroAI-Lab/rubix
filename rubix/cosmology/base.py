@@ -40,7 +40,7 @@ class BaseCosmology(eqx.Module):
         h (jnp.float32): Dimensionless Hubble constant.
 
     Example:
-  
+
             >>> # Create Planck15 cosmology
             >>> from rubix.cosmology import COSMOLOGY
             >>> cosmo = COSMOLOGY(0.3089, -1.0, 0.0, 0.6774)
@@ -317,7 +317,7 @@ class BaseCosmology(eqx.Module):
             Float[Array, "..."]: Angular scale in kpc/arcsec.
 
         Example:
- 
+
                 >>> from rubix.cosmology import PLANCK15 as cosmo
                 >>> # Calculate the angular scale at redshift 0.5
                 >>> cosmo.angular_scale(0.5)

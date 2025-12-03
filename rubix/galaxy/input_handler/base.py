@@ -163,7 +163,6 @@ class BaseHandler(ABC):
             if field not in units["galaxy"]:
                 raise ValueError(f"Units for {field} not found in units")
 
-
     def _check_particle_data(self, particle_data, units):
         # Get the list of expected particle types from the configuration
         expected_particle_types = list(self.config["particles"].keys())

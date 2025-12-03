@@ -21,7 +21,7 @@ def get_cosmology(config: dict) -> RubixCosmology:
         ValueError: When ``config["cosmology"]["name"]`` is not supported.
 
     Example:
-    
+
             >>> config = {
             ...     ...
             ...     "cosmology":
