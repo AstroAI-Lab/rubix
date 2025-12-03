@@ -40,7 +40,7 @@ class BaseCosmology(eqx.Module):
         h (jnp.float32): Dimensionless Hubble constant.
 
     Example:
-        ::
+  
             >>> # Create Planck15 cosmology
             >>> from rubix.cosmology import COSMOLOGY
             >>> cosmo = COSMOLOGY(0.3089, -1.0, 0.0, 0.6774)
@@ -73,7 +73,7 @@ class BaseCosmology(eqx.Module):
             Float[Array, "..."]: Redshift ``1/a - 1``.
 
         Example:
-            ::
+
                 >>> from rubix.cosmology import PLANCK15 as cosmo
                 >>> # Convert scale factor 0.5 to redshift
                 >>> cosmo.scale_factor_to_redshift(jnp.array(0.5))
@@ -121,7 +121,7 @@ class BaseCosmology(eqx.Module):
             Float[Array, "..."]: Comoving distance in Mpc.
 
         Example:
-            ::
+
                 >>> from rubix.cosmology import PLANCK15 as cosmo
                 >>> # Calculate comoving distance to redshift 0.5
                 >>> cosmo.comoving_distance_to_z(0.5)
@@ -145,7 +145,7 @@ class BaseCosmology(eqx.Module):
             Float[Array, "..."]: Luminosity distance in Mpc.
 
         Example:
-            ::
+
                 >>> from rubix.cosmology import PLANCK15 as cosmo
                 >>> # Compute the luminosity distance to redshift 0.5
                 >>> cosmo.luminosity_distance_to_z(0.5)
@@ -167,7 +167,7 @@ class BaseCosmology(eqx.Module):
             Float[Array, "..."]: Angular diameter distance in Mpc.
 
         Example:
-            ::
+
                 >>> from rubix.cosmology import PLANCK15 as cosmo
                 >>> # Compute the angular diameter distance to redshift 0.5
                 >>> cosmo.angular_diameter_distance_to_z(0.5)
@@ -189,7 +189,7 @@ class BaseCosmology(eqx.Module):
             Float[Array, "..."]: Distance modulus.
 
         Example:
-            ::
+
                 >>> from rubix.cosmology import PLANCK15 as cosmo
                 >>> # Compute the distance modulus to redshift 0.5
                 >>> cosmo.distance_modulus_to_z(0.5)
@@ -211,7 +211,7 @@ class BaseCosmology(eqx.Module):
             Float[Array, "..."]: Hubble time in seconds.
 
         Example:
-            ::
+
                 >>> from rubix.cosmology import PLANCK15 as cosmo
                 >>> # Calculate the Hubble time at redshift 0.5
                 >>> cosmo._hubble_time(0.5)
@@ -235,7 +235,7 @@ class BaseCosmology(eqx.Module):
             Float[Array, "..."]: Lookback time in seconds.
 
         Example:
-            ::
+
                 >>> from rubix.cosmology import PLANCK15 as cosmo
                 >>> # Calculate the lookback time to redshift 0.5
                 >>> cosmo.lookback_to_z(0.5)
@@ -256,7 +256,7 @@ class BaseCosmology(eqx.Module):
             The age of the universe at redshift 0 (float).
 
         Example:
-            ::
+
                 >>> from rubix.cosmology import PLANCK15 as cosmo
                 >>> # Calculate the age of the universe at redshift 0
                 >>> cosmo.age_at_z0()
@@ -294,7 +294,7 @@ class BaseCosmology(eqx.Module):
             Float[Array, "..."]: Age in seconds.
 
         Example:
-            ::
+
                 >>> from rubix.cosmology import PLANCK15 as cosmo
                 >>> # Calculate the age of the universe at redshift 0.5
                 >>> cosmo.age_at_z(0.5)
@@ -317,7 +317,7 @@ class BaseCosmology(eqx.Module):
             Float[Array, "..."]: Angular scale in kpc/arcsec.
 
         Example:
-            ::
+ 
                 >>> from rubix.cosmology import PLANCK15 as cosmo
                 >>> # Calculate the angular scale at redshift 0.5
                 >>> cosmo.angular_scale(0.5)
@@ -326,34 +326,3 @@ class BaseCosmology(eqx.Module):
         D_A = self.angular_diameter_distance_to_z(z)  # in Mpc
         scale = D_A * (jnp.pi / (180 * 60 * 60)) * 1e3  # in kpc/arcsec
         return scale
-
-    """
-    I dont think we need this currently, but keeping it here for reference
-    @jit
-    def rho_crit(self, redshift):
-        rho_crit0 = RHO_CRIT0_KPC3_UNITY_H * self.h * self.h
-        rho_crit = rho_crit0 * self._Ez(redshift) ** 2
-        return rho_crit
-
-    @jit
-    def _integrand_oneOverEz1pz(self, z):
-        return 1.0 / self._Ez(z) / (1.0 + z)
-
-    @jit
-    def _Om_at_z(self, z):
-        E = self._Ez(z)
-        return self.Om0 * (1.0 + z) ** 3 / E / E
-
-    @jit
-    def _delta_vir(self, z):
-        x = self._Om(z) - 1.0
-        Delta = 18 * jnp.pi**2 + 82.0 * x - 39.0 * x**2
-        return Delta
-
-    @jit
-    def virial_dynamical_time(self, redshift):
-        delta = self._delta_vir(redshift)
-        t_cross = 2**1.5 * self._hubble_time(redshift) * delta**-0.5
-        return t_cross
-
-"""

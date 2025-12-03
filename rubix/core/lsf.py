@@ -23,7 +23,6 @@ def get_convolve_lsf(config: dict) -> Callable[[RubixData], RubixData]:
         ValueError: When the telescope LSF configuration or sigma is missing.
 
     Example:
-        ::
 
             >>> config = {
             ...     ...

@@ -28,7 +28,6 @@ def get_convolve_psf(config: dict) -> Callable:
             kernel type.
 
     Example:
-        ::
 
             >>> config = {
             ...     ...

@@ -77,7 +77,7 @@ class SSPGrid:
             Partial: Interpolation function ``f(metallicity, age)``.
 
         Examples:
-            ::
+
                 >>> grid = SSPGrid(...)
                 >>> lookup = grid.get_lookup_interpolation()
                 >>> metallicity = 0.02
@@ -256,7 +256,6 @@ class HDF5SSPGrid(SSPGrid):
         flux (Float[Array, FLUX_AXES]): SSP fluxes in Lsun/Angstrom.
 
     Example:
-        ::
 
             >>> config = {
             ...     "name": "Bruzual & Charlot (2003)",
@@ -363,7 +362,6 @@ class pyPipe3DSSPGrid(SSPGrid):
         flux (Float[Array, FLUX_AXES]): SSP fluxes in Lsun/Angstrom.
 
     Example:
-        ::
 
             >>> config = {
             ...     "name": "Mastar Charlot & Bruzual (2019)",

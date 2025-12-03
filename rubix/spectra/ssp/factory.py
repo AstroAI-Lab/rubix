@@ -22,6 +22,7 @@ def get_ssp_template(template: str) -> SSPGrid:
         ValueError: If the template name or source format is not supported.
 
     Example:
+    
     >>> from rubix.spectra.ssp.factory import get_ssp_template
     >>> ssp = get_ssp_template("FSPS")
     >>> ssp.age.shape

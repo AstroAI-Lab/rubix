@@ -152,7 +152,7 @@ def get_filter_particles(config: dict) -> Callable:
         Callable[[RubixData], RubixData]: Function that filters particles.
 
     Example:
-        ::
+
             >>> from rubix.core.telescope import get_filter_particles
             >>> filter_particles = get_filter_particles(config)
 

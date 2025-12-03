@@ -71,7 +71,7 @@ def trapz(
         jnp.ndarray: Scalar results collected from the scan.
 
     Example:
-        ::
+
             >>> from rubix.cosmology.utils import trapz
             >>> import jax.numpy as jnp
 

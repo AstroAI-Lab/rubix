@@ -265,7 +265,7 @@ def convert_to_rubix(config: Union[dict, str]):
         ValueError: When ``config['data']['name']`` is unsupported.
 
     Example:
-        ::
+
             >>> import os
             >>> from rubix.core.data import convert_to_rubix
 
@@ -397,7 +397,7 @@ def prepare_input(config: Union[dict, str]) -> RubixData:
         ValueError: When subset mode is enabled but neither stars nor gas coordinates exist.
 
     Example:
-        ::
+
             >>> import os
             >>> from rubix.core.data import convert_to_rubix, prepare_input
 
@@ -550,7 +550,7 @@ def get_reshape_data(config: Union[dict, str]) -> Callable:
             Function that reshapes a `RubixData` instance.
 
     Example:
-        ::
+
             >>> from rubix.core.data import get_reshape_data
             >>> reshape_data = get_reshape_data(config)
             >>> rubixdata = reshape_data(rubixdata)

@@ -48,7 +48,6 @@ class RubixPipeline:
             Parsed configuration dictionary or path to a configuration file.
 
     Example:
-        ::
 
             >>> from rubix.core.pipeline import RubixPipeline
             >>> config = "path/to/config.yml"

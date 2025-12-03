@@ -26,7 +26,6 @@ def get_apply_noise(config: dict) -> Callable[[RubixData], RubixData]:
         ValueError: When required noise configuration keys are missing.
 
     Example:
-        ::
 
         >>> config = {
         ...     ...

@@ -180,7 +180,7 @@ def load_galaxy_data(
         Tuple[Dict[str, Any], Dict[str, Any]]: Galaxy data and associated units
 
     Example:
-        ::
+
         >>> from rubix.utils import load_galaxy_data
         >>> galaxy_data, units = load_galaxy_data("path/to/file.hdf5")
     """
