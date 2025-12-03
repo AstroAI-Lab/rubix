@@ -5,7 +5,8 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from rubix.paths import TEMPLATE_PATH
+from rubix import config as rubix_config
+from rubix.spectra.ssp import factory
 from rubix.spectra.ssp.factory import HDF5SSPGrid, get_ssp_template, pyPipe3DSSPGrid
 
 
@@ -21,6 +22,15 @@ def reset_config():
     # Teardown: Reset config to original after each test
     with patch("rubix.spectra.ssp.factory.rubix_config", original_config):
         pass
+
+
+def _set_templates(monkeypatch, templates):
+    monkeypatch.setitem(rubix_config["ssp"], "templates", templates)
+
+
+@pytest.fixture(autouse=True)
+def stub_logger(monkeypatch):
+    monkeypatch.setattr(factory, "get_logger", lambda: MagicMock())
 
 
 def get_config():
@@ -79,9 +89,10 @@ def test_get_ssp_template_existing_template():
                 template = get_ssp_template(template_name)
                 template_class_name = config["ssp"]["templates"][template_name]["name"]
                 assert template.__class__.__name__ == template_class_name
-            assert (
-                mock_write_fsps_data_to_disk.call_count <= 1
-            ), f"Expected at most 1 call to 'write_fsps_data_to_disk', but got {mock_write_fsps_data_to_disk.call_count}"
+            assert mock_write_fsps_data_to_disk.call_count <= 1, (
+                "Expected at most 1 call to 'write_fsps_data_to_disk', "
+                f"but got {mock_write_fsps_data_to_disk.call_count}"
+            )
 
 
 def test_get_ssp_template_existing_template_BC03():
@@ -97,9 +108,9 @@ def test_get_ssp_template_non_existing_template():
     with pytest.raises(ValueError) as excinfo:
         get_ssp_template(template_name)
 
-    assert (
-        str(excinfo.value)
-        == "SSP template unknown_template not found in the supported configuration file."
+    assert str(excinfo.value) == (
+        "SSP template unknown_template not found in the supported "
+        "configuration file."
     )
 
 
@@ -117,9 +128,9 @@ def test_get_ssp_template_invalid_format():
         with pytest.raises(ValueError) as excinfo:
             get_ssp_template(template_name)
 
-        assert (
-            str(excinfo.value)
-            == "Currently only HDF5 format and fits files in the format of pyPipe3D format are supported for SSP templates."
+        assert str(excinfo.value) == (
+            "Currently only HDF5 format and fits files in the format of "
+            "pyPipe3D format are supported for SSP templates."
         )
 
 
@@ -148,6 +159,59 @@ def test_get_ssp_template_existing_fsps_template():
         assert template.__class__.__name__ == template_class_name
 
 
+def test_get_ssp_template_fsps_file_missing(monkeypatch):
+    grid = MagicMock(spec=HDF5SSPGrid)
+    from_file_spy = MagicMock(side_effect=[FileNotFoundError, grid])
+    monkeypatch.setattr(factory.HDF5SSPGrid, "from_file", from_file_spy)
+    write_spy = MagicMock()
+    monkeypatch.setattr(factory, "write_fsps_data_to_disk", write_spy)
+    templates = {
+        "FSPS": {
+            "format": "fsps",
+            "source": "load_from_file",
+            "file_name": "fsps.h5",
+        }
+    }
+    _set_templates(monkeypatch, templates)
+
+    result = get_ssp_template("FSPS")
+
+    assert from_file_spy.call_count == 2
+    write_spy.assert_called_once_with(
+        "fsps.h5",
+        file_location=factory.TEMPLATE_PATH,
+    )
+    assert result is grid
+
+
+def test_get_ssp_template_fsps_rerun_from_scratch(monkeypatch):
+    grid = MagicMock(spec=HDF5SSPGrid)
+    from_file_spy = MagicMock(return_value=grid)
+    monkeypatch.setattr(factory.HDF5SSPGrid, "from_file", from_file_spy)
+    write_spy = MagicMock()
+    monkeypatch.setattr(factory, "write_fsps_data_to_disk", write_spy)
+    templates = {
+        "FSPS": {
+            "format": "fsps",
+            "source": "rerun_from_scratch",
+            "file_name": "fsps.h5",
+        }
+    }
+    _set_templates(monkeypatch, templates)
+
+    result = get_ssp_template("FSPS")
+
+    from_file_spy.assert_called_once_with(
+        templates["FSPS"],
+        file_location=factory.TEMPLATE_PATH,
+    )
+    write_spy.assert_called_once_with(
+        "fsps.h5",
+        file_location=factory.TEMPLATE_PATH,
+    )
+    assert result is grid
+
+
 def test_get_fsps_template_wrong_source_keyword():
     config = get_config()
     config_copy = config.copy()
@@ -165,6 +229,6 @@ def test_get_fsps_template_wrong_source_keyword():
         with pytest.raises(ValueError) as excinfo:
             get_ssp_template("FSPS")
     assert (
-        f"The source {supported_templates['FSPS']['source']} of the FSPS SSP template is not supported."
-        == str(excinfo.value)
-    )
+        f"The source {supported_templates['FSPS']['source']} "
+        "of the FSPS SSP template is not supported."
+    ) == str(excinfo.value)

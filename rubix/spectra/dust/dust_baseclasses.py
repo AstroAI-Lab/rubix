@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from typing import Final
 
 import equinox
 import jax.numpy as jnp
@@ -8,6 +9,8 @@ from beartype import beartype as typechecker
 # can be achieved by using chekify...
 # from .helpers import test_valid_x_range
 from jaxtyping import Array, Float, jaxtyped
+
+N_WAVE_AXIS: Final[str] = "n_wave"
 
 __all__ = [
     "BaseExtModel",
@@ -24,47 +27,51 @@ class BaseExtModel(equinox.Module):
     wave_range_l: equinox.AbstractVar[float]
     wave_range_h: equinox.AbstractVar[float]
 
-    def __call__(self, wave: Float[Array, "n_wave"]) -> Float[Array, "n_wave"]:
+    def __call__(
+        self,
+        wave: Float[Array, N_WAVE_AXIS],
+    ) -> Float[Array, N_WAVE_AXIS]:
         """
-        Evaluate the dust extinction model at the input wavelength for the given model parameters.
+        Evaluate the dust extinction model at the input wavelength for the
+        given model parameters.
         """
 
-        # test_valid_x_range(wave, [self.wave_range_l,self.wave_range_h], self.__class__.__name__)
+        # test_valid_x_range(
+        #     wave,
+        #     [self.wave_range_l, self.wave_range_h],
+        #     self.__class__.__name__,
+        # )
 
         return self.evaluate(wave)
 
     @abstractmethod
-    def evaluate(self, wave: Float[Array, "n_wave"]) -> Float[Array, "n_wave"]:
+    def evaluate(
+        self,
+        wave: Float[Array, N_WAVE_AXIS],
+    ) -> Float[Array, N_WAVE_AXIS]:
         """
-        Abstract function to evaluate the dust extinction model at the input wavelength for the given model parameters.
+        Abstract function to evaluate the dust extinction model at the input
+        wavelength for the given model parameters.
 
-        Parameters
-        ----------
-        wave : Float[Array, "n_wave"]
-            The wavelength to calculate the dust extinction for.
-            The wavelength has to be passed as wavenumber in units of [1/microns].
+        Args:
+            wave (Float[Array, N_WAVE_AXIS]):
+                The wavelength (wavenumber) used to compute the extinction.
+                It must be provided in units of [1/microns].
 
-        Returns
-        -------
-        Float[Array, "n_wave"]
-            The dust extinction as a function of wavenumber.
+        Returns:
+            Float[Array, N_WAVE_AXIS]:
+                The dust extinction as a function of wavenumber.
         """
 
     @abstractmethod
-    def extinguish(self) -> Float[Array, "n_wave"]:
+    def extinguish(self) -> Float[Array, N_WAVE_AXIS]:
         """
-        Abstract function to calculate the dust extinction for a given wavelength as a fraction.
+        Abstract function to calculate the dust extinction for a given set
+        of wavelengths.
 
-        Parameters
-        ----------
-        wave : Float[Array, "n_wave"]
-            The wavelength to calculate the dust extinction for.
-            The wavelength has to be passed as wavenumber in units of [1/microns].
-
-        Returns
-        -------
-        Float[Array, "n_wave"]
-            The fractional extinction as a function of wavenumber.
+        Returns:
+            Float[Array, N_WAVE_AXIS]:
+                The fractional extinction as a function of wavenumber.
         """
 
 
@@ -123,31 +130,35 @@ class BaseExtRvModel(BaseExtModel):
     #    )
 
     def extinguish(
-        self, wave: Float[Array, "n_wave"], Av: Float = None, Ebv: Float = None
-    ) -> Float[Array, "n_wave"]:
+        self,
+        wave: Float[Array, N_WAVE_AXIS],
+        Av: Float = None,
+        Ebv: Float = None,
+    ) -> Float[Array, N_WAVE_AXIS]:
         """
         Calculate the dust extinction for a given wavelength as a fraction.
 
-        Parameters
-        ----------
-        wave : Float[Array, "n_wave"]
-            The wavelength to calculate the dust extinction for.
-            The wavelength has to be passed as wavenumber in units of [1/microns].
+        Args:
+            wave (Float[Array, N_WAVE_AXIS]):
+                The wavelength (wavenumber) to evaluate the dust extinction at.
+                It must be passed as wavenumber in units of [1/microns].
+            Av (Float, optional):
+                Visual extinction A(V) of the dust column. Overrides ``Ebv`` if
+                both are provided.
+            Ebv (Float, optional):
+                Color excess E(B-V) of the dust column. Converted to ``Av``
+                using ``Rv`` when ``Av`` is not provided.
 
-        Av : Float
-            The visual extinction.
-            A(V) value of dust column.
-            Note: Av or Ebv must be set.
+        Notes:
+            Either ``Av`` or ``Ebv`` has to be provided. If both are provided,
+            ``Av`` is used to compute the extinction.
 
-        Ebv : Float
-            The color excess.
-            E(B-V) value of dust column.
-            Note: Av or Ebv must be set.
+        Returns:
+            Float[Array, N_WAVE_AXIS]:
+                The fractional extinction as a function of wavenumber.
 
-        Returns
-        -------
-        Float[Array, "n_wave"]
-            The fractional extinction as a function of wavenumber.
+        Raises:
+            ValueError: If neither ``Av`` nor ``Ebv`` is provided.
         """
         # get the extinction curve
         axav = self(wave)

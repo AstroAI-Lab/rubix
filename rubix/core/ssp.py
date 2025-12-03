@@ -18,6 +18,9 @@ def get_ssp(config: dict) -> object:
 
     Returns:
         SSP template
+
+    Raises:
+        ValueError: If required keys are missing from the configuration.
     """
     # Check if field exists
     if "ssp" not in config:

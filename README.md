@@ -4,11 +4,16 @@
 
 # Welcome to RUBIX
 
+[![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/AstroAI-Lab/rubix/blob/main/docs/CONTRIBUTING.md)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/AstroAI-Lab/rubix/ci.yml?branch=main)](https://github.com/AstroAI-Lab/rubix/actions/workflows/ci.yml)
+[![Documentation Status](https://readthedocs.org/projects/rubix/badge/)](https://astro-rubix.web.app)
+[![codecov](https://codecov.io/gh/AstroAI-Lab/rubix/branch/main/graph/badge.svg)](https://codecov.io/gh/AstroAI-Lab/rubix)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+[![All Contributors](https://img.shields.io/github/all-contributors/AstroAI-Lab/rubix?color=ee8449&style=flat-square)](#contributors)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/ufuk-cakir/rubix/ci.yml?branch=main)](https://github.com/ufuk-cakir/rubix/actions/workflows/ci.yml)
-[![Documentation Status](https://readthedocs.org/projects/rubix/badge/)](https://rubix.readthedocs.io/)
-[![codecov](https://codecov.io/gh/ufuk-cakir/rubix/branch/main/graph/badge.svg)](https://codecov.io/gh/ufuk-cakir/rubix)
-[![All Contributors](https://img.shields.io/github/all-contributors/ufuk-cakir/rubix?color=ee8449&style=flat-square)](#contributors)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
+[![Type checking](https://github.com/beartype/beartype-assets/blob/main/badge/bear-ified.svg)](https://github.com/beartype/beartype)
 
 RUBIX is a versatile Integral Field Unit (IFU) tool designed for astrophysical simulations. It transforms any particle based galaxy model (e.g. cosmological hydrodynamical simulation outputs) into realistic mock IFU cubes, enabling both forward and inverse modeling. Built on JAX, RUBIX leverages GPU acceleration and automatic differentiation, allowing users to perform gradient-based optimization for inverse modeling alongside traditional forward modeling.
 
@@ -57,39 +62,52 @@ Sphinx Documentation of all the functions is currently available under [this lin
 Contributions to `rubix` are welcome and greatly appreciated!
 Whether you're fixing bugs, improving documentation, or suggesting new features, your help is valuable to us.
 
-
-### 1. File your issue
-
-If you find a bug or think of an enhancement, please open an issue on GitHub. For example, you might write an issue like:
-
-- **Title:** Fix incorrect galaxy rotation calculation
-- **Description:**
-  The galaxy rotation function (rotate_galaxy) does not properly convert angle inputs, causing unexpected behavior when non-scalar JAX arrays are passed. Please investigate and fix this conversion so that it accepts a Python float.
-
-### 2. Create a branch for your issue
-
-After creating the issue, create a new branch from `main` following a clear naming convention - e.g. name it such that the following sentence makes sense: ```If applied, this branch does/adds/ *name-of-branch*.```
-For example:
-
-```bash
-git checkout -b fix/rotate-galaxy-angle
-```
-
-Work on your changes in this branch. Make sure to write tests and update documentation if necessary.
-
-### 3. Submit a pull request
-
-Once your changes pass all tests locally and the branch is up to date with `main`, create a pull request (PR) on GitHub. Describe the problem, your approach, and link the original issue so that the issue is automatically closed upon merge.
-
-### 4. Merge and get recognition
-
-After your PR is reviewed and merged into `main`, your contributions will be recognized automatically. Thanks to our All Contributors setup, a bot or a maintainer will add you to the contributors list in the README file. You'll then appear in the All Contributors section below.
+Please see [here](docs/CONTRIBUTING.md) for contribution guidelines.
 
 Thank you for helping improve `rubix`!
 
-## Acknowledgments
+## Citation & Acknowledgement
 
-This repository was set up using the [SSC Cookiecutter for Python Packages](https://github.com/ssciwr/cookiecutter-python-package).
+Please cite **both** of the following papers ([Cakir et al. 2024](https://arxiv.org/abs/2412.08265), [Schaible et al. 2025](https://arxiv.org/abs/2511.17110)) if you use Rubix in your research:
+
+```
+  @ARTICLE{2024arXiv241208265C,
+       author = {{{\c{C}}ak{\i}r}, Ufuk and {Schaible}, Anna Lena and {Buck}, Tobias},
+        title = "{Fast GPU-Powered and Auto-Differentiable Forward Modeling of IFU Data Cubes}",
+      journal = {arXiv e-prints},
+     keywords = {Astrophysics - Instrumentation and Methods for Astrophysics, Astrophysics - Astrophysics of Galaxies, Physics - Computational Physics, Physics - Data Analysis, Statistics and Probability},
+         year = 2024,
+        month = dec,
+          eid = {arXiv:2412.08265},
+        pages = {arXiv:2412.08265},
+          doi = {10.48550/arXiv.2412.08265},
+        archivePrefix = {arXiv},
+       eprint = {2412.08265},
+        primaryClass = {astro-ph.IM},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2024arXiv241208265C},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+  }
+
+  @ARTICLE{2025arXiv251117110S,
+       author = {{Schaible}, Anna Lena and {{\c{C}}ak{\i}r}, Ufuk and {Buck}, Tobias and {Mack}, Harald and {Obreja}, Aura and {Oguz}, Nihat and {Oliver}, William H. and {C{\u{a}}r{\u{a}}mizaru}, Horea-Alexandru},
+        title = "{RUBIX: Differentiable forward modelling of galaxy spectral data cubes for gradient-based parameter estimation}",
+      journal = {arXiv e-prints},
+     keywords = {Astrophysics of Galaxies},
+         year = 2025,
+        month = nov,
+          eid = {arXiv:2511.17110},
+        pages = {arXiv:2511.17110},
+          doi = {10.48550/arXiv.2511.17110},
+        archivePrefix = {arXiv},
+       eprint = {2511.17110},
+      primaryClass = {astro-ph.GA},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2025arXiv251117110S},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+  }
+```
+
+
+
 
 
 ## Contributors
@@ -105,6 +123,10 @@ This repository was set up using the [SSC Cookiecutter for Python Packages](http
       <td align="center" valign="top" width="14.28%"><a href="https://tobibu.github.io"><img src="https://avatars.githubusercontent.com/u/7574273?v=4?s=100" width="100px;" alt="Tobias Buck"/><br /><sub><b>Tobias Buck</b></sub></a><br /><a href="#code-TobiBu" title="Code">💻</a> <a href="#content-TobiBu" title="Content">🖋</a> <a href="#data-TobiBu" title="Data">🔣</a> <a href="#doc-TobiBu" title="Documentation">📖</a> <a href="#design-TobiBu" title="Design">🎨</a> <a href="#example-TobiBu" title="Examples">💡</a> <a href="#ideas-TobiBu" title="Ideas, Planning, & Feedback">🤔</a> <a href="#infra-TobiBu" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#maintenance-TobiBu" title="Maintenance">🚧</a> <a href="#plugin-TobiBu" title="Plugin/utility libraries">🔌</a> <a href="#projectManagement-TobiBu" title="Project Management">📆</a> <a href="#question-TobiBu" title="Answering Questions">💬</a> <a href="#research-TobiBu" title="Research">🔬</a> <a href="#review-TobiBu" title="Reviewed Pull Requests">👀</a> <a href="#tool-TobiBu" title="Tools">🔧</a> <a href="#test-TobiBu" title="Tests">⚠️</a> <a href="#talk-TobiBu" title="Talks">📢</a> <a href="#userTesting-TobiBu" title="User Testing">📓</a> <a href="#mentoring-TobiBu" title="Mentoring">🧑‍🏫</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/robin-janssen"><img src="https://avatars.githubusercontent.com/u/82322346?v=4?s=100" width="100px;" alt="Robin Janssen"/><br /><sub><b>Robin Janssen</b></sub></a><br /><a href="#code-robin-janssen" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/nihatog"><img src="https://avatars.githubusercontent.com/u/185299085?v=4?s=100" width="100px;" alt="nihatog"/><br /><sub><b>nihatog</b></sub></a><br /><a href="#code-nihatog" title="Code">💻</a> <a href="#doc-nihatog" title="Documentation">📖</a> <a href="#example-nihatog" title="Examples">💡</a> <a href="#research-nihatog" title="Research">🔬</a> <a href="#review-nihatog" title="Reviewed Pull Requests">👀</a> <a href="#test-nihatog" title="Tests">⚠️</a> <a href="#userTesting-nihatog" title="User Testing">📓</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/aobr"><img src="https://avatars.githubusercontent.com/u/7265091?v=4?s=100" width="100px;" alt="Aura Obreja"/><br /><sub><b>Aura Obreja</b></sub></a><br /><a href="#question-aobr" title="Answering Questions">💬</a> <a href="#review-aobr" title="Reviewed Pull Requests">👀</a> <a href="#tool-aobr" title="Tools">🔧</a> <a href="#userTesting-aobr" title="User Testing">📓</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/MaHaWo"><img src="https://avatars.githubusercontent.com/u/39521902?v=4?s=100" width="100px;" alt="Harald Mack"/><br /><sub><b>Harald Mack</b></sub></a><br /><a href="#code-MaHaWo" title="Code">💻</a> <a href="#doc-MaHaWo" title="Documentation">📖</a> <a href="#design-MaHaWo" title="Design">🎨</a> <a href="#infra-MaHaWo" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#question-MaHaWo" title="Answering Questions">💬</a> <a href="#review-MaHaWo" title="Reviewed Pull Requests">👀</a> <a href="#tool-MaHaWo" title="Tools">🔧</a> <a href="#test-MaHaWo" title="Tests">⚠️</a> <a href="#userTesting-MaHaWo" title="User Testing">📓</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://horea.caramizaru.xyz"><img src="https://avatars.githubusercontent.com/u/5146294?v=4?s=100" width="100px;" alt="Horea Caramizaru"/><br /><sub><b>Horea Caramizaru</b></sub></a><br /><a href="#code-nashmit" title="Code">💻</a> <a href="#design-nashmit" title="Design">🎨</a> <a href="#infra-nashmit" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#question-nashmit" title="Answering Questions">💬</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/william-h-oliver"><img src="https://avatars.githubusercontent.com/u/144013301?v=4?s=100" width="100px;" alt="Will"/><br /><sub><b>Will</b></sub></a><br /><a href="#question-william-h-oliver" title="Answering Questions">💬</a> <a href="#userTesting-william-h-oliver" title="User Testing">📓</a></td>
     </tr>
   </tbody>
 </table>
@@ -113,3 +135,11 @@ This repository was set up using the [SSC Cookiecutter for Python Packages](http
 <!-- prettier-ignore-end -->
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
+
+## Licence
+
+[MIT License](https://github.com/AstroAI-Lab/rubix/blob/main/LICENSE.md)
+
+## Acknowledgments
+
+This repository was set up using the [SSC Cookiecutter for Python Packages](https://github.com/ssciwr/cookiecutter-python-package).

@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Final, Tuple
 
 import jax
 import jax.numpy as jnp
@@ -6,33 +6,32 @@ from beartype import beartype as typechecker
 from jaxtyping import Array, Float, jaxtyped
 
 # from jax.scipy.special import comb
-from scipy.special import (  # whenever there is a jax version of comb, replace this!!!
-    comb,
-)
+# whenever there is a jax version of comb, replace this!!!
+from scipy.special import comb
 
-# Might come soon according to this github PR: https://github.com/jax-ml/jax/pull/18389
+# Might come soon according to this github PR:
+# https://github.com/jax-ml/jax/pull/18389
+
+N_AXIS: Final[str] = "n"
+N_WAVE_AXIS: Final[str] = "n_wave"
+N_PARAMS_AXIS: Final[str] = "m"
 
 
 def test_valid_x_range(
-    wave: Float[Array, "n"], wave_range: Float[Array, "2"], outname: str
+    wave: Float[Array, N_AXIS],
+    wave_range: Float[Array, "2"],
+    outname: str,
 ) -> None:  # pragma no cover
     """
-    Test if the input wavelength is within the valid range of the model.
+    Ensure the input wavelength stays inside the configured range.
 
-    Parameters
-    ----------
-    wave : Float[Array, "n"]
-        The input wavelength to test.
+    Args:
+        wave (Float[Array, N_AXIS]): The input wavelengths to test.
+        wave_range (Float[Array, "2"]): The valid bounds for the model.
+        outname (str): The model name used in the error message.
 
-    wave_range : Float[Array, "2"]
-        The valid range of the model.
-
-    outname : str
-        The name of the model for error message.
-
-    Returns
-    -------
-    None
+    This helper raises a ``ValueError`` if the wavelengths fall outside
+    the requested range.
     """
 
     deltacheck = 1e-6  # delta to allow for small numerical issues
@@ -51,7 +50,10 @@ def test_valid_x_range(
     #    )
     def true_fn(_):
         raise ValueError(
-            f"Input wave (min: {jnp.min(wave)}, max: {jnp.max(wave)}) outside of range defined for {outname} [{wave_range[0]} <= wave <= {wave_range[1]}, wave has units 1/micron]."
+            "Input wave (min: "
+            f"{jnp.min(wave)}, max: {jnp.max(wave)}) outside of "
+            f"range defined for {outname} [{wave_range[0]} <= wave <= "
+            f"{wave_range[1]}, wave has units 1/micron]."
         )
 
     def false_fn(_):
@@ -66,11 +68,23 @@ def test_valid_x_range(
 
 @jaxtyped(typechecker=typechecker)
 def _smoothstep(
-    x: Float[Array, "n_wave"], x_min: float = 0, x_max: float = 1, N: int = 1
-) -> Float[Array, "n_wave"]:
+    x: Float[Array, N_WAVE_AXIS],
+    x_min: float = 0,
+    x_max: float = 1,
+    N: int = 1,
+) -> Float[Array, N_WAVE_AXIS]:
     """
-    Smoothstep function. This function is a polynomial approximation to the smoothstep function.
+    Smoothstep interpolation defined by a polynomial between 0 and 1.
     The smoothstep function is a function commonly used in computer graphics to interpolate smoothly between two values.
+
+    Args:
+        x (Float[Array, N_WAVE_AXIS]): Input values in the unit interval.
+        x_min (float): Lower bound of the input domain.
+        x_max (float): Upper bound of the input domain.
+        N (int): Number of times to apply the base smoothstep polynomial.
+
+    Returns:
+        Float[Array, N_WAVE_AXIS]: Smoothly interpolated values.
     """
     x = jnp.clip((x - x_min) / (x_max - x_min), 0, 1)
 
@@ -85,19 +99,20 @@ def _smoothstep(
 
 @jaxtyped(typechecker=typechecker)
 def poly_map_domain(
-    oldx: Float[Array, "n"], domain: Tuple[float, float], window: Tuple[float, float]
-) -> Float[Array, "n"]:
+    oldx: Float[Array, N_AXIS],
+    domain: Tuple[float, float],
+    window: Tuple[float, float],
+) -> Float[Array, N_AXIS]:
     """
-    Map domain into window by shifting and scaling.
+    Map domain coordinates into a target window via an affine transform.
 
-    Parameters
-    ----------
-    oldx : array
-          original coordinates
-    domain : tuple of length 2
-          function domain
-    window : tuple of length 2
-          range into which to map the domain
+    Args:
+        oldx (Float[Array, N_AXIS]): Original coordinates.
+        domain (Tuple[float, float]): Domain of the input values.
+        window (Tuple[float, float]): Window into which to map the domain.
+
+    Returns:
+        Float[Array, N_AXIS]: Transformed coordinates.
     """
     domain = jnp.array(domain)
     window = jnp.array(window)

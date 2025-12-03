@@ -1,129 +1,137 @@
 from abc import ABC, abstractmethod
+from typing import Any, Callable, Optional, Sequence
 
 from jax import jit
+
+try:
+    from jax._src.core import ClosedJaxpr
+except ImportError:  # pragma: no cover - fallback for older JAX
+    from jax.core import ClosedJaxpr
 
 from .transformer import compiled_transformer, expression_transformer
 
 
 class AbstractPipeline(ABC):
-    """
-    AbstractPipeline Abstract baseclass for data transformation pipelines.
-    Provides methods `build_pipeline`, `build_expression` and `apply` which
-    must be implemented by every derived class and
-    which are responsible for building up the pipeline, for assembling it into
-    a self-contained pure functional function and for applyin the latter to
-    data, respectively.
+    """Abstract base class for data transformation pipelines.
+
+    Derived classes must implement `build_pipeline`, `build_expression`, and
+    `apply`. These helpers build the pipeline, assemble it into a pure
+    function, and apply it to input data.
+
+    Args:
+        cfg (dict): Configuration dictionary defining the pipeline.
+        transformers (list[Callable[..., Any]]): Transformers that will be
+            registered with the pipeline.
     """
 
-    def __init__(self, cfg: dict, transformers: list):
-        """
-        __init__ _Create a new pipeline. This should only be called in derived
-                classes' __init__ methods.
-
-        Args:
-            cfg (dict): Read config file defining the pipeline
-            transformers (list): Transformer functions to use
-        """
+    def __init__(
+        self,
+        cfg: dict,
+        transformers: list[Callable[..., Any]],
+    ) -> None:
         self.config = cfg
-        self._pipeline = []
-        self._names = []
-        self.transformers = {}
-        self.expression = None
-        self.compiled_expression = None
+        self._pipeline: list[Callable[..., Any]] = []
+        self._names: list[str] = []
+        self.transformers: dict[str, Callable[..., Any]] = {}
+        self.expression: Callable[..., Any] | None = None
+        self.compiled_expression: Callable[..., Any] | None = None
 
-        for t in transformers:
-            self.register_transformer(t)
+        for transformer in transformers:
+            self.register_transformer(transformer)
 
         self.assemble()
 
-    def assemble(self):
-        """
-        assemble Assemble the pipeline into a self-contained function with the
-        same signature as the pipeline's first element. Can only run if all
-        functions that make up the pipeline are registered with it by calling
-        `register_transformer`.
-
-        Raises
-        ------
-        RuntimeError
-            When no transformers are registered to build the pipeline out of.
-        """
+    def assemble(self) -> None:
+        """Assemble the pipeline into a self-contained function."""
         self.build_pipeline()
         self.build_expression()
 
     @property
-    def pipeline(self) -> dict:
-        """
-        pipeline Get the sequence of functions that make up the pipeline as a
-        dictionary of name: function pairs.
+    def pipeline(self) -> dict[str, Callable[..., Any]]:
+        """Return the registered pipeline elements as a
+            dictionary of name: function pairs.
 
         Returns:
-            Description of the pipeline as name: function pairs as dict.
+            dict[str, Callable[..., Any]]: Mapping from name to function.
         """
         return dict(zip(self._names, self._pipeline))
 
-    def register_transformer(self, cls):
-        """
-        register_transformer Make a functtion available to the calling
-        pipeline object. The registered function must be a pure functional
-        function in order to be transformable with jax. The registered transformers
-        are used to build a pipeline.
+    def register_transformer(self, cls: Callable[..., Any]) -> None:
+        """Register a transformer function for later use to
+        make it available to the calling pipeline object.
+
+            Note:
+            The registered function must be a pure functional
+            function in order to be transformable with jax.
+            The registered transformers are used to build a pipeline.
 
         Args:
-            cls: function object to register.
+            cls (Callable[..., Any]): Function to register.
 
-        Raises
-        ------
-        ValueError
-            When the function is already registered  with the pipeline
+        Raises:
+            ValueError:
+                When a transformer with the same name is already present.
         """
         if cls.__name__ in self.transformers:
             raise ValueError("A transformer of this name is already present")
         self.transformers[cls.__name__] = cls
 
-    def get_jaxpr(self, *args, static_args: list = []):
-        """
-        get_jaxpr Get a jax intermediate expression for the function that
-        represents an application of this pipeline to input data.
-        Please note that this only works with tatic positional arguments: JAX does currently not provide a way to have static keyword arguments when creating a jaxpr and not a jited function.
-        You can use `partial` to fix keyword arguments before calling this method.
+    def get_jaxpr(
+        self,
+        *args: Any,
+        static_args: Optional[Sequence[int]] = None,
+    ) -> Callable[..., Any] | ClosedJaxpr:
+        """Return a JAX intermediate expression for the pipeline.
 
-        Parameters
-        ----------
-        static_args : list, optional
-            Static argument indices. Will be forwarded to the static_argnums
-            argument of jax.make_jaxpr, by default []
+            Note:
+            Please note that this only works with static positional arguments:
+            JAX does currently not provide a way to have static keyword
+            arguments when creating a jaxpr and not a jitted function.
+            You can use `partial` to fix keyword arguments before calling this
+            method.
 
-        Returns
-        -------
-        jax.ClosedJaxpr
-            If *args is not empty: A jax intermediate representation that
-            results from applying the calling pipeline to the provided arguments.
-        Callable
-            if *args is empty. A function that will result in a jax
-            intermediate expression if called with desired arguments.
-        """
-        return expression_transformer(*args, static_args=static_args)(self.expression)
-
-    def compile_expression(self, static_args=[], static_kwargs=[]):
-        """
-        compile_expression Compile the function that represents an application
-                            of this pipeline to input data using jax jit.
-
-        Parameters
-        ----------
-        static_args : list, optional
-            static poisitional arguments that should not be traced by jit, by default []
-        static_kwargs : list, optional
-            statiuc keyword arguments that should not be traced by jit, by default []
+        Args:
+            *args (Any): Positional arguments forwarded to the expression
+                whose intermediate representation should be produced.
+            static_args (Optional[Sequence[int]], optional): Static positional
+                indices forwarded to ``jax.make_jaxpr`` via
+                ``static_argnums``. Defaults to ``None``.
 
         Returns:
-            Compiled pipeline function as PjitFunction
+            ClosedJaxpr: When ``*args`` is provided.
+            Callable[..., Any]: When ``*args`` is empty.
         """
-        f = None
+        static_args = static_args or []
+        return expression_transformer(
+            *args,
+            static_args=static_args,
+        )(self.expression)
 
+    def compile_expression(
+        self,
+        static_args: Optional[Sequence[int]] = None,
+        static_kwargs: Optional[Sequence[str]] = None,
+    ) -> Callable[..., Any]:
+        """Compile the pipeline expression using ``jax.jit``.
+
+        Args:
+            static_args (Optional[Sequence[int]], optional): Positional indices
+                forwarded to ``jit`` as ``static_argnums``. Defaults to
+                ``None``.
+            static_kwargs (Optional[Sequence[str]], optional): Keyword names
+                forwarded to ``jit`` as ``static_argnames``. Defaults to
+                ``None``.
+
+        Raises:
+            RuntimeError: When compilation fails.
+
+        Returns:
+            Callable[..., Any]: Compiled pipeline function.
+        """
+        static_args = static_args or ()
+        static_kwargs = static_kwargs or ()
         try:
-            f = jit(
+            compiled = jit(
                 self.expression,
                 static_argnums=static_args,
                 static_argnames=static_kwargs,
@@ -131,41 +139,48 @@ class AbstractPipeline(ABC):
         except Exception as e:
             raise RuntimeError("Expression compilation failed") from e
 
-        self.compiled_expression = f
+        self.compiled_expression = compiled
+        return compiled
 
-        return f
+    def compile_element(
+        self,
+        name: str,
+        static_args: Optional[Sequence[int]] = None,
+        static_kwargs: Optional[Sequence[str]] = None,
+    ) -> Callable[..., Any]:
+        """Compile a specific pipeline element using ``jax.jit``.
 
-    def compile_element(self, name: str, static_args=[], static_kwargs=[]):
+        Args:
+            name (str): Name of the element to compile.
+            static_args (Optional[Sequence[int]], optional): Positional indices
+                forwarded to ``jit`` as ``static_argnums``. Defaults to
+                ``None``.
+            static_kwargs (Optional[Sequence[str]], optional): Keyword names
+                forwarded to ``jit`` as ``static_argnames``. Defaults to
+                ``None``.
+
+        Raises:
+            RuntimeError: When compilation of the element fails.
+
+        Returns:
+            Callable[..., Any]: The compiled transformer.
         """
-        compile_element Compile an element of the pipeline named 'name' with
-        the jax jit with the provided static_args and static kwargs.
-
-        Parameters
-        ----------
-        name : str
-            Name of the element to be compiled
-        static_args : list, optional
-            static positional argument indices. Will be forwarded to the jit
-            static_argnums argument., by default []
-        static_kwargs : list, optional
-            Names of the static keyword arguments. Will be forwarded to the
-            jit static_argnames argument, by default []
-
-        Returns
-        -------
-        _type_
-            _description_
-        """
-        f = None
+        static_args = static_args or ()
+        static_kwargs = static_kwargs or ()
         try:
-            f = compiled_transformer(
+            compiled = compiled_transformer(
                 static_args=static_args, static_kwargs=static_kwargs
             )(self.pipeline[name])
         except Exception as e:
             raise RuntimeError(f"Compilation of element '{name}' failed") from e
-        return f
+        return compiled
 
-    def get_jaxpr_for_element(self, name: str, *args, static_args: list = []):
+    def get_jaxpr_for_element(
+        self,
+        name: str,
+        *args: Any,
+        static_args: Optional[Sequence[int]] = None,
+    ) -> Callable[..., Any] | ClosedJaxpr:
         """
         get_jaxpr_for_element Create a jax intermediate expression for a given
         element of the pipeline named 'name' with static arguments 'static_args
@@ -173,24 +188,21 @@ class AbstractPipeline(ABC):
         returned which will return the intermediate representation once it is
         called with arguments.
 
-        Parameters
-        ----------
-        name : str
-            Name of the element to be retrieved
-        static_args : list, optional
-            static positional argument indices, by default []
+        Args:
+            name (str): Name of the element to inspect.
+            *args (Any): Positional arguments forwarded to the element.
+            static_args (Optional[Sequence[int]], optional): Static positional
+                indices forwarded to ``expression_transformer``. Defaults to
+                ``None``.
 
-        Returns
-        -------
-        jax.ClosedJaxpr
-            If *args is not empty: Intermediate expression respresenting the
-            computation that is carried out when calling the element with the
-            given arguments.
-        Callable
-            If *args is empty: Function that returns a jax.ClosedJaxpr once
-            called with appropriate arguments.
+        Raises:
+            RuntimeError: When the expression cannot be created.
+
+        Returns:
+            ClosedJaxpr: When ``*args`` is provided.
+            Callable[..., Any]: When ``*args`` is empty.
         """
-        expr = None
+        static_args = static_args or []
         try:
             expr = expression_transformer(*args, static_args=static_args)(
                 self.pipeline[name]

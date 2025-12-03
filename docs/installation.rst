@@ -12,7 +12,7 @@ pip install .
 If you want to contribute to the development of `RUBIX`, we recommend the following editable installation from this repository:
 
 ```
-git clone https://github.com/ufuk-cakir/rubix
+git clone https://github.com/AstroAI-Lab/rubix
 cd rubix
 pip install -e .
 ```

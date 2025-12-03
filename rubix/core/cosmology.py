@@ -6,24 +6,28 @@ from rubix.logger import get_logger
 
 
 @jaxtyped(typechecker=typechecker)
-def get_cosmology(config: dict):
+def get_cosmology(config: dict) -> RubixCosmology:
     """
-    Get the cosmology from the configuration
+    Build the requested cosmology object described by ``config``.
 
     Args:
-        config : Configuration dictionary
+        config (dict): Configuration dictionary containing a ``cosmology``
+            entry with ``name`` plus optional ``args`` for ``CUSTOM``.
 
     Returns:
-        RubixCosmology
+        RubixCosmology: The selected cosmology implementation.
 
-    Example
-    --------
-    >>> config = {
-    ...     ...
-    ...     "cosmology":
-    ...         {"name": "PLANCK15"},
-    ...     ...
-    ... }
+    Raises:
+        ValueError: When ``config["cosmology"]["name"]`` is not supported.
+
+    Example:
+        ::
+            >>> config = {
+            ...     ...
+            ...     "cosmology":
+            ...         {"name": "PLANCK15"},
+            ...     ...
+            ... }
     """
     logger = get_logger(config.get("logger", None))
 
@@ -39,5 +43,7 @@ def get_cosmology(config: dict):
 
     else:
         raise ValueError(
-            f"Cosmology {config['cosmology']['name']} not supported. Try PLANCK15 or CUSTOM."
+            "Cosmology "
+            f"{config['cosmology']['name']} not supported. "
+            "Try PLANCK15 or CUSTOM."
         )

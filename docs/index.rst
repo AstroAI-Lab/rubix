@@ -12,27 +12,26 @@ improvements over state-of-the-art codes. For further details see the publicatio
 
 Currently the following functionalities are provided:
 
-- Generate mock IFU flux cubes for stars from IllustrisTNG50
+- Generate mock IFU flux cubes for stars from IllustrisTNG50, NIHAO or other cosmological hydrodynamical simulations
 
 - Generate mock photometric images for stars for different filter curves
 
-- Use different stellar population synthesis models
+- Use different stellar population synthesis models (Bruzual & Charlot, Mastar, FSPS, EMILES)
 
 - Use MUSE as telescope instrument (and some other instruments)
 
+- Use different dust attenuation laws
+
+- Calculate gradients of the modelled flux cubes with respect to stellar age and metallicity using JAX automatic differentiation
 
 Currently the code is under development and is not yet all functionality is available.
 We are working on adding more features and improving the code, espectially we work on the following features:
 
-- Adding support for more simulations
-
-- Adding support for more telescopes
-
 - Adding gas emission lines and gas continuum
 
-- Adding dust attenuation
+- Extend gradient calculation to more parameters and scale the gradient calculation to larger data sets
 
-- Adding support for gradient calculation
+- Sampling from distribution functions
 
 If you are interested in contributing to the code or have ideas for further features, please contact us via a github issue or via email.
 If you use the code in your research, please cite the following paper: :ref:`publications`
@@ -58,12 +57,16 @@ Notebooks
 
    notebooks/create_rubix_data.ipynb
    notebooks/pipeline_demo.ipynb
-   notebooks/rubix_pipeline_single_function.ipynb
+   notebooks/rubix_pipeline_single_function_shard_map.ipynb
    notebooks/rubix_pipeline_stepwise.ipynb
+   notebooks/dust_extinction.ipynb
+   notebooks/gradient_age_metallicity_adamoptimizer_multi.ipynb
+   notebooks/gradient_age_metallicity_adamoptimizer_vs_finite_diff.ipynb
    notebooks/cosmology.ipynb
    notebooks/telescope.ipynb
-   notebooks/spaxel_assignment.ipynb
    notebooks/ssp_template.ipynb
+   notebooks/ssp_interpolation.ipynb
+   notebooks/ssp_template_fsps.ipynb
    notebooks/psf.ipynb
    notebooks/filter_curves.ipynb
 

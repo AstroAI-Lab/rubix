@@ -1,5 +1,6 @@
+import logging
 import os
-from typing import List, Union
+from typing import Any, List, Optional, Union
 
 import h5py
 import requests
@@ -11,71 +12,81 @@ class IllustrisAPI:
     """
     This class is used to load data from the Illustris API.
 
-    It loads both subhalo data and particle data from a given simulation, snapshot, and subhalo ID.
+    It loads both subhalo data and particle data from a given simulation,
+    snapshot, and subhalo ID.
 
-    Check the source for the API documentation for more information: https://www.tng-project.org/data/docs/api/
+    Check the source for the API documentation for more information:
+    https://www.tng-project.org/data/docs/api/
+
+    Attributes:
+        URL (str): Base URL of the Illustris API.
+        DEFAULT_FIELDS (dict[str, list[str]]): Default particle fields to
+            download per particle type.
+
+    Args:
+        api_key (str): API key for authenticating with the Illustris API.
+        particle_type (Optional[List[str]], optional): Particle categories to
+            download (default: ["stars", "gas"]).
+        simulation (str, optional): Simulation to connect to
+            (default: "TNG50-1").
+        snapshot (int, optional): Snapshot ID to query (default: 99).
+        save_data_path (str, optional): Directory where downloaded data
+            will be stored.
+        logger (Optional[logging.Logger], optional): Logger instance for debug
+            output.
+
+    Raises:
+        ValueError: If the API key is missing.
     """
 
-    URL = "http://www.tng-project.org/api/"
-    DEFAULT_FIELDS = config["IllustrisAPI"]["DEFAULT_FIELDS"]
+    URL: str = "http://www.tng-project.org/api/"
+    DEFAULT_FIELDS: dict[str, list[str]] = config["IllustrisAPI"]["DEFAULT_FIELDS"]
 
     def __init__(
         self,
-        api_key,
-        particle_type: list = ["stars", "gas"],
-        simulation="TNG50-1",
-        snapshot=99,
-        save_data_path="./api_data",
-        logger=None,
+        api_key: str,
+        particle_type: Optional[List[str]] = None,
+        simulation: str = "TNG50-1",
+        snapshot: int = 99,
+        save_data_path: str = "./api_data",
+        logger: Optional[logging.Logger] = None,
     ):
-        """Illustris API class.
-
-        Class to load data from the Illustris API.
-
-        Parameters
-        ----------
-        api_key : str
-            API key for the Illustris API.
-        particle_type : str
-            Particle type to load. Default is "stars".
-        simulation : str
-            Simulation to load from. Default is "TNG100-1".
-        snapshot : int
-            Snapshot to load from. Default is 99.
-        """
 
         if api_key is None:
             raise ValueError("Please set the API key.")
 
         self.headers = {"api-key": api_key}
-        self.particle_type = particle_type
+        self.particle_type = particle_type or ["stars", "gas"]
         self.snapshot = snapshot
         self.simulation = simulation
         self.baseURL = f"{self.URL}{self.simulation}/snapshots/{self.snapshot}"
         self.DATAPATH = save_data_path
         if logger is None:
-            import logging
-
             self.logger = logging.getLogger(__name__)
         else:
             self.logger = logger
 
-    def _get(self, path, params=None, name=None):
-        """Get data from the Illustris API.
+    def _get(
+        self,
+        path: str,
+        params: Optional[dict[str, Any]] = None,
+        name: Optional[str] = None,
+    ) -> Union[dict[str, Any], str]:
+        """
+        Get data from the Illustris API.
 
-        Parameters
-        ----------
-        path : str
-            Path to load from.
-        params : dict
-            Parameters to pass to the API.
-        name : str
-            Name to save the file as. If None, the name will be taken from the content-disposition header.
-        Returns
-        -------
-        r : requests object
-            The requests object.
+        Args:
+            path (str): Path to load data from.
+            params (Optional[dict[str, Any]], optional):
+                Query parameters for the request.
+            name (Optional[str], optional):
+                Filename to use when saving the response.
 
+        Returns:
+            dict[str, Any] | str: JSON data or the saved filename.
+
+        Raises:
+            ValueError: On HTTP failures or if a download cannot be saved.
         """
 
         os.makedirs(self.DATAPATH, exist_ok=True)
@@ -103,37 +114,34 @@ class IllustrisAPI:
             f.write(r.content)
         return filename  # return the filename string
 
-    def get_subhalo(self, id):
-        """
-        Get subhalo data from the Illustris API.
-
-        Returns the subhalo data for the given subhalo ID.
+    def get_subhalo(self, id: int) -> dict[str, Any]:
+        """Get subhalo data for a given Illustris ID.
 
         Args:
             id (int): Subhalo ID to load.
 
         Returns:
-            The subhalo data as a dictionary (r).
+            dict[str, Any]: Subhalo metadata.
 
+        Raises:
+            ValueError: If the provided ID is not an integer.
         """
 
         if not isinstance(id, int):
             raise ValueError("ID should be an integer.")
         return self._get(f"{self.baseURL}/subhalos/{id}")
 
-    def _load_hdf5(self, filename):
-        """Load HDF5 file.
+    def _load_hdf5(self, filename: str) -> dict[str, Any]:
+        """Load a previously downloaded HDF5 file.
 
-        Loads the HDF5 file with the given filename.
+        Args:
+            filename (str): Base name of the file to load.
 
-        Parameters
-        ----------
-        filename : str
-            Filename to load.
-        Returns
-        -------
-        returndict : dict
-            Dictionary containing the data from the HDF5 file.
+        Returns:
+            dict[str, Any]: Loaded data grouped by particle type.
+
+        Raises:
+            ValueError: If the requested file cannot be found.
         """
         # Check if filename ends with .hdf5
         if filename.endswith(".hdf5"):
@@ -150,22 +158,29 @@ class IllustrisAPI:
                 # create new dictionary for each type
                 returndict[type] = dict()
                 for fields in f[type].keys():  # type: ignore
-                    returndict[type][fields] = f[type][fields][()]  # type: ignore
+                    field_array = f[type][fields][()]  # type: ignore
+                    returndict[type][fields] = field_array
 
         return returndict
 
-    def get_particle_data(self, id: int, particle_type, fields: Union[str, List[str]]):
-        """
-        Get particle data from the Illustris API.
-
-        Returns the particle data for the given subhalo ID.
+    def get_particle_data(
+        self,
+        id: int,
+        particle_type: str,
+        fields: Union[str, List[str]],
+    ) -> dict[str, Any]:
+        """Download particle cutouts for a subhalo.
 
         Args:
             id (int): Subhalo ID to load.
-            fields (str or list): Fields to load. If a string, the fields should be comma-separated.
+            particle_type (str): Particle species to request.
+            fields (Union[str, List[str]]): Data fields to include.
 
         Returns:
-            Dictionary containing the particle data in the given fields (data).
+            dict[str, Any]: Downloaded particle data.
+
+        Raises:
+            ValueError: If the particle type, fields, or ID are invalid.
         """
         # Get fields in the right format
         if isinstance(fields, str):
@@ -179,30 +194,44 @@ class IllustrisAPI:
 
         if particle_type not in ["stars", "gas", "dm"]:
             raise ValueError("Particle type should be 'stars', 'gas', or 'dm'.")
-        url = f"{self.baseURL}/subhalos/{id}/cutout.hdf5?{particle_type}={fields}"
+        url = f"{self.baseURL}/subhalos/{id}/cutout.hdf5?" f"{particle_type}={fields}"
         self._get(url, name="cutout")
         data = self._load_hdf5("cutout")
         return data
 
-    def load_galaxy(self, id: int, overwrite: bool = False, reuse: bool = False):
-        """
-        Download Galaxy Data from the Illustris API.
+    def load_galaxy(
+        self,
+        id: int,
+        overwrite: bool = False,
+        reuse: bool = False,
+    ) -> dict[str, Any]:
+        """Download subhalo and particle data for a galaxy.
 
-        This function downloads both the subhalo data and the particle data for stars and gas particles, for the fields specified in DEFAULT_FIELDS.
-        It saves the data in a HDF5 file.
+        The function fetches subhalo metadata and configured particle fields
+        and stores everything in a local HDF5 file.
 
         Args:
-            id (int): The ID of the subhalo to download.
-            overwrite (bool): Whether to overwrite the file if it already exists. Default is False.
-            reuse (bool): Whether to reuse the file if it already exists. Default is False.
+            id (int): Subhalo ID to download.
+            overwrite (bool, optional): Overwrite an existing file if True.
+            reuse (bool, optional): Reuse an existing file instead of
+                redownloading it.
 
         Returns:
-            The galaxy data as dictionary.
+            dict[str, Any]: Loaded galaxy data.
 
-        Example
-        --------
-        >>> illustris_api = IllustrisAPI(api_key, simulation="TNG50-1", snapshot=99, particle_type=["stars", "gas"])
-        >>> data = illustris_api.load_galaxy(id=0, verbose=True)
+        Raises:
+            ValueError: If the download is blocked by an existing file or an
+                unsupported particle type is configured.
+
+        Example:
+            ::
+                >>> illustris_api = IllustrisAPI(
+                ...     api_key,
+                ...     simulation="TNG50-1",
+                ...     snapshot=99,
+                ...     particle_type=["stars", "gas"],
+                ... )
+                >>> illustris_api.load_galaxy(id=0)
         """
 
         # Check if there is already a file with the same name
@@ -212,21 +241,28 @@ class IllustrisAPI:
                 # If we should not overwrite it, check if we should reuse it
                 if reuse:
                     self.logger.info(
-                        f"Reusing existing file galaxy-id-{id}.hdf5. If you want to download the data again, set reuse=False."
+                        "Reusing existing file galaxy-id-%d.hdf5. "
+                        "If you want to download the data again, "
+                        "set reuse=False." % id
                     )
                     return self._load_hdf5(filename=f"galaxy-id-{id}")
                 else:
                     # If we should not reuse it, raise an error
                     raise ValueError(
-                        f"File with name galaxy-id-{id}.hdf5 already exists. Please remove it before downloading the data, or set overwrite=True, or reuse=True to load the data."
+                        "File with name galaxy-id-%d.hdf5 already exists. "
+                        "Please remove it before downloading the data, "
+                        "or set overwrite=True, or reuse=True to load the data." % id
                     )
             else:
                 self.logger.info(
-                    f"Found existing file galaxy-id-{id}.hdf5, but overwrite is set to True. Overwriting the file."
+                    (
+                        f"Found existing file galaxy-id-{id}.hdf5, "
+                        "but overwrite is set to True. "
+                        "Overwriting the file."
+                    )
                 )
 
         # Check which particles we want to load
-
         self.logger.debug(f"Loading galaxy with ID {id}")
         url = f"{self.baseURL}/subhalos/{id}/cutout.hdf5?"
 
@@ -234,7 +270,12 @@ class IllustrisAPI:
             # Check if particle type is valid
             if particle_type not in self.DEFAULT_FIELDS.keys():
                 raise ValueError(
-                    f"Got unsupported particle type. Supported types are {self.DEFAULT_FIELDS.keys()} and we got {particle_type}."
+                    (
+                        "Got unsupported particle type. "
+                        f"Supported types are "
+                        f"{list(self.DEFAULT_FIELDS.keys())} "
+                        f"and we got {particle_type}."
+                    )
                 )
 
             fields = self.DEFAULT_FIELDS[particle_type]
@@ -262,7 +303,14 @@ class IllustrisAPI:
             for key in subhalo_data.keys():
                 if isinstance(subhalo_data[key], dict):
                     continue
-                f["SubhaloData"].create_dataset(key, data=subhalo_data[key])  # type: ignore
+                f["SubhaloData"].create_dataset(
+                    key,
+                    data=subhalo_data[key],
+                )  # type: ignore
 
     def __str__(self) -> str:
-        return f"IllustrisAPI: Simulation {self.simulation}, Snapshot {self.snapshot}, Particle Type {self.particle_type}"
+        return (
+            f"IllustrisAPI: Simulation {self.simulation}, "
+            f"Snapshot {self.snapshot}, "
+            f"Particle Type {self.particle_type}"
+        )

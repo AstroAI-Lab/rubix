@@ -73,6 +73,24 @@ def test_center_galaxy_sucessful():
     )
 
 
+def test_center_galaxy_gas_branch():
+    gas_coordinates = np.array([[1, 2, 3], [4, 5, 6]])
+    gas_velocities = np.array([[1, 1, 1], [2, 2, 2]])
+    center = np.array([1, 2, 3])
+
+    mockdata = MockRubixData(
+        MockGalaxyData(center=center),
+        MockStarsData(coords=gas_coordinates, velocity=gas_velocities),
+        MockGasData(coords=gas_coordinates, velocity=gas_velocities),
+    )
+
+    result = center_particles(mockdata, "gas")
+    assert np.all(result.gas.coords == gas_coordinates - center)
+    assert np.all(
+        result.gas.velocity == gas_velocities - np.median(gas_velocities, axis=0)
+    )
+
+
 def test_moment_of_inertia_tensor():
     """Test the moment_of_inertia_tensor function."""
 
@@ -206,3 +224,53 @@ def test_rotate_galaxy():
 
     # assert jnp.allclose(rotated_velocities, expected_rotated_velocities), \
     #    f"Test failed. Expected velocities {expected_rotated_velocities}, got {rotated_velocities}"
+
+
+def test_rotate_galaxy_unknown_key():
+    positions = jnp.array([[1.0, 0.0, 0.0]])
+    velocities = jnp.array([[0.0, 1.0, 0.0]])
+    masses = jnp.array([1.0])
+    halfmass = 1.0
+
+    with pytest.raises(ValueError, match="Unknown key"):
+        rotate_galaxy(
+            positions,
+            velocities,
+            positions,
+            masses,
+            halfmass,
+            0.0,
+            0.0,
+            0.0,
+            "Unknown",
+        )
+
+
+def test_rotate_galaxy_uses_nihao_branch():
+    positions = jnp.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+    velocities = jnp.array([[0.0, 1.0, 0.0], [1.0, 0.0, 0.0]])
+    stars = jnp.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
+    masses = jnp.array([1.0, 1.0])
+    halfmass = 1.0
+
+    alpha = 45.0
+    beta = 15.0
+    gamma = 30.0
+
+    expected_positions = apply_rotation(positions, alpha, beta, gamma)
+    expected_velocities = apply_rotation(velocities, alpha, beta, gamma)
+
+    rotated_positions, rotated_velocities = rotate_galaxy(
+        positions,
+        velocities,
+        stars,
+        masses,
+        halfmass,
+        alpha,
+        beta,
+        gamma,
+        "NIHAO",
+    )
+
+    assert jnp.allclose(rotated_positions, expected_positions)
+    assert jnp.allclose(rotated_velocities, expected_velocities)

@@ -14,33 +14,37 @@ from .data import RubixData
 
 
 @jaxtyped(typechecker=typechecker)
-def get_apply_noise(config: dict) -> Callable:
-    """
-    Get the function to apply noise to the datacube based on the configuration.
+def get_apply_noise(config: dict) -> Callable[[RubixData], RubixData]:
+    """Build the noise application function described by ``config``.
 
     Args:
-        config (dict): Configuration dictionary.
+        config (dict): Configuration dict that includes ``telescope.noise``.
 
     Returns:
-        The function to apply noise to the datacube.
+        Callable[[RubixData], RubixData]: Function that adds noise to data.
 
-    Example
-    -------
-    >>> config = {
-    ...     ...
-    ...     "telescope": {
-    ...         "name": "MUSE",
-    ...         "psf": {"name": "gaussian", "size": 5, "sigma": 0.6},
-    ...         "lsf": {"sigma": 0.5},
-    ...         "noise": {"signal_to_noise": 1,"noise_distribution": "normal"},
-    ...    },
-    ...     ...
-    ... }
+    Raises:
+        ValueError: When required noise configuration keys are missing.
 
-    >>> from rubix.core.noise import get_apply_noise
-    >>> apply_noise = get_apply_noise(config)
-    >>> rubixdata = apply_noise(rubixdata)
+    Example:
+        ::
+
+        >>> config = {
+        ...     ...
+        ...     "telescope": {
+        ...         "name": "MUSE",
+        ...         "psf": {"name": "gaussian", "size": 5, "sigma": 0.6},
+        ...         "lsf": {"sigma": 0.5},
+        ...         "noise": {"signal_to_noise": 1,"noise_distribution": "normal"},
+        ...    },
+        ...     ...
+        ... }
+
+        >>> from rubix.core.noise import get_apply_noise
+        >>> apply_noise = get_apply_noise(config)
+        >>> rubixdata = apply_noise(rubixdata)
     """
+
     if "noise" not in config["telescope"]:
         raise ValueError("Noise information not provided in telescope config")
 
@@ -49,7 +53,8 @@ def get_apply_noise(config: dict) -> Callable:
 
     if "noise_distribution" not in config["telescope"]["noise"]:
         raise ValueError(
-            f"Noise distribution not provided in noise config. Currently supported distributions are: {SUPPORTED_NOISE_DISTRIBUTIONS}"
+            "Noise distribution missing. Supported ones: "
+            f"{SUPPORTED_NOISE_DISTRIBUTIONS}"
         )
 
     # Get the signal to noise ratio
@@ -62,7 +67,8 @@ def get_apply_noise(config: dict) -> Callable:
 
     def apply_noise(rubixdata: RubixData) -> RubixData:
         logger.info(
-            f"Applying noise to datacube with signal to noise ratio: {signal_to_noise} and noise distribution: {noise_distribution}"
+            "Applying noise to datacube with signal to noise ratio: "
+            f"{signal_to_noise} and noise distribution: {noise_distribution}"
         )
         datacube = rubixdata.stars.datacube
         # Define S2n for each spaxel

@@ -1,3 +1,5 @@
+from typing import Optional
+
 import jax.numpy as jnp
 from jax import random as jrandom
 from jaxtyping import Array, Float
@@ -5,20 +7,22 @@ from jaxtyping import Array, Float
 SUPPORTED_NOISE_DISTRIBUTIONS = ["normal", "uniform"]
 
 
-def sample_noise(shape, type="normal", key=None):
+def sample_noise(
+    shape: tuple, type: str = "normal", key: Optional[jnp.ndarray] = None
+) -> jnp.ndarray:
     """Sample noise from a normal or uniform distribution.
-    Parameters
-    ----------
-    shape : tuple
-        The shape of the noise array.
-    type : str, optional
-        The type of distribution to sample from. Can be either "normal" or "uniform", by default "normal".
-    key : jnp.array, optional
-        The random key to use for sampling, by default None.
-    Returns
-    -------
-    jnp.array
-        The sampled noise.
+
+    Args:
+        shape (tuple): The shape of the noise array.
+        type (str, optional): The type of distribution to sample from. Can be either "normal" or "uniform". Defaults to "normal".
+        key (Optional[jnp.ndarray], optional): The random key to use for
+            sampling. Defaults to ``None``.
+
+    Returns:
+        jnp.ndarray: The sampled noise.
+
+    Raises:
+        ValueError: If an unsupported noise distribution is requested.
     """
     if key is None:
         key = jrandom.PRNGKey(0)
@@ -35,24 +39,17 @@ def sample_noise(shape, type="normal", key=None):
 def calculate_S2N(
     datacube: Float[Array, "n_x n_y n_wave_bins"], observation_signal_to_noise: float
 ) -> Float[Array, "n_y n_y"]:
-    """
-    Calculate the signal-to-noise ratio array from a data cube.
-
+    """Calculate the signal-to-noise ratio array from a data cube.
 
     Adapted from: https://github.com/kateharborne/SimSpin/blob/4e8f0af0ebc0e43cc31729978deb3a554e039f6b/R/build_datacube.R#L386
-    which implements equation 4 from  Nanni et al. 2022
+    which implements equation 4 from Nanni et al. 2022.
 
-    Parameters
-    ----------
-    datacube : jnp.array (n_x, n_y, n_wave_bins)
-        The data cube with dimensions (n_x, n_y, n_wave_bins).
-    observation_signal_to_noise : float
-        The signal-to-noise ratio of the observation.
+    Args:
+        datacube (Float[Array, "n_x n_y n_wave_bins"]): The data cube with dimensions (n_x, n_y, n_wave_bins).
+        observation_signal_to_noise (float): The signal-to-noise ratio of the observation.
 
-    Returns
-    -------
-    jnp.array (n_x, n_y)
-        The signal-to-noise ratio array.
+    Returns:
+        Float[Array, "n_x n_y"]: The signal-to-noise ratio array.
     """
     # Sum up the spectra along the wavelength bins to get the flux image
     flux_image = jnp.sum(datacube, axis=-1)
@@ -79,26 +76,19 @@ def calculate_S2N(
 def calculate_noise_cube(
     cube: Float[Array, "n_x n_y n_wave_bins"],
     signal_to_noise: float,
-    noise_distribution="normal",
+    noise_distribution: str = "normal",
 ) -> Float[Array, "n_x n_y n_wave_bins"]:
     """Calculate the noise cube given the cube and the signal-to-noise ratio.
 
-
     Adapted from: https://github.com/kateharborne/SimSpin/blob/4e8f0af0ebc0e43cc31729978deb3a554e039f6b/R/utilities.R#L587
 
-    Parameters
-    ----------
-    cube : jnp.array (n_x, n_y, n_wave_bins)
-        The data cube.
-    signal-to-noise : float
-        The signal-to-noise ratio of the observation.
-    noise_distribution: str, optional
-        The type of distribution to sample from. Can be either "normal" or "uniform", by default "normal".
+    Args:
+        cube (Float[Array, "n_x n_y n_wave_bins"]): The data cube.
+        signal_to_noise (float): The signal-to-noise ratio of the observation.
+        noise_distribution (str, optional): The type of distribution to sample from. Can be either "normal" or "uniform". Defaults to "normal".
 
-    Returns
-    -------
-    jnp.array (n_x, n_y, n_wave_bins)
-        The noise cube.
+    Returns:
+        Float[Array, "n_x n_y n_wave_bins"]: The noise cube.
     """
     key = jrandom.PRNGKey(0)
     # S2N = jnp.where(

@@ -2,7 +2,7 @@
 # process itself. Being able to do this was the original reason to
 # introduce pyproject.toml
 [build-system]
-requires = ["setuptools >=61", "setuptools_scm >=7"]
+requires = ["setuptools >=80.9", "setuptools_scm >=9.2"]
 build-backend = "setuptools.build_meta"
 
 # This section provides general project metadata that is used across
@@ -10,20 +10,56 @@ build-backend = "setuptools.build_meta"
 # single source of truth for rubix's version
 [project]
 name = "rubix"
-description = "Add short description here"
+description = "A toolkit for simulating and analyzing integral field spectroscopic data cubes of astronomical sources."
 readme = "README.md"
+
+authors = [{ name = "AstroAI-Lab", email = "astroai@iwr.uni-heidelberg.de" }, { name = "Tobias Buck", email = "tobias.buck@iwr.uni-heidelberg.de" },
+           { name = "Ufuk Cakir", email = "ufukcakir@robots.ox.ac.uk" }, { name = "Anna Lena Schaible", email = "annalena.schaible@iwr.uni-heidelberg.de"}]
+
 maintainers = [{ name = "AstroAI-Lab", email = "astroai@iwr.uni-heidelberg.de" }]
+
 dynamic = ["version"]
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 license = { text = "MIT" }
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
     "License :: OSI Approved :: MIT License",
 ]
+
+# Project keywords
+keywords =[
+  "galaxy",
+  "modelling",
+  "smoothed particle hydrodynamics",
+  "particles",
+  "nbody",
+  "galaxy formation",
+  "parametric",
+  "theory",
+  "sph",
+  "cosmology",
+  "galaxy evolution",
+  "survey",
+  "telescope",
+  "stellar population",
+  "synthesis",
+  "IFU",
+  "integral field unit",
+  "astronomy",
+  "astrophysics",
+  "simulation",
+  "JAX",
+  "differentiable programming",
+  "automatic differentiation",
+  "machine learning",
+  "GPU",
+]
+
+urls = { Homepage = "https://astro-rubix.web.app", Repository = "https://github.com/AstroAI-Lab/rubix", Issues = "https://github.com/AstroAI-Lab/rubix/issues" }
+
 dependencies = [
     "requests",
-    "requests-mock",
     "h5py",
     "astropy",
     "scipy",
@@ -32,7 +68,6 @@ dependencies = [
     "pyaml",
     "jaxtyping",
     "equinox",
-    "jax[cpu]>0.5.1",
     "interpax",
     "astroquery",
     "beartype",
@@ -40,14 +75,21 @@ dependencies = [
     "ipywidgets",
     "jdaviz",
     "pynbody",
-    "pytest-mock",
     "opt-einsum >=3.3.0",
 ]
 [project.optional-dependencies]
+# Development
+dev = [
+    "black",
+    "pre-commit",
+    "nbstripout",
+]
+# Testing
 tests = [
     "pytest",
     "pytest-cov",
     "pytest-mock",
+    "requests-mock",
     "nbval",
     "jax[cpu]>0.5.1",
     "pre-commit",
@@ -60,6 +102,9 @@ docs = [
     "sphinx_mdinclude",
     "sphinx_rtd_theme",
 ]
+cpu = [
+    "jax[cpu]>0.5.1",
+    ]
 cuda = [
     "jax[cuda]>0.5.1",
     ]
