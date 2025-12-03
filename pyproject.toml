@@ -75,6 +75,7 @@ dependencies = [
     "ipywidgets",
     "jdaviz",
     "pynbody",
+    "pytest",
     "opt-einsum >=3.3.0",
 ]
 [project.optional-dependencies]
