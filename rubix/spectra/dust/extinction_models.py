@@ -39,7 +39,6 @@ class Cardelli89(BaseExtRvModel):
 
     Example:
         Example showing CCM89 curves for a range of R(V) values.
-        ::
 
         .. plot::
             :include-source:
@@ -209,7 +208,6 @@ class Gordon23(BaseExtRvModel):
 
     Example:
         Example showing G23 curves for a range of R(V) values.
-        ::
 
         .. plot::
             :include-source:

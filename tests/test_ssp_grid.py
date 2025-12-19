@@ -65,10 +65,10 @@ def test_from_hdf5():
         mock_file.return_value = mock_instance
         mock_instance.__enter__.return_value = mock_instance
         mock_instance.__getitem__.side_effect = lambda key: {
-            "age": [1, 2, 3],
-            "metallicity": [0.1, 0.2, 0.3],
-            "wavelength": [4000, 5000, 6000],
-            "flux": [0.5, 1.0, 1.5],
+            "age": np.array([1, 2, 3], dtype=np.float32),
+            "metallicity": np.array([0.1, 0.2, 0.3], dtype=np.float32),
+            "wavelength": np.array([4000, 5000, 6000], dtype=np.float32),
+            "flux": np.array([0.5, 1.0, 1.5], dtype=np.float32),
         }[key]
 
         result = HDF5SSPGrid.from_file(config, file_location)
@@ -79,6 +79,59 @@ def test_from_hdf5():
         assert np.allclose(result.metallicity, [0.1, 0.2, 0.3])
         assert np.allclose(result.wavelength, [4000, 5000, 6000])
         assert np.allclose(result.flux, [0.5, 1.0, 1.5])
+
+
+def test_from_hdf5_handles_log_field():
+    config = {
+        "format": "hdf5",
+        "file_name": "test.hdf5",
+        "source": "http://example.com/template.hdf5",
+        "fields": {
+            "age": {
+                "name": "age",
+                "in_log": False,
+                "units": "Gyr",
+            },
+            "metallicity": {
+                "name": "metallicity",
+                "in_log": False,
+                "units": "",
+            },
+            "wavelength": {
+                "name": "wavelength",
+                "in_log": False,
+                "units": "Angstrom",
+            },
+            "flux": {
+                "name": "flux",
+                "in_log": True,
+                "units": "Lsun/Angstrom",
+            },
+        },
+        "name": "TestSSPGrid",
+    }
+    file_location = "/path/to/files"
+
+    with (
+        patch("os.path.exists") as mock_exists,
+        patch("rubix.spectra.ssp.grid.h5py.File") as mock_file,
+    ):
+        mock_exists.return_value = True
+        mock_instance = MagicMock()
+        mock_file.return_value = mock_instance
+        mock_instance.__enter__.return_value = mock_instance
+        mock_instance.__getitem__.side_effect = lambda key: {
+            "age": np.array([1, 2, 3], dtype=np.float32),
+            "metallicity": np.array([0.1, 0.2, 0.3], dtype=np.float32),
+            "wavelength": np.array([4000, 5000, 6000], dtype=np.float32),
+            "flux": np.array([0.5, 1.0, 1.5], dtype=np.float32),
+        }[key]
+
+        result = HDF5SSPGrid.from_file(config, file_location)
+
+        assert isinstance(result, HDF5SSPGrid)
+        expected_flux = np.power(10, np.array([0.5, 1.0, 1.5], dtype=np.float32))
+        assert np.allclose(result.flux, expected_flux)
 
 
 def test_from_hdf5_wrong_format():
@@ -365,6 +418,54 @@ def test_from_pyPipe3D_wrong_field_name():
         assert str(e.value) == "Field wrong_field_name not recognized"
 
 
+def test_from_pyPipe3D_handles_log_field(tmp_path):
+    config = {
+        "format": "pypipe3d",
+        "file_name": "pyPipe_log.fits",
+        "source": "http://example.com/",
+        "fields": {
+            "age": {"name": "age", "in_log": True, "units": "Gyr"},
+            "metallicity": {"name": "metallicity", "in_log": False, "units": ""},
+            "wavelength": {"name": "wavelength", "in_log": False, "units": "Angstrom"},
+            "flux": {"name": "flux", "in_log": False, "units": "Lsun/Angstrom"},
+        },
+        "name": "pyPipeSSPGrid",
+    }
+
+    header = fits.Header()
+    header["CRVAL1"] = 4000
+    header["CDELT1"] = 1000
+    header["NAXIS1"] = 3
+    header["CRPIX1"] = 1
+    header["NAXIS2"] = 2
+    header["NAME0"] = "spec_ssp_1.0_z01.spec"
+    header["NAME1"] = "spec_ssp_1.0_z02.spec"
+    header["NORM0"] = 1.0
+    header["NORM1"] = 1.0
+
+    data = np.array([[0.5, 1.0, 1.5], [0.6, 1.1, 1.6]], dtype=np.float32)
+    hdu = fits.PrimaryHDU(data=data, header=header)
+    hdul = fits.HDUList([hdu])
+    file_path = tmp_path / "pyPipe_log.fits"
+    hdul.writeto(
+        file_path,
+        overwrite=True,
+        output_verify="silentfix",
+    )
+
+    with patch(
+        "rubix.spectra.ssp.grid.pyPipe3DSSPGrid.checkout_SSP_template",
+        return_value=str(file_path),
+    ):
+        grid = pyPipe3DSSPGrid.from_file(config, str(tmp_path))
+
+    expected_age = jnp.power(
+        10,
+        jnp.array([1.0], dtype=jnp.float32),
+    )
+    assert np.allclose(grid.age, expected_age)
+
+
 def test_from_pyPipe3D_wrong_format():
     config = {
         "format": "wrong",
@@ -648,6 +749,33 @@ def test_checkout_SSP_template_file_download_failed_HDF5SSPGrid():
             match=f"Could not download file {config['file_name']} from url {config['source']}.",
         ):
             HDF5SSPGrid.checkout_SSP_template(config, file_location)
+
+
+def test_checkout_SSP_template_raise_for_status(monkeypatch):
+    config = {
+        "format": "hdf5",
+        "file_name": "test.hdf5",
+        "source": "http://example.com",
+    }
+    file_location = "/tmp"
+
+    response = MagicMock()
+    response.raise_for_status.side_effect = requests.exceptions.HTTPError("status fail")
+    download_msg = "Could not download file test.hdf5 from url http://example.com/."
+
+    with (
+        patch("os.path.exists") as mock_exists,
+        patch("requests.get", return_value=response),
+    ):
+        mock_exists.return_value = False
+
+        with pytest.raises(
+            FileNotFoundError,
+            match=download_msg,
+        ):
+            SSPGrid.checkout_SSP_template(config, file_location)
+
+        response.raise_for_status.assert_called_once()
 
 
 def test_get_lookup_interpolation():

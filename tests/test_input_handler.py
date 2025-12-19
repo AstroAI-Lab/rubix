@@ -213,3 +213,15 @@ def test_particle_field_unit_info_missing_error(input_handler):
         particle_data["stars"]["unsupported_field"] = 1
         input_handler._check_particle_data(particle_data, units)
     assert "Units for unsupported_field not found in units" in str(excinfo.value)
+
+
+def test_missing_particle_field_error(input_handler):
+    with pytest.raises(ValueError) as excinfo:
+        particle_data = input_handler.get_particle_data()
+        del particle_data["stars"]["mass"]
+        units = input_handler.get_units()
+        input_handler._check_particle_data(particle_data, units)
+    assert (
+        str(excinfo.value)
+        == "Missing field mass in particle data for particle type stars"
+    )

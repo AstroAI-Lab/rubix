@@ -1,8 +1,7 @@
-from typing import Final, Tuple
-
 import jax
 import jax.numpy as jnp
 from beartype import beartype as typechecker
+from beartype.typing import Final, Tuple
 from jaxtyping import Array, Float, jaxtyped
 
 # from jax.scipy.special import comb

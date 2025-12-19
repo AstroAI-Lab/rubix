@@ -1,7 +1,6 @@
-from typing import Callable
-
 import jax.numpy as jnp
 from beartype import beartype as typechecker
+from beartype.typing import Callable
 from jaxtyping import jaxtyped
 
 from rubix.logger import get_logger
@@ -27,7 +26,6 @@ def get_apply_noise(config: dict) -> Callable[[RubixData], RubixData]:
         ValueError: When required noise configuration keys are missing.
 
     Example:
-        ::
 
         >>> config = {
         ...     ...

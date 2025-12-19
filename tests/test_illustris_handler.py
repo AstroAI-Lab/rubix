@@ -272,3 +272,115 @@ def test_load_data_without_GFM_stellarformation_time(mock_file, mock_exists):
     data["test_part"] = data["PartType4"]
     data = handler._get_particle_data(data, "test_part")
     assert "coordinates" in data
+
+
+def _make_stub_handler():
+    handler = object.__new__(IllustrisHandler)
+    handler._logger = MagicMock()
+    return handler
+
+
+def test_check_fields_missing_expected():
+    handler = _make_stub_handler()
+    with pytest.raises(ValueError) as exc:
+        handler._check_fields({"random": {}})
+    assert "No expected fields" in str(exc.value)
+
+
+def test_check_fields_unexpected_extra_field():
+    handler = _make_stub_handler()
+    fake_data = {
+        "Header": {},
+        "SubhaloData": {},
+        "PartType4": {},
+        "Random": {},
+    }
+    with pytest.raises(ValueError) as exc:
+        handler._check_fields(fake_data)
+    assert "Unexpected fields" in str(exc.value)
+
+
+def test_check_fields_unsupported_part_type():
+    handler = _make_stub_handler()
+    fake_data = {
+        "Header": {},
+        "SubhaloData": {},
+        "PartType4": {},
+        "PartType99": {},
+    }
+    with pytest.raises(NotImplementedError) as exc:
+        handler._check_fields(fake_data)
+    assert "PartType99" in str(exc.value)
+
+
+def test_check_particle_data_requires_mapped_fields():
+    handler = _make_stub_handler()
+    valid_data = {"stars": {"coords": np.array([0.0])}}
+    with pytest.raises(ValueError):
+        handler._check_particle_data(valid_data, {})
+
+
+def test_get_particle_keys_unsupported_type():
+    handler = _make_stub_handler()
+    handler.MAPPED_PARTICLE_KEYS = {"PartType4": "stars"}
+    handler.ILLUSTRIS_DATA = [
+        "Header",
+        "SubhaloData",
+        "PartType4",
+        "PartTypeX",
+    ]
+    fake_file = {
+        "Header": {},
+        "SubhaloData": {},
+        "PartType4": {},
+        "PartTypeX": {},
+    }
+    with pytest.raises(NotImplementedError) as exc:
+        handler._get_particle_keys(fake_file)
+    assert "PartTypeX" in str(exc.value)
+
+
+def test_check_particle_data_no_matching_fields():
+    handler = _make_stub_handler()
+    with pytest.raises(ValueError) as exc:
+        handler._check_particle_data({"unexpected": {}}, {})
+    assert "No expected fields" in str(exc.value)
+
+
+def test_check_particle_data_extra_parttype_field_raises_not_implemented():
+    handler = _make_stub_handler()
+    handler.MAPPED_PARTICLE_KEYS = {"PartType4": "stars"}
+    handler.MAPPED_FIELDS = {"PartType4": {"Coordinates": "coords"}}
+    particle_data = {
+        "stars": {"coords": np.array([0.0])},
+        "PartType99": {},
+    }
+    with pytest.raises(NotImplementedError) as exc:
+        handler._check_particle_data(particle_data, {})
+    assert "PartType99" in str(exc.value)
+
+
+def test_check_particle_data_extra_field_raises_value_error():
+    handler = _make_stub_handler()
+    handler.MAPPED_PARTICLE_KEYS = {"PartType4": "stars"}
+    handler.MAPPED_FIELDS = {"PartType4": {"Coordinates": "coords"}}
+    particle_data = {
+        "stars": {"coords": np.array([0.0])},
+        "extra": {},
+    }
+    with pytest.raises(ValueError) as exc:
+        handler._check_particle_data(particle_data, {})
+    assert "Unexpected fields" in str(exc.value)
+
+
+def test_halfmassrad_stars_requires_coordinates():
+    handler = _make_stub_handler()
+    handler.TIME = 1.0
+    handler.HUBBLE_PARAM = 0.5
+    fake_file = {
+        "SubhaloData": {"halfmassrad_stars": np.array(1.0)},
+        "PartType4": {},
+    }
+    with pytest.raises(ValueError) as exc:
+        handler._get_halfmassrad_stars(fake_file)
+    assert "Coordinates" in str(exc.value)

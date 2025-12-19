@@ -1,7 +1,6 @@
-from typing import Callable, Union
-
 import jax.numpy as jnp
 from beartype import beartype as typechecker
+from beartype.typing import Callable, Union
 from jaxtyping import Array, Float, jaxtyped
 
 from rubix.logger import get_logger
@@ -153,7 +152,7 @@ def get_filter_particles(config: dict) -> Callable:
         Callable[[RubixData], RubixData]: Function that filters particles.
 
     Example:
-        ::
+
             >>> from rubix.core.telescope import get_filter_particles
             >>> filter_particles = get_filter_particles(config)
 

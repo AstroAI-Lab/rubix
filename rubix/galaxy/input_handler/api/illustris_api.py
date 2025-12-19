@@ -224,7 +224,7 @@ class IllustrisAPI:
                 unsupported particle type is configured.
 
         Example:
-            ::
+
                 >>> illustris_api = IllustrisAPI(
                 ...     api_key,
                 ...     simulation="TNG50-1",

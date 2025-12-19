@@ -8,6 +8,7 @@ from rubix.spectra.ifu import (
     calculate_cube,
     calculate_diff,
     convert_luminoisty_to_flux,
+    convert_luminoisty_to_flux_factor,
     cosmological_doppler_shift,
     get_velocity_component,
     resample_spectrum,
@@ -147,6 +148,28 @@ def test_convert_luminoisty_to_flux():
     assert jnp.allclose(flux, expected_flux, rtol=1e-5)
 
 
+def test_convert_luminoisty_to_flux_factor():
+    observation_lum_dist = 10.0
+    observation_z = 0.5
+    pixel_size = 2.0
+
+    factor = convert_luminoisty_to_flux_factor(
+        observation_lum_dist,
+        observation_z,
+        pixel_size,
+        CONSTANTS=mock_config["constants"],
+    )
+
+    CONST = mock_config["constants"]["LSOL_TO_ERG"] / (
+        mock_config["constants"]["MPC_TO_CM"] ** 2
+    )
+    expected_factor = (
+        CONST / (4 * np.pi * observation_lum_dist**2) / (1 + observation_z) / pixel_size
+    )
+
+    assert jnp.isclose(factor, expected_factor, rtol=1e-6)
+
+
 def test_velocity_doppler_shift():
     wavelength = jnp.array([5000.0, 6000.0, 7000.0])
     velocity = jnp.array([[300.0, 400.0, 500.0], [600.0, 700.0, 800.0]])
@@ -170,6 +193,31 @@ def test_velocity_doppler_shift():
     assert jnp.allclose(
         doppler_shifted_wavelength, expected_shifted_wavelength, rtol=1e-5
     )
+
+
+def test_velocity_doppler_shift_handles_singleton_leading_axis():
+    wavelength = jnp.array([5000.0, 6000.0])
+    velocity = jnp.array([[[300.0, 400.0, 500.0], [600.0, 700.0, 800.0]]])
+
+    doppler_shifted_wavelength = velocity_doppler_shift(
+        wavelength,
+        velocity,
+        direction="y",
+        SPEED_OF_LIGHT=mock_config["constants"]["SPEED_OF_LIGHT"],
+    )
+
+    base_velocities = velocity[0]
+    expected = jnp.stack(
+        [
+            wavelength
+            * jnp.exp(
+                base_velocities[i, 1] / mock_config["constants"]["SPEED_OF_LIGHT"]
+            )
+            for i in range(base_velocities.shape[0])
+        ]
+    )
+
+    assert jnp.allclose(doppler_shifted_wavelength, expected, rtol=1e-5)
 
 
 def test_resample_spectrum():

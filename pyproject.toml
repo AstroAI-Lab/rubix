@@ -75,6 +75,7 @@ dependencies = [
     "ipywidgets",
     "jdaviz",
     "pynbody",
+    "optax",
     "opt-einsum >=3.3.0",
 ]
 [project.optional-dependencies]
@@ -91,7 +92,6 @@ tests = [
     "pytest-mock",
     "requests-mock",
     "nbval",
-    "jax[cpu]>0.5.1",
     "pre-commit",
 ]
 docs = [

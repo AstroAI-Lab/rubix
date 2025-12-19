@@ -1,7 +1,6 @@
-from typing import Tuple, Union
-
 import jax.numpy as jnp
 from beartype import beartype as typechecker
+from beartype.typing import Tuple, Union
 from jax.scipy.spatial.transform import Rotation
 from jaxtyping import Array, Float, jaxtyped
 
@@ -23,7 +22,7 @@ def center_particles(rubixdata: object, key: str) -> object:
         ValueError: If the galaxy center lies outside the particle bounds.
 
     Example:
-        ::
+
             >>> from rubix.galaxy.alignment import center_particles
             >>> rubixdata = center_particles(rubixdata, "stars")
     """
@@ -84,7 +83,7 @@ def moment_of_inertia_tensor(
         Float[Array, "..."]: Moment of inertia tensor.
 
     Example:
-        ::
+
             >>> from rubix.galaxy.alignment import moment_of_inertia_tensor
             >>> I = moment_of_inertia_tensor(
             ...     rubixdata.stars.coords,

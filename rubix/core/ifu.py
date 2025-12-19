@@ -1,8 +1,7 @@
-from typing import Callable, Union
-
 import jax
 import jax.numpy as jnp
 from beartype import beartype as typechecker
+from beartype.typing import Callable
 from jax import lax
 from jaxtyping import Array, Float, jaxtyped
 
@@ -192,7 +191,7 @@ def get_calculate_dusty_datacube_particlewise(config: dict) -> Callable:
         ext_model = config["ssp"]["dust"]["extinction_model"]
         Rv = config["ssp"]["dust"]["Rv"]
         # Dynamically choose the extinction model based on the string name
-        if ext_model not in RV_MODELS:
+        if ext_model not in RV_MODELS:  # pragma: no cover
             raise ValueError(
                 "Extinction model '{ext_model}' is not available. "
                 f"Choose from {RV_MODELS}."

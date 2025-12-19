@@ -6,6 +6,7 @@ import numpy as np
 from beartype import beartype as typechecker
 from jaxtyping import jaxtyped
 
+from rubix.logger import get_logger
 from rubix.telescope.apertures import (
     CIRCULAR_APERTURE,
     HEXAGONAL_APERTURE,
@@ -22,11 +23,17 @@ TELESCOPE_CONFIG_PATH = os.path.join(PATH, "telescopes.yaml")
 class TelescopeFactory:
     @jaxtyped(typechecker=typechecker)
     def __init__(self, telescopes_config: Optional[Union[dict, str]] = None) -> None:
+        logger = get_logger()
         if telescopes_config is None:
+            logger.info(
+                "No telescope config provided, falling back to %s",
+                TELESCOPE_CONFIG_PATH,
+            )
             warnings.warn(
-                "No telescope config provided, using default stored in {}".format(
+                ("No telescope config provided, " "using default stored in {}").format(
                     TELESCOPE_CONFIG_PATH
-                )
+                ),
+                UserWarning,
             )
             self.telescopes_config = read_yaml(TELESCOPE_CONFIG_PATH)
         elif isinstance(telescopes_config, str):
@@ -46,7 +53,8 @@ class TelescopeFactory:
             The telescope object as BaseTelescope.
 
         Raises:
-            ValueError: If the telescope name is not present in the configuration.
+            ValueError: If the telescope name is not present in the
+                configuration.
 
         Example 1 (Uses the defined telescope configuration)
         -----------------------------------------------------

@@ -26,7 +26,7 @@ def get_galaxy_rotation(config: dict):
             or missing.
 
     Example:
-        ::
+
             >>> config = {
             ...     ...
             ...     "galaxy": {
