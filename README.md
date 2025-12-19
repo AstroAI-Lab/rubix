@@ -25,13 +25,15 @@ Key features include:
 
 ## Installation
 
-The Python package `rubix` can be downloades from git and can be installed:
+The Python package `rubix` is published on GitHub and can be installed alongside its runtime dependencies (including JAX) by choosing the relevant extras. For a CPU-only environment, install with:
 
 ```
 git clone https://github.com/AstroAI-Lab/rubix.git
 cd rubix
-pip install .
+pip install .[cpu]
 ```
+
+If you need GPU acceleration, replace `[cpu]` with `[cuda]` (or install `jax[cuda]` following the [JAX instructions](https://github.com/google/jax#installation) before installing Rubix). The plain `pip install .` command installs the minimal package without JAX and will raise `ImportError` if you try to import `rubix` before adding `jax` manually.
 
 ## Development installation
 
@@ -41,7 +43,7 @@ the following editable installation from this repository:
 ```
 git clone https://github.com/AstroAI-Lab/rubix.git
 cd rubix
-python -m pip install --editable .[tests]
+python -m pip install --editable .[cpu,tests,dev]
 ```
 
 Having done so, the test suite can be run using `pytest`:
@@ -50,9 +52,21 @@ Having done so, the test suite can be run using `pytest`:
 python -m pytest
 ```
 
-This project depends on [jax](https://github.com/google/jax). It only installed for cpu computations with the testing dependencies. For installation instructions with gpu support,
-please refer to [here](https://github.com/google/jax?tab=readme-ov-file#installation).
+This project depends on [jax](https://github.com/google/jax). For the pytests we only test the `cpu` version.
+For installation instructions with gpu support,
+please refer to [here](https://github.com/google/jax?tab=readme-ov-file#installation) or simply use the `cuda` option when pip installing.
 
+## Configuration overview
+
+Rubix ships with two YAML files in `rubix/config/`: `rubix_config.yml` (constants, SSP templates, dust recipes, handler mappings, etc.) and `pipeline_config.yml` (pipeline graphs such as `calc_ifu` and `calc_dusty_ifu`). There is no configuration wizard — your runtime settings must supply a dictionary with the following blocks:
+
+- `pipeline.name`: Identifies the pipeline from `pipeline_config.yml` (e.g., `calc_ifu`, `calc_dusty_ifu`, or `calc_gradient`).
+- `galaxy`: Must provide `dist_z` and a `rotation` section (`type` or explicit `alpha`, `beta`, `gamma`).
+- `telescope`: Requires `name`, `psf` (currently only the `gaussian` kernel with `size` and `sigma`), `lsf` (`sigma`), and `noise` (`signal_to_noise` plus `noise_distribution`, choose from `normal` or `uniform`).
+- `ssp.dust`: Must declare `extinction_model` and `Rv` before calling the dusty pipeline (see `rubix/spectra/dust/extinction_models.py` for the supported models such as `Cardelli89`).
+- `data.args.particle_type`: Should include `"stars"` (and `"gas"` if you want the gas branch) so the filters and rotation functions know which components exist.
+
+The tutorials and notebooks assume square spaxels, so the default telescope factory currently only supports `pixel_type: square`. For a working example, inspect `notebooks/rubix_pipeline_single_function_shard_map.ipynb`, which runs the exact pipeline used in the tests.
 
 ## Documentation
 Sphinx Documentation of all the functions is currently available under [this link](https://astro-rubix.web.app/).

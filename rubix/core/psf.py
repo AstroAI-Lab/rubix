@@ -1,6 +1,5 @@
-from typing import Callable
-
 from beartype import beartype as typechecker
+from beartype.typing import Callable
 from jaxtyping import jaxtyped
 
 from rubix.logger import get_logger
@@ -29,7 +28,6 @@ def get_convolve_psf(config: dict) -> Callable:
             kernel type.
 
     Example:
-        ::
 
             >>> config = {
             ...     ...

@@ -117,6 +117,7 @@ def Drude1d(
         ValueError: If ``x_0`` is zero.
 
     Examples:
+
     .. plot::
         :include-source:
 
@@ -214,7 +215,6 @@ def FM90(
     Examples:
 
         Example showing a FM90 curve with components identified.
-        ::
 
         .. plot::
             :include-source:

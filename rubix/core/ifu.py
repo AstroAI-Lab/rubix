@@ -1,8 +1,7 @@
-from typing import Callable, Union
-
 import jax
 import jax.numpy as jnp
 from beartype import beartype as typechecker
+from beartype.typing import Callable
 from jax import lax
 from jaxtyping import Array, Float, jaxtyped
 

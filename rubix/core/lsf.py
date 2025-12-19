@@ -1,6 +1,5 @@
-from typing import Callable
-
 from beartype import beartype as typechecker
+from beartype.typing import Callable
 from jaxtyping import jaxtyped
 
 from rubix.logger import get_logger
@@ -24,7 +23,6 @@ def get_convolve_lsf(config: dict) -> Callable[[RubixData], RubixData]:
         ValueError: When the telescope LSF configuration or sigma is missing.
 
     Example:
-        ::
 
             >>> config = {
             ...     ...

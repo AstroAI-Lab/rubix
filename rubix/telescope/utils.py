@@ -1,8 +1,7 @@
-from typing import List, Tuple, Union
-
 import jax.numpy as jnp
 import numpy as np
 from beartype import beartype as typechecker
+from beartype.typing import List, Tuple, Union
 from jaxtyping import Array, Bool, Float, Int, jaxtyped
 
 from rubix.cosmology.base import BaseCosmology

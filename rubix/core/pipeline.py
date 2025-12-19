@@ -1,11 +1,23 @@
 import time
-from typing import Any, Optional, Sequence, Union
+import warnings
 
 import jax
 import jax.numpy as jnp
 from beartype import beartype as typechecker
+from beartype.typing import Any, Optional, Sequence, Union
 from jax import lax
-from jax.experimental.shard_map import shard_map
+
+try:
+    from jax.shard_map import shard_map  # type: ignore[attr-defined]
+except ImportError:  # pragma: no cover - older JAX compatibility
+    warnings.filterwarnings(
+        "ignore",
+        message="jax.experimental.shard_map is deprecated in v0.8.0.*",
+        category=DeprecationWarning,
+        module=__name__,
+    )
+    from jax.experimental.shard_map import shard_map
+
 from jax.sharding import Mesh, NamedSharding, PartitionSpec as P
 from jax.tree_util import tree_map
 from jaxtyping import jaxtyped
@@ -36,16 +48,17 @@ class RubixPipeline:
             Parsed configuration dictionary or path to a configuration file.
 
     Example:
-        ::
 
             >>> from rubix.core.pipeline import RubixPipeline
             >>> config = "path/to/config.yml"
+            >>> target_datacube = ...  # Load or define your target datacube here
             >>> pipe = RubixPipeline(config)
             >>> inputdata = pipe.prepare_data()
-            >>> output = pipe.run(inputdata)
             >>> final_datacube = pipe.run_sharded(inputdata)
-            >>> ssp_model = pipeline.ssp
-            >>> telescope = pipeline.telescope
+            >>> ssp_model = pipe.ssp
+            >>> telescope = pipe.telescope
+            >>> loss_value = pipe.loss(inputdata, target_datacube)
+            >>> gradient_data = pipe.gradient(inputdata, target_datacube)
     """
 
     def __init__(self, user_config: Union[dict, str]):
@@ -304,6 +317,6 @@ class RubixPipeline:
             jnp.ndarray:
                 Scalar mean squared error value.
         """
-        output = self.run(rubixdata)
+        output = self.run_sharded(rubixdata)
         loss_value = jnp.sum((output - targetdata) ** 2)
         return loss_value
