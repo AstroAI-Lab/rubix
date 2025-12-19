@@ -43,7 +43,7 @@ the following editable installation from this repository:
 ```
 git clone https://github.com/AstroAI-Lab/rubix.git
 cd rubix
-python -m pip install --editable .[cpu,tests]
+python -m pip install --editable .[cpu,tests,dev]
 ```
 
 Having done so, the test suite can be run using `pytest`:
