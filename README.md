@@ -9,7 +9,7 @@
 [![Documentation Status](https://readthedocs.org/projects/rubix/badge/)](https://astro-rubix.web.app)
 [![codecov](https://codecov.io/gh/AstroAI-Lab/rubix/branch/main/graph/badge.svg)](https://codecov.io/gh/AstroAI-Lab/rubix)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
-[![All Contributors](https://img.shields.io/github/all-contributors/all-contributors/app?color=orange&style=flat-square)](#contributors)
+[![All Contributors](https://img.shields.io/github/AstroAI-Lab/rubix?color=ee8449&style=flat-square)](#contributors)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
