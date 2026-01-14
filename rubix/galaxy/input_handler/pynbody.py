@@ -103,7 +103,9 @@ class PynbodyHandler(BaseHandler):
             gsf_spliting = pickle.load(open(self.component_file, "rb"))
             #tags = gsf_spliting["tags"]              # e.g. ["classicalBulge","ThinDisc",…]
             #tags = ["Disk", "Bulge", "Spheroid", "Halo"]
-            tags = ["PseudoBulge", "ClassicalBulge"]
+            #for 8.13e11 Datentyp: ['ClassicalBulge', 'Disk', 'PseudoBulge', 'InnerDisk']
+            #for 8.26e11 Datentyp: ['ClassicalBulge', 'ThinDisk', 'ThickDisk', 'PseudoBulge', 'Halo']
+            tags = ['ClassicalBulge', 'ThinDisk', 'ThickDisk', 'PseudoBulge', 'Halo']
             labels = gsf_spliting["label"]           # array of ints same length as iord
             gmm_iords = gsf_spliting["iord"]         # array of star iords
 
