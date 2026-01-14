@@ -9,11 +9,12 @@
 [![Documentation Status](https://readthedocs.org/projects/rubix/badge/)](https://astro-rubix.web.app)
 [![codecov](https://codecov.io/gh/AstroAI-Lab/rubix/branch/main/graph/badge.svg)](https://codecov.io/gh/AstroAI-Lab/rubix)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
-[![All Contributors](https://img.shields.io/github/all-contributors/AstroAI-Lab/rubix?color=ee8449&style=flat-square)](#contributors)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
-[![Type checking](https://github.com/beartype/beartype-assets/blob/main/badge/bear-ified.svg)](https://github.com/beartype/beartype)
+[![Type checking](https://github.com/beartype/beartype-assets/blob/main/badge/bear-ified.svg)](https://github.com/beartype/beartype)<!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
+[![All Contributors](https://img.shields.io/badge/all_contributors-9-orange.svg?style=flat-square)](#contributors-)
+<!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 RUBIX is a versatile Integral Field Unit (IFU) tool designed for astrophysical simulations. It transforms any particle based galaxy model (e.g. cosmological hydrodynamical simulation outputs) into realistic mock IFU cubes, enabling both forward and inverse modeling. Built on JAX, RUBIX leverages GPU acceleration and automatic differentiation, allowing users to perform gradient-based optimization for inverse modeling alongside traditional forward modeling.
 
