@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="[https://github.com/AstroAI-Lab/rubix/blob/main/logo_rubix.png]" alt="Rubix Logo" width="30%">
+  <img src="https://github.com/AstroAI-Lab/rubix/blob/main/logo_rubix.png" alt="Rubix Logo" width="30%">
 </p>
 
 # Welcome to RUBIX
