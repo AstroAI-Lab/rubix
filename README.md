@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./logo_rubix.png" alt="Rubix Logo" width="30%">
+  <img src="https://github.com/AstroAI-Lab/rubix/blob/main/logo_rubix.png" alt="Rubix Logo" width="30%">
 </p>
 
 # Welcome to RUBIX
@@ -25,8 +25,13 @@ Key features include:
 - **Flexible and Extensible:** Designed to easily integrate with existing pipelines and astrophysical analysis tools.
 
 ## Installation
+Rubix is on [PyPi](https://pypi.org/project/astro-rubix/). You can install it via
 
-The Python package `rubix` is published on GitHub and can be installed alongside its runtime dependencies (including JAX) by choosing the relevant extras. The CPU-only version will be installed by default as follows:
+```
+pip install astro-rubix
+```
+
+Alternatively, the Python package `rubix` is published on GitHub and can be installed alongside its runtime dependencies (including JAX) by choosing the relevant extras. For a CPU-only environment, install with:
 
 ```
 git clone https://github.com/AstroAI-Lab/rubix.git
@@ -81,7 +86,7 @@ Please see [here](docs/CONTRIBUTING.md) for contribution guidelines.
 
 Thank you for helping improve `rubix`!
 
-## Citation & Acknowledgement
+## Citation
 
 Please cite **both** of the following papers ([Cakir et al. 2024](https://arxiv.org/abs/2412.08265), [Schaible et al. 2025](https://arxiv.org/abs/2511.17110)) if you use Rubix in your research:
 
