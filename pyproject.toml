@@ -59,6 +59,7 @@ keywords =[
 urls = { Homepage = "https://astro-rubix.web.app", Repository = "https://github.com/AstroAI-Lab/rubix", Issues = "https://github.com/AstroAI-Lab/rubix/issues" }
 
 dependencies = [
+    "jax[cpu]>0.5.1",
     "requests",
     "h5py",
     "astropy",
@@ -102,9 +103,7 @@ docs = [
     "sphinx_mdinclude",
     "sphinx_rtd_theme",
 ]
-cpu = [
-    "jax[cpu]>0.5.1",
-    ]
+
 cuda = [
     "jax[cuda]>0.5.1",
     ]
