@@ -31,6 +31,12 @@ Rubix is on [PyPi](https://pypi.org/project/astro-rubix/). You can install it vi
 pip install astro-rubix
 ```
 
+If you need GPU acceleration, you can install it via
+
+```
+pip install astro-rubix[cuda]
+```
+
 Alternatively, the Python package `rubix` is published on GitHub and can be installed alongside its runtime dependencies (including JAX) by choosing the relevant extras. For a CPU-only environment, install with:
 
 ```
