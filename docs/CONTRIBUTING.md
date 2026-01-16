@@ -30,10 +30,10 @@ You can then clone the repo and install it in editable mode with the extra devel
 ```bash
 git clone https://github.com/AstroAI-Lab/rubix
 cd rubix
-pip install -e .[cpu,dev]
+pip install -e .[dev]
 ```
 
-Note: if you are planning to use RUBIX on the GPU you need to replace the `cpu` dependency with the corresponding `cuda` dependency. If you additionally plan to build the docs locally you'll also need to include the `docs` dependency group.
+Note: if you are planning to use RUBIX on the GPU you need to add the corresponding optional `cuda` dependency. If you additionally plan to build the docs locally you'll also need to include the `docs` dependency group.
 
 ### Setting up pre-commit hooks
 
