@@ -74,10 +74,6 @@ More general forward-modeling frameworks, such as Synthesizer, provide flexible 
 
 `RUBIX` is conceptually closest to recent `JAX`-based modeling frameworks such as scarlet2 [@scarlet2], which enable differentiable scene modeling for astronomical imaging. While scarlet2 targets pixel-level modeling of imaging data, `RUBIX` addresses the distinct challenges posed by IFU spectroscopy, including the combination of spatial and spectral information and the forward modeling of particle-based galaxy simulations. By extending differentiable modeling concepts to IFU data, `RUBIX` fills a methodological gap between traditional forward-modeling codes and modern machine-learning–driven inference frameworks.
 
-# Research applications
-
- The software is currently used to generate large-scale mock IFU surveys for GECKOS  and to perform gradient-based inverse modelling of the data cubes.
-
 # Research Impact Statement
 
 `RUBIX` is already in active scientific use: it powers the generation of GECKOS mock IFU surveys [@Fraser-McKelvie2024] and supports gradient-based inverse modeling in ongoing analyses. Early benchmarks on typical galaxy models show that the GPU-enabled pipeline produces science-ready cubes in about a minute, roughly an order of magnitude faster than CPU-bound alternatives such as SimSpin [@Harborne2020;@Harborne2023], MaNGIA [@Sarmiento2023] or GalCraft [@Wang2024]. The codebase includes reproducible configuration files and notebooks, enabling third parties to regenerate results and adapt the pipeline to new surveys with minimal effort. Community uptake is evidenced as `RUBIX` has been recently presented at the Machine Learning and the Physical Sciences workshop at NeurIPS 2024 [@Cakir2024] and at the 1st Workshop on Differentiable Systems and Scientific Machine Learning at EurIPS 2025 [@Schaible2025].
