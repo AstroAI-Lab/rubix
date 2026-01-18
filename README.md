@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./logo_rubix.png" alt="Rubix Logo" width="30%">
+  <img src="https://github.com/AstroAI-Lab/rubix/blob/main/logo_rubix.png" alt="Rubix Logo" width="30%">
 </p>
 
 # Welcome to RUBIX
@@ -25,16 +25,27 @@ Key features include:
 - **Flexible and Extensible:** Designed to easily integrate with existing pipelines and astrophysical analysis tools.
 
 ## Installation
+Rubix is on [PyPi](https://pypi.org/project/astro-rubix/). You can install it via
 
-The Python package `rubix` is published on GitHub and can be installed alongside its runtime dependencies (including JAX) by choosing the relevant extras. For a CPU-only environment, install with:
+```
+pip install astro-rubix
+```
+
+If you need GPU acceleration, you can install it via
+
+```
+pip install astro-rubix[cuda]
+```
+
+Alternatively, the Python package `rubix` is published on GitHub and can be installed alongside its runtime dependencies (including JAX) by choosing the relevant extras. For a CPU-only environment, install with:
 
 ```
 git clone https://github.com/AstroAI-Lab/rubix.git
 cd rubix
-pip install .[cpu]
+pip install .
 ```
 
-If you need GPU acceleration, replace `[cpu]` with `[cuda]` (or install `jax[cuda]` following the [JAX instructions](https://github.com/google/jax#installation) before installing Rubix). The plain `pip install .` command installs the minimal package without JAX and will raise `ImportError` if you try to import `rubix` before adding `jax` manually.
+If you need GPU acceleration, please add the optional dependence with `[cuda]` (or install `jax[cuda]` following the [JAX instructions](https://github.com/google/jax#installation) before installing Rubix).
 
 ## Development installation
 
@@ -44,7 +55,7 @@ the following editable installation from this repository:
 ```
 git clone https://github.com/AstroAI-Lab/rubix.git
 cd rubix
-python -m pip install --editable .[cpu,tests,dev]
+python -m pip install --editable .[tests,dev]
 ```
 
 Having done so, the test suite can be run using `pytest`:
@@ -81,7 +92,7 @@ Please see [here](docs/CONTRIBUTING.md) for contribution guidelines.
 
 Thank you for helping improve `rubix`!
 
-## Citation & Acknowledgement
+## Citation
 
 Please cite **both** of the following papers ([Cakir et al. 2024](https://arxiv.org/abs/2412.08265), [Schaible et al. 2025](https://arxiv.org/abs/2511.17110)) if you use Rubix in your research:
 

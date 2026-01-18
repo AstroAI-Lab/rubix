@@ -9,7 +9,7 @@ build-backend = "setuptools.build_meta"
 # a variety of build tools. Notably, the version specified here is the
 # single source of truth for rubix's version
 [project]
-name = "rubix"
+name = "astro-rubix"
 description = "A toolkit for simulating and analyzing integral field spectroscopic data cubes of astronomical sources."
 readme = "README.md"
 
@@ -59,6 +59,7 @@ keywords =[
 urls = { Homepage = "https://astro-rubix.web.app", Repository = "https://github.com/AstroAI-Lab/rubix", Issues = "https://github.com/AstroAI-Lab/rubix/issues" }
 
 dependencies = [
+    "jax[cpu]>0.5.1",
     "requests",
     "h5py",
     "astropy",
@@ -102,9 +103,7 @@ docs = [
     "sphinx_mdinclude",
     "sphinx_rtd_theme",
 ]
-cpu = [
-    "jax[cpu]>0.5.1",
-    ]
+
 cuda = [
     "jax[cuda]>0.5.1",
     ]
