@@ -42,21 +42,11 @@ Integral field unit (IFU) spectroscopy provides spatially resolved spectral data
 
 # Statement of need
 
-Large IFU surveys such as CALIFA, MaNGA, SAMI, GECKOS, and current and upcoming programs with instruments like MUSE and JWST/NIRSpec are producing vast, information-rich datasets that demand scalable and flexible analysis methods. Forward modeling enables direct, apples-to-apples comparisons between theoretical models and data, but existing IFU forward-modeling tools are limited in several important ways.
+Large IFU surveys such as CALIFA, MaNGA, SAMI, GECKOS, and current and upcoming programs with instruments like VLT?MUSE and JWST/NIRSpec are producing vast, information-rich datasets that demand scalable and flexible analysis methods. Forward modeling enables direct, apples-to-apples comparisons between theoretical models and data, but existing IFU forward-modeling tools are limited in several important ways.
 
-First, **computational performance remains a major bottleneck**: widely used packages for generating mock IFU observations from simulations often require tens of minutes to hours per galaxy on CPUs, making large mock surveys or extensive parameter studies impractical. Second, these tools are generally non-differentiable, which precludes efficient gradient-based optimization and inference. As a result, there are **limitations to inverse modelling** which must rely on expensive sampling methods or simplified approximations, limiting the scope and precision of simulation–observation comparisons. Third, many existing codes are monolithic and difficult to extend, with hard-coded modeling assumptions that hinder **reproducibility and extensibility** through exploration of alternative physical models.
+First, computational performance remains a major bottleneck: widely used packages for generating mock IFU observations from simulations often require tens of minutes to hours per galaxy on CPUs, making large mock surveys or extensive parameter studies impractical. Second, these tools are generally non-differentiable, which precludes efficient gradient-based optimization and inference. As a result, there are limitations to inverse modelling which must rely on expensive sampling methods or simplified approximations, limiting the scope and precision of simulation–observation comparisons. Third, many existing codes are monolithic and difficult to extend, with hard-coded modeling assumptions that hinder reproducibility and extensibility through exploration of alternative physical models.
 
-`RUBIX` addresses these limitations by providing a fast, GPU-accelerated, and fully differentiable IFU forward-modeling pipeline. Built on `JAX`, `RUBIX` enables end-to-end automatic differentiation through all stages of the modeling process (from particle-based inputs to science-ready IFU data cubes), allowing gradient-based parameter estimation, variational inference, and integration with modern machine-learning techniques. Its modular, functional architecture facilitates reproducible workflows and straightforward integration of alternative spectral models, dust prescriptions, and instrument effects. Together, these features make `RUBIX` a practical foundation for large-scale mock surveys, simulation-based inference, and machine-learning applications in IFU astronomy. \autoref{comparison} summarizes key differences between `RUBIX` and commonly used IFU forward-modeling tools.
-
-: Comparison between `RUBIX` and existing software. `RUBIX` addresses many limitations of existing software by providing: computation acceleration, automatic differentiation, modular design and comprehensive testing. []{label="comparison"}
-
-| Feature | `RUBIX` | SimSpin | MaNGIA | GalCraft |
-|---------|-------|---------|---------|----------|
-| Runtime (typical galaxy) | ~ 1 minute | ~ 1 hour | ~ 30 minutes | ~ 1.4 hours |
-| GPU Support | yes | no | no | no |
-| Differentiable | yes | no | no | no |
-| Modular Architecture | yes | Limited | Limited | Limited |
-| Dust Modeling | Multiple laws | Basic | Basic | Basic |
+`RUBIX` addresses these limitations by providing a fast, GPU-accelerated, and fully differentiable IFU forward-modeling pipeline. Built on `JAX`, `RUBIX` enables end-to-end automatic differentiation through all stages of the modeling process (from particle-based inputs to science-ready IFU data cubes), allowing gradient-based parameter estimation, variational inference, and integration with modern machine-learning techniques. Its modular, functional architecture facilitates reproducible workflows and straightforward integration of alternative spectral models, dust prescriptions, and instrument effects. Together, these features make `RUBIX` a practical foundation for large-scale mock surveys, simulation-based inference, and machine-learning applications in IFU astronomy.
 
 # Software description
 
@@ -69,22 +59,39 @@ The **forward-modeling pipeline** transforms particle data from theoretical gala
 
 All stages of the pipeline are differentiable to enable **inverse modelling**. `JAX`’s automatic differentiation enables the computation of exact gradients with respect to both physical and nuisance parameters, allowing `RUBIX` to support gradient-based optimization, variational inference, and integration with modern machine-learning libraries. This key feature distinguishes `RUBIX` from traditional IFU forward-modeling tools and allows forward and inverse modeling to be performed consistently within a single framework.Comprehensive documentation, testing, and continuous integration support reproducible and extensible research workflows.
 
+# Software Design
+
+`RUBIX` prioritizes a functional, configuration-driven architecture through the use of YAML files to keep the forward model fully differentiable while remaining extensible. The central design choice was to compose the pipeline from pure functions that accept explicit inputs (particle data and configuration objects) and return immutable outputs (intermediate tensors or IFU cubes). This reduces hidden state, simplifies gradient tracing, and makes it straightforward to swap components (e.g., alternative dust laws or SSP grids) without touching the rest of the pipeline.
+
+We favored `JAX` transformations (jit, vmap, pmap) over custom CUDA or C++ extensions. The trade-off is an initial compile time and stricter requirements on pure, array-oriented code, but the payoff is device portability (CPU, GPU, TPU), automatic differentiation through every stage, which is essential for gradient-based inference and a massively reduced development time through high-level Python code. Where performance and clarity competed, we separated concerns: high-level orchestration lives in small, typed functions, while numerically intense steps are vectorized primitives that JIT-compile cleanly.
+
+Instrument effects, dust models, and spectral synthesis are implemented as pluggable modules with validated defaults. This enables users to inject domain-specific choices (e.g., PSF kernels, LSF parametrizations, attenuation curves) by editing YAML configs instead of rewriting code, preserving reproducibility. The pipeline also emits intermediate products (e.g., binned particle maps, attenuated spectra) to aid debugging and validation without breaking differentiability. This design balances usability, speed, and scientific fidelity for large IFU modeling campaigns.
+
 # Related work
 
-Several existing software packages perform forward modeling of IFU observations from simulations, including SimSpin [@Harborne2020;@Harborne2023], MaNGIA [@Sarmiento2023], GalCraft [@Wang2024] or Synthesizer [Lovell2025Synthesizer,Roper2025synthesizer]. These tools enable the generation of realistic mock data but are typically CPU-bound and non-differentiable, limiting their scalability and applicability to modern inference and machine-learning approaches.
+Several existing software packages perform forward modeling of IFU observations from simulations, including SimSpin [@Harborne2020;@Harborne2023], MaNGIA [@Sarmiento2023], GalCraft [@Wang2024] or Synthesizer [@Lovell2025Synthesizer;@Roper2025synthesizer]. These tools enable the generation of realistic mock data but are typically CPU-bound and non-differentiable, limiting their scalability and applicability to modern inference and machine-learning approaches.
 More general forward-modeling frameworks, such as Synthesizer, provide flexible and efficient generation of synthetic observables from theoretical galaxy models, with a strong emphasis on modularity and performance. `RUBIX` complements these approaches by focusing specifically on IFU data and by providing a fully differentiable pipeline designed for gradient-based inverse modeling.
 
-`RUBIX` is conceptually closest to recent `JAX`-based modeling frameworks such as scarlet2 [scarlet2], which enable differentiable scene modeling for astronomical imaging. While scarlet2 targets pixel-level modeling of imaging data, `RUBIX` addresses the distinct challenges posed by IFU spectroscopy, including the combination of spatial and spectral information and the forward modeling of particle-based galaxy simulations. By extending differentiable modeling concepts to IFU data, `RUBIX` fills a methodological gap between traditional forward-modeling codes and modern machine-learning–driven inference frameworks.
+`RUBIX` is conceptually closest to recent `JAX`-based modeling frameworks such as scarlet2 [@scarlet2], which enable differentiable scene modeling for astronomical imaging. While scarlet2 targets pixel-level modeling of imaging data, `RUBIX` addresses the distinct challenges posed by IFU spectroscopy, including the combination of spatial and spectral information and the forward modeling of particle-based galaxy simulations. By extending differentiable modeling concepts to IFU data, `RUBIX` fills a methodological gap between traditional forward-modeling codes and modern machine-learning–driven inference frameworks.
 
 # Research applications
 
-`RUBIX` has been presented at the Machine Learning and the Physical Sciences workshop at NeurIPS 2024 [@Cakir2024] and at the 1st Workshop on Differentiable Systems and Scientific Machine Learning at EurIPS 2025. The software is currently used to generate large-scale mock IFU surveys for GECKOS [@Fraser-McKelvie2024] and to perform gradient-based inverse modelling of the data cubes.
+ The software is currently used to generate large-scale mock IFU surveys for GECKOS  and to perform gradient-based inverse modelling of the data cubes.
+
+# Research Impact Statement
+
+`RUBIX` is already in active scientific use: it powers the generation of GECKOS mock IFU surveys [@Fraser-McKelvie2024] and supports gradient-based inverse modeling in ongoing analyses. Early benchmarks on typical galaxy models show that the GPU-enabled pipeline produces science-ready cubes in about a minute, roughly an order of magnitude faster than CPU-bound alternatives such as SimSpin [@Harborne2020;@Harborne2023], MaNGIA [@Sarmiento2023] or GalCraft [@Wang2024]. The codebase includes reproducible configuration files and notebooks, enabling third parties to regenerate results and adapt the pipeline to new surveys with minimal effort. Community uptake is evidenced as `RUBIX` has been recently presented at the Machine Learning and the Physical Sciences workshop at NeurIPS 2024 [@Cakir2024] and at the 1st Workshop on Differentiable Systems and Scientific Machine Learning at EurIPS 2025 [@Schaible2025].
+Additionally `RUBIX` integrates external spectral libraries (e.g., FSPS) and dust laws from the literature for easy adoption. Together these signals demonstrate both realized impact and readiness for broader adoption.
 
 
 # Acknowledgements
 
 We acknowledge the Scientific Software Center at Heidelberg University [(SSC)](https://www.ssc.uni-heidelberg.de/en) for code consulting.
 This project was made possible by funding from the Carl Zeiss Stiftung.
-The authors acknowledge usage of the AI clusters \textit{Tom} and \textit{Jerry}, funded by Field of Focus~2 of Heidelberg University.
+The authors acknowledge usage of the AI clusters \textit{Tom} and \textit{Jerry}, funded by Field of Focus 2 of Heidelberg University.
+
+# AI usage disclosure
+
+Generative AI tools (e.g., GitHub Copilot/ChatGPT) were used to assist with aligning docstrings to implemented code, drafting portions of the documentation, refining paper wording, and suggesting code-review improvements. All AI-suggested content (code, comments, and prose) was reviewed and edited by the authors for technical correctness and appropriateness. No proprietary or unpublished data were provided to AI tools, and all scientific claims and results are derived from the authors’ analyses and validated code.
 
 # References
