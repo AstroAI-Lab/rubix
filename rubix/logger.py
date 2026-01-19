@@ -45,15 +45,13 @@ def get_logger(config=None):
 
     if first_time:
 
-        logger.info(
-            r"""
+        logger.info(r"""
    ___  __  _____  _____  __
   / _ \/ / / / _ )/  _/ |/_/
  / , _/ /_/ / _  |/ /_>  <
 /_/|_|\____/____/___/_/|_|
 
-"""
-        )
+""")
         logger.info(f"Rubix version: {version.__version__}")
         logger.info(f"JAX version: {jax.__version__}")
         logger.info(f"Running on {jax.devices()} devices")
