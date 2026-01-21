@@ -48,6 +48,10 @@ First, computational performance remains a major bottleneck: widely used package
 
 `RUBIX` addresses these limitations by providing a fast, GPU-accelerated, and fully differentiable IFU forward-modeling pipeline. Built on `JAX`, `RUBIX` enables end-to-end automatic differentiation through all stages of the modeling process (from particle-based inputs to science-ready IFU data cubes), allowing gradient-based parameter estimation, variational inference, and integration with modern machine-learning techniques. Its modular, functional architecture facilitates reproducible workflows and straightforward integration of alternative spectral models, dust prescriptions, and instrument effects. Together, these features make `RUBIX` a practical foundation for large-scale mock surveys, simulation-based inference, and machine-learning applications in IFU astronomy.
 
+# State of the field
+
+Forward-modeling IFU codes have matured but remain divided between legacy CPU-only tools and newer, but often non-differentiable, pipelines. SimSpin, MaNGIA, and GalCraft provide realistic mock cubes but typically require tens of minutes to hours per target and do not support gradient-based optimization, limiting their use in modern inference workflows. General frameworks like Synthesizer emphasize modularity yet stop short of full end-to-end differentiation for IFU-specific effects. At the same time, differentiable imaging frameworks such as scarlet2 showcase the power of JAX for optimization, but target imaging rather than combined spatial–spectral data. The field is therefore in transition: scalable, GPU-accelerated, and differentiable IFU modeling remains rare, and community benchmarks for speed, gradient fidelity, and reproducibility are only beginning to emerge. `RUBIX` is designed to sit in this evolving landscape by offering GPU-accelerated, differentiable IFU forward modeling with modular components and reproducible configs, enabling gradient-based science cases that current CPU-bound or non-differentiable tools cannot easily support.
+
 # Software description
 
 ![Schematic overview of the `RUBIX` software: We hand into the pipeline particle data and a configuration as input. The pipeline splits the data onto different devices. The pipeline itself consists of functiona that are applieds in a linear way. As output of our software we get an IFU cube‚.\label{fig:overview}](rubix_code_overview.png)
@@ -88,6 +92,6 @@ The authors acknowledge usage of the AI clusters \textit{Tom} and \textit{Jerry}
 
 # AI usage disclosure
 
-Generative AI tools (e.g., GitHub Copilot/ChatGPT) were used to assist with aligning docstrings to implemented code, drafting portions of the documentation, refining paper wording, and suggesting code-review improvements. All AI-suggested content (code, comments, and prose) was reviewed and edited by the authors for technical correctness and appropriateness. No proprietary or unpublished data were provided to AI tools, and all scientific claims and results are derived from the authors’ analyses and validated code.
+Generative AI tools (e.g., GitHub Copilot/ChatGPT) were used to assist with aligning docstrings to implemented code, drafting portions of the documentation, refining paper wording, and suggesting code-review improvements. All other code design choices and algorithm building were solely done by humans. All AI-suggested content (code, comments, and prose) was reviewed and edited by the authors for technical correctness and appropriateness. No proprietary or unpublished data were provided to AI tools, and all scientific claims and results are derived from the authors’ analyses and validated code.
 
 # References
