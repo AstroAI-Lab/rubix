@@ -90,6 +90,6 @@ The authors acknowledge usage of the AI clusters \textit{Tom} and \textit{Jerry}
 
 # AI usage disclosure
 
-Generative AI tools (e.g., GitHub Copilot/ChatGPT) were used to assist with aligning docstrings to implemented code, drafting portions of the documentation, refining paper wording, and suggesting code-review improvements. All other code design choices and algorithm building were solely done by humans. All AI-suggested content (code, comments, and prose) was reviewed and edited by the authors for technical correctness and appropriateness. No proprietary or unpublished data were provided to AI tools, and all scientific claims and results are derived from the authors’ analyses and validated code.
+Generative AI tools (e.g., GitHub Copilot/ChatGPT model GPT-5.1-Codex-Max) were used to assist with aligning docstrings to implemented code, drafting portions of the documentation, refining paper wording, and suggesting code-review improvements. All other code design choices and algorithm building were solely done by humans. All AI-suggested content (code, comments, docstrings and prose) was reviewed and edited by the authors for technical correctness and appropriateness. No proprietary or unpublished data were provided to AI tools, and all scientific claims and results are derived from the authors’ analyses and validated code.
 
 # References
