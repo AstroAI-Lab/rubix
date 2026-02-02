@@ -14,10 +14,13 @@ authors:
   - name: Ufuk Cakir
     equal-contrib: true
     affiliation: 3
-  - name: Tobias Buck
-    affiliation: "1, 2"
   - name: Harald Mack
     affiliation: 1
+  - name: Horea-Alexandru Cărămizaru
+    affiliation: 4
+  - name: Tobias Buck
+    corresponding: true # (This is how to denote the corresponding author)
+    affiliation: "1, 2"
 affiliations:
  - name: Interdisciplinary Center for Scientific Computing (IWR), University of Heidelberg, Im Neuenheimer Feld 205, D-69120 Heidelberg, Germany
    index: 1
@@ -25,7 +28,9 @@ affiliations:
    index: 2
  - name: Intelligent Earth UKRI Centre for Doctoral Training in AI for the Environment, University of Oxford, UK
    index: 3
-date: 19 December 2025
+ - name: School of Engineering, The University of Edinburgh, Edinburgh, UK
+   index: 4
+date: 2 February 2026
 bibliography: paper.bib
 
 # Optional fields if submitting to a AAS journal too, see this blog post:
