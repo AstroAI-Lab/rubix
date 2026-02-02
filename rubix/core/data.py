@@ -415,7 +415,7 @@ def prepare_input(config: Union[dict, str]) -> RubixData:
             >>> rubixdata.stars.coords
     """
 
-    logger_config = config["logger"] if "logger" in config else None  # type:ignore
+    logger_config = config["logger"] if "logger" in config else None  # type: ignore
     logger = get_logger(logger_config)
     file_path = config["output_path"]
     file_path = os.path.join(file_path, "rubix_galaxy.h5")
@@ -464,13 +464,13 @@ def prepare_input(config: Union[dict, str]) -> RubixData:
                 if rubixdata.stars.coords is not None:
                     indices = np.random.choice(
                         np.arange(len(rubixdata.stars.coords)),
-                        size=size,  # type:ignore
+                        size=size,  # type: ignore
                         replace=False,
-                    )  # type:ignore
+                    )  # type: ignore
                 elif rubixdata.gas.coords is not None:
                     indices = np.random.choice(
                         np.arange(len(rubixdata.gas.coords)),
-                        size=size,  # type:ignore
+                        size=size,  # type: ignore
                         replace=False,
                     )
                 else:
