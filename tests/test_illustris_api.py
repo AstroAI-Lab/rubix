@@ -385,11 +385,11 @@ def test_append_subhalo_data(api_instance, tmp_path):
                 dataset = f["SubhaloData"][key]  # type: ignore
                 if isinstance(value, np.ndarray):
                     np.testing.assert_array_equal(
-                        dataset[:], value  # type:ignore
-                    ), f"Data '{key}' does not match the expected value."  # type:ignore
+                        dataset[:], value  # type: ignore
+                    ), f"Data '{key}' does not match the expected value."  # type: ignore
                 else:
                     assert (
-                        dataset[()] == value  # type:ignore
+                        dataset[()] == value  # type: ignore
                     ), f"Data '{key}' does not match the expected value."
 
 
