@@ -123,9 +123,9 @@ def get_galaxy_rotation(config: dict):
                     velocities=velocities,
                     masses=masses,
                     halfmass_radius=halfmass_radius,
-                    alpha=alpha,
-                    beta=beta,
-                    gamma=gamma,
+                    alpha=alpha, #x
+                    beta=80#beta, #y
+                    gamma=gamma, #z
                     R=rotation_matrix,
                 )
 
