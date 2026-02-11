@@ -11,7 +11,7 @@ authors:
     corresponding: true # (This is how to denote the corresponding author)
     equal-contrib: true
     affiliation: "1, 2" # (Multiple affiliations must be quoted)
-  - name: Ufuk Cakir
+  - name: Ufuk Çakır
     equal-contrib: true
     affiliation: 3
   - name: Harald Mack
@@ -26,7 +26,7 @@ affiliations:
    index: 1
  - name: Universität Heidelberg, Zentrum für Astronomie, Institut für Theoretische Astrophysik, Albert-Ueberle-Straße 2, D-69120 Heidelberg, Germany
    index: 2
- - name: Intelligent Earth UKRI Centre for Doctoral Training in AI for the Environment, University of Oxford, UK
+ - name: Oxford Robotics Institute, University of Oxford, UK
    index: 3
  - name: School of Engineering, The University of Edinburgh, Edinburgh, UK
    index: 4
@@ -47,7 +47,7 @@ Integral field unit (IFU) spectroscopy provides spatially resolved spectral data
 
 # Statement of need
 
-Large IFU surveys such as CALIFA, MaNGA, SAMI, GECKOS, and current and upcoming programs with instruments like VLT?MUSE and JWST/NIRSpec are producing vast, information-rich datasets that demand scalable and flexible analysis methods. Forward modeling enables direct, apples-to-apples comparisons between theoretical models and data, but existing IFU forward-modeling tools are limited in several important ways.
+Large IFU surveys such as CALIFA, MaNGA, SAMI, GECKOS, and current and upcoming programs with instruments like VLT/MUSE and JWST/NIRSpec are producing vast, information-rich datasets that demand scalable and flexible analysis methods. Forward modeling enables direct, apples-to-apples comparisons between theoretical models and data, but existing IFU forward-modeling tools are limited in several important ways.
 
 First, computational performance remains a major bottleneck: widely used packages for generating mock IFU observations from simulations often require tens of minutes to hours per galaxy on CPUs, making large mock surveys or extensive parameter studies impractical. Second, these tools are generally non-differentiable, which precludes efficient gradient-based optimization and inference. As a result, there are limitations to inverse modelling which must rely on expensive sampling methods or simplified approximations, limiting the scope and precision of simulation–observation comparisons. Third, many existing codes are monolithic and difficult to extend, with hard-coded modeling assumptions that hinder reproducibility and extensibility through exploration of alternative physical models.
 
