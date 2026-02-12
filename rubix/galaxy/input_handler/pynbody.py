@@ -83,6 +83,7 @@ class PynbodyHandler(BaseHandler):
             #pynbody.analysis.angmom.faceon(halo.s)
             pynbody.analysis.angmom.faceon(halo.s)
             ang_mom_vec = pynbody.analysis.angmom.ang_mom_vec(halo.s)
+            #rotation_matrix = pynbody.analysis.angmom.calc_sideon_matrix(ang_mom_vec)
             rotation_matrix = pynbody.analysis.angmom.calc_sideon_matrix(ang_mom_vec)
             np.save("./data/rotation_matrix.npy", rotation_matrix)
             self.logger.info(
@@ -103,9 +104,13 @@ class PynbodyHandler(BaseHandler):
             gsf_spliting = pickle.load(open(self.component_file, "rb"))
             #tags = gsf_spliting["tags"]              # e.g. ["classicalBulge","ThinDisc",…]
             #tags = ["Disk", "Bulge", "Spheroid", "Halo"]
-            #for 8.13e11 Datentyp: ['ClassicalBulge', 'Disk', 'PseudoBulge', 'InnerDisk']
-            #for 8.26e11 Datentyp: ['ClassicalBulge', 'ThinDisk', 'ThickDisk', 'PseudoBulge', 'Halo']
-            tags = ['ClassicalBulge', 'ThinDisk', 'ThickDisk', 'PseudoBulge', 'Halo']
+            #for 8.13e11 3D space Datentyp: ['ClassicalBulge', 'Disk', 'PseudoBulge', 'InnerDisk']
+            #for 8.13e11 6D space Datentyp: ['Bar', 'Disk', 'Spheroid', 'Halo']
+            #for 8.26e11 3D space Datentyp: ['ClassicalBulge', 'ThinDisk', 'ThickDisk', 'PseudoBulge', 'Halo']
+            #for 8.26e11 6D space Datentyp: ['ThickDisk', 'ThinDisk', 'PseudoBulge', 'ClassicalBulge', 'Halo']
+            #for 2.79e12 6D space Datentyp: ['ThickDisk', 'Bar', 'B/Pbulge', 'Thin disk', 'Halo', 'Classical bulge']
+            #tags = ['ClassicalBulge', 'ThinDisk', 'ThickDisk', 'PseudoBulge', 'Halo']
+            tags = ['Bar', 'Disk', 'Spheroid', 'Halo']
             labels = gsf_spliting["label"]           # array of ints same length as iord
             gmm_iords = gsf_spliting["iord"]         # array of star iords
 
@@ -180,7 +185,11 @@ class PynbodyHandler(BaseHandler):
                 # unique for safety (large sets)
                 sel_iords = np.unique(sel_iords)
                 mask = np.isin(snap_iords, sel_iords, assume_unique=False)
-                halo.s = halo.s[~mask]
+                # if you want to remove all but the selected components, use the inverse mask:
+                #halo.s = halo.s[~mask]
+                # otherwise you use the mask as is:
+                #halo.s = halo.s[mask]
+                halo.s = halo.s[mask]
                 self.logger.info(
                     "Filtered to components %s (%d particles out of %d).",
                     resolved, int(mask.sum()), int(len(snap_iords))

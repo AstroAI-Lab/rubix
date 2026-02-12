@@ -212,96 +212,7 @@ plt.plot(wave, spectra_sharded[200,150,:])
 plt.savefig(f"./output/emiles/spectra_{galaxy_id}_{component}.jpeg")
 #plt.show()
 
-
-
-from rubix.core.rotation import get_galaxy_rotation
-rotate = get_galaxy_rotation(config_NIHAO)
-
-inputdata = rotate(inputdata)
-
-
-from rubix.core.telescope import get_spaxel_assignment
-bin_particles = get_spaxel_assignment(config_NIHAO)
-
-inputdata = bin_particles(inputdata)
-
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-# Assuming your data arrays are defined as follows:
-pixel_assignment = np.asarray(np.squeeze(inputdata.stars.pixel_assignment))
-velocities = np.asarray(inputdata.stars.velocity[:, 2])
-
-# Compute the sum of velocities and count per pixel using np.bincount
-sum_velocity = np.bincount(pixel_assignment, weights=velocities)
-counts = np.bincount(pixel_assignment)
-
-# Calculate mean velocity; note: division by zero is avoided if every pixel has at least one star.
-mean_velocity = sum_velocity / counts
-
-
-# If you know the pixel grid dimensions (for example, a square grid)
-n_pixels = len(mean_velocity)
-grid_size = int(np.sqrt(n_pixels))
-if grid_size * grid_size != n_pixels:
-    raise ValueError("The total number of pixels is not a perfect square; please specify the grid shape explicitly.")
-
-# Reshape the mean_velocity into a 2D array for imshow
-velocity_map = mean_velocity.reshape((grid_size, grid_size))
-print(velocity_map[12,12])
-
-print(velocity_map[17,12]-velocity_map[7,12])
-# Plot the result
-plt.figure(figsize=(6, 5))
-plt.imshow(velocity_map, origin='lower', interpolation='nearest', cmap='seismic')
-plt.colorbar(label='Mean Velocity')
-plt.title('Mean Velocity per Pixel')
-plt.xlabel('X pixel index')
-plt.ylabel('Y pixel index')
-#storepath = f"./output/datacube_NIHAO{config_illustris['data']['load_galaxy_args']['id']}_{config_illustris["telescope"]["name"]}_{config_illustris['pipeline']['name']}_velocity.png"
-#plt.savefig(storepath)
-plt.savefig(f"./output/emiles/mean_vel_{galaxy_id}_{component}.jpeg")
-#plt.show()
-
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-# Assuming your data arrays are defined as follows:
-pixel_assignment = np.asarray(np.squeeze(inputdata.stars.pixel_assignment))
-ages = np.asarray(inputdata.stars.age[:])
-
-# Compute the sum of velocities and count per pixel using np.bincount
-sum_ages = np.bincount(pixel_assignment, weights=ages)
-counts = np.bincount(pixel_assignment)
-
-# Calculate mean velocity; note: division by zero is avoided if every pixel has at least one star.
-mean_age = sum_ages / counts
-
-
-# If you know the pixel grid dimensions (for example, a square grid)
-n_pixels = len(mean_age)
-grid_size = int(np.sqrt(n_pixels))
-if grid_size * grid_size != n_pixels:
-    raise ValueError("The total number of pixels is not a perfect square; please specify the grid shape explicitly.")
-
-# Reshape the mean_velocity into a 2D array for imshow
-age_map = mean_age.reshape((grid_size, grid_size))
-print(age_map[12,12])
-
-# Plot the result
-plt.figure(figsize=(6, 5))
-plt.imshow(age_map, origin='lower', interpolation='nearest', cmap='inferno')
-plt.colorbar(label='Mean Age')
-plt.title('Mean Age per Pixel')
-plt.xlabel('X pixel index')
-plt.ylabel('Y pixel index')
-#storepath = f"./output/datacube_NIHAO{config_illustris['data']['load_galaxy_args']['id']}_{config_illustris["telescope"]["name"]}_{config_illustris['pipeline']['name']}_age.png"
-#plt.savefig(storepath)
-plt.savefig(f"./output/emiles/mean_age_{galaxy_id}_{component}.jpeg")
-#plt.show()
-
+"""
 import matplotlib.pyplot as plt
 
 # Plot a histogram of the velocities
@@ -320,3 +231,4 @@ plt.xlabel('Metallicity (Z/Zsun)')
 plt.ylabel('Frequency')
 plt.title('Histogram of Star Metallicity')
 plt.savefig(f"./output/emiles/metallicity_{galaxy_id}_{component}.jpeg")
+"""
