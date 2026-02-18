@@ -1,4 +1,15 @@
 #fov in arcsec!
+
+HARMONI:
+  fov: 4.0
+  spatial_res: 0.025
+  wave_range: [8300.0, 10500.0]
+  wave_res: 0.78
+  lsf_fwhm: 2.51
+  signal_to_noise: null
+  aperture_type: "square"
+  pixel_type: "square"
+
 MUSE:
   fov: 5.0
   spatial_res: 0.2

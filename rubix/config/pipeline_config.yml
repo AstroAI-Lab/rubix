@@ -1,3 +1,47 @@
+calc_ifu_memory_harmoni:
+  Transformers:
+    rotate_galaxy:
+      name: rotate_galaxy
+      depends_on: null
+      args: []
+      kwargs: {}
+    filter_particles:
+      name: filter_particles
+      depends_on: rotate_galaxy
+      args: []
+      kwargs: {}
+    spaxel_assignment:
+      name: spaxel_assignment
+      depends_on: filter_particles
+      args: []
+      kwargs: {}
+    calculate_datacube_particlewise:
+      name: calculate_datacube_particlewise
+      depends_on: spaxel_assignment
+      args: []
+      kwargs: {}
+    #convolve_psf:
+    #  name: convolve_psf
+    #  depends_on: calculate_datacube_particlewise
+    #  args: []
+    #  kwargs: {}
+    #convolve_lsf:
+    #  name: convolve_lsf
+    #  depends_on: convolve_psf
+    #  args: []
+    #  kwargs: {}
+    #apply_noise:
+    #  name: apply_noise
+    #  depends_on: convolve_lsf
+    #  args: []
+    #  kwargs: {}
+    #convert_flux:
+    #  name: convert_flux
+    #  depends_on: apply_noise
+    #  args: []
+    #  kwargs: {}
+
+
 calc_ifu:
   Transformers:
     rotate_galaxy:
