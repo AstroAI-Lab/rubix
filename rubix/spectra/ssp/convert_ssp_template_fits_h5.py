@@ -71,12 +71,13 @@ sample_wave = data_dict[(ages[0], metallicities[0])][0]
 # Create the flux grid. 
 # Note: The shape is set to (n_age, n_metallicity, n_wavelength) here. 
 # If your RUBIX reader expects (n_metallicity, n_age, n_wavelength), just swap `len(ages)` and `len(metallicities)` here and in the loop!
-flux_grid = np.zeros((len(ages), len(metallicities), len(sample_wave)))
+flux_grid = np.zeros((len(metallicities), len(ages), len(sample_wave)))
 
-for i, a in enumerate(ages):
-    for j, m in enumerate(metallicities):
+for j, m in enumerate(metallicities): # Swap the loop order for clarity
+    for i, a in enumerate(ages):
         if (a, m) in data_dict:
-            flux_grid[i, j, :] = data_dict[(a, m)][1]
+            # Note: Index is now [j, i, :] -> [metallicity, age, wavelength]
+            flux_grid[j, i, :] = data_dict[(a, m)][1]
         else:
             print(f"Warning: Missing FITS file for Age={a}, Metallicity={m}")
 

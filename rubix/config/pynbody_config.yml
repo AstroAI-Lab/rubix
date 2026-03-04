@@ -32,6 +32,7 @@ units:
     density: "Msun/kpc^3"
     temperature: "K"
     metals: "dimensionless"
+    metallicity: ""
     #OxMassFrac: "dimensionless"
     #HI: "dimensionless"
     coords: "kpc"
