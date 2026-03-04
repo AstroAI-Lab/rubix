@@ -1,11 +1,13 @@
 import logging
 import os
-from typing import Optional
+import ast
+import re
 
 import astropy.units as u
 import numpy as np
 import pynbody
 import yaml
+import pickle
 
 from rubix.cosmology import PLANCK15 as rubix_cosmo
 from rubix.units import Zsun
@@ -15,35 +17,18 @@ from .base import BaseHandler
 
 
 class PynbodyHandler(BaseHandler):
-    """
-    Handler implementation that loads a galaxy using the pynbody library.
-
-    Args:
-        path (str): Path to the snapshot file.
-        halo_path (Optional[str]): Optional halo file path.
-        rotation_path (str): Path to store rotation matrix.
-        logger (Optional[logging.Logger]): Optional logger instance.
-        config (Optional[dict]): Optional configuration dict.
-        dist_z (Optional[float]): Optional redshift override.
-        halo_id (Optional[int]): Optional halo identifier.
-    """
-
     def __init__(
-        self,
-        path: str,
-        halo_path: Optional[str] = None,
-        rotation_path: str = "./data",
-        logger: Optional[logging.Logger] = None,
-        config: Optional[dict] = None,
-        dist_z: Optional[float] = None,
-        halo_id: Optional[int] = None,
+        self, path, halo_path=None, component=None, component_file=None, logger=None, config=None, dist_z=None, halo_id=None
     ):
+        """Initialize handler with paths to snapshot and halo files."""
         self.metallicity_unit = Zsun
         self.path = path
         self.halo_path = halo_path
-        self.rotation_path = rotation_path
         self.halo_id = halo_id
         self.pynbody_config = config or self._load_config()
+        comp_cfg = self.pynbody_config.get("galaxy", {})
+        self.component      = component
+        self.component_file = component_file
         self.logger = logger or self._default_logger()
         super().__init__()
         self.dist_z = dist_z
@@ -95,20 +80,126 @@ class PynbodyHandler(BaseHandler):
         self.logger.info(f"Simulation snapshot loaded from halo {self.halo_id}")
         halo = self.get_halo_data(halo_id=self.halo_id)
         if halo is not None:
+            #pynbody.analysis.angmom.faceon(halo.s)
             pynbody.analysis.angmom.faceon(halo.s)
             ang_mom_vec = pynbody.analysis.angmom.ang_mom_vec(halo.s)
+            #rotation_matrix = pynbody.analysis.angmom.calc_sideon_matrix(ang_mom_vec)
             rotation_matrix = pynbody.analysis.angmom.calc_sideon_matrix(ang_mom_vec)
-            if not os.path.exists(self.rotation_path):
-                self.logger.info("Rotation matrix calculated and not saved.")
-            else:
-                np.save(
-                    os.path.join(self.rotation_path, "rotation_matrix.npy"),
-                    rotation_matrix,
-                )
-                self.logger.info(
-                    f"Rotation matrix calculated and saved to '{self.rotation_path}/rotation_matrix.npy'."
-                )
+            np.save("./data/rotation_matrix.npy", rotation_matrix)
+            self.logger.info(
+                "Rotation matrix calculated and saved to '/notebooks/data/rotation_matrix.npy'."
+            )
             self.sim = halo
+
+            self.logger.info(
+                f"Loaded halo data for halo ID {self.halo_id} with {len(halo.s)} particles."
+            )
+            self.logger.info(
+                f"Loading components from file: {self.component_file}."
+            )
+            self.logger.info(
+                f"Filtering components by: {self.component}."
+            )
+            # If a component is specified, load it and store from the input handler only the particles belonging to that file.
+            gsf_spliting = pickle.load(open(self.component_file, "rb"))
+            #tags = gsf_spliting["tags"]              # e.g. ["classicalBulge","ThinDisc",…]
+            #tags = ["Disk", "Bulge", "Spheroid", "Halo"]
+            #for 8.13e11 3D space Datentyp: ['ClassicalBulge', 'Disk', 'PseudoBulge', 'InnerDisk']
+            #for 8.13e11 6D space Datentyp: ['Bar', 'Disk', 'Spheroid', 'Halo']
+            #for 8.26e11 3D space Datentyp: ['ClassicalBulge', 'ThinDisk', 'ThickDisk', 'PseudoBulge', 'Halo']
+            #for 8.26e11 6D space Datentyp: ['ThickDisk', 'ThinDisk', 'PseudoBulge', 'ClassicalBulge', 'Halo']
+            #for 2.79e12 6D space Datentyp: ['ThickDisk', 'Bar', 'BPbulge', 'ThinDisk', 'Halo', 'ClassicalBulge']
+            #tags = ['ClassicalBulge', 'ThinDisk', 'ThickDisk', 'PseudoBulge', 'Halo']
+            tags = ['Bar', 'Disk', 'Spheroid', 'Halo']
+            labels = gsf_spliting["label"]           # array of ints same length as iord
+            gmm_iords = gsf_spliting["iord"]         # array of star iords
+
+            # normalize config to a list (or empty list for no filter)
+            def _norm_tag(s: str) -> str:
+                s = s.strip()
+                s = s.replace("ThinDisk", "ThinDisc").replace("ThickDisk", "ThickDisc")
+                return re.sub(r"\s+", "", s).lower()  # case/space-insensitive
+
+            def _parse_components(comp):
+                """Return None (no filter), a str, or a list[str] in original form."""
+                if comp is None:
+                    return None
+                if isinstance(comp, list) or isinstance(comp, tuple):
+                    return list(comp)
+                if isinstance(comp, str):
+                    c = comp.strip()
+                    if c == "" or c.lower() == "none":
+                        return None
+                    # handle "['A','B']" or '["A","B"]'
+                    if c.startswith("[") and c.endswith("]"):
+                        try:
+                            parsed = ast.literal_eval(c)
+                            return [str(x) for x in parsed]
+                        except Exception:
+                            pass
+                    # handle CSV "A,B,C"
+                    if "," in c:
+                        return [x.strip() for x in c.split(",")]
+                    return c
+                return None
+
+            # ---- parse & normalize requested components
+            requested = _parse_components(self.component)  # None | str | list[str]
+            if requested is None:
+                target_tags = []
+            else:
+                if isinstance(requested, str):
+                    target_tags = [requested]
+                else:
+                    target_tags = list(requested)
+
+            # build normalization map from pickle tags -> original form
+            tags_norm_map = {_norm_tag(t): t for t in tags}
+
+            # map requested tags (after normalization/synonyms) to original tags if possible
+            resolved = []
+            unknown = []
+            for t in target_tags:
+                tN = _norm_tag(t)
+                if tN in tags_norm_map:
+                    resolved.append(tags_norm_map[tN])
+                else:
+                    unknown.append(t)
+
+            if unknown:
+                self.logger.warning(
+                    "Ignoring unknown components after normalization: %s ; valid tags are: %s",
+                    sorted(set(unknown)), tags
+                )
+
+            if resolved:
+                self.logger.info("Filtering components by tags (resolved): %s", resolved)
+                target_idxs = [tags.index(t) for t in resolved]
+                snap_iords = np.asarray(halo.s["iord"])
+                # union of all requested labels
+                sel_list = [gmm_iords[labels == idx] for idx in target_idxs]
+                if len(sel_list) == 1:
+                    sel_iords = sel_list[0]
+                else:
+                    sel_iords = np.concatenate(sel_list, axis=0)
+                # unique for safety (large sets)
+                sel_iords = np.unique(sel_iords)
+                mask = np.isin(snap_iords, sel_iords, assume_unique=False)
+                # if you want to remove all but the selected components, use the inverse mask:
+                #halo.s = halo.s[~mask]
+                # otherwise you use the mask as is:
+                #halo.s = halo.s[mask]
+                halo.s = halo.s[mask]
+                self.logger.info(
+                    "Filtered to components %s (%d particles out of %d).",
+                    resolved, int(mask.sum()), int(len(snap_iords))
+                )
+            else:
+                self.logger.info("No component filtering; loading all stars.")
+
+            self.sim = halo
+
+
 
         fields = self.pynbody_config["fields"]
         load_classes = self.pynbody_config.get("load_classes", ["stars", "gas"])
@@ -117,10 +208,35 @@ class PynbodyHandler(BaseHandler):
 
         # Load data for stars and gas
         for cls in load_classes:
-            if cls in ["stars", "gas"]:
-                self.data[cls] = self.load_particle_data(
-                    getattr(self.sim, cls), fields[cls], units[cls], cls
-                )
+            #if cls in ["stars", "gas"]:
+            #    self.data[cls] = self.load_particle_data(
+            #        getattr(self.sim, cls), fields[cls], units[cls], cls
+            #    )
+            if cls == "stars":
+                # use the masked subhalo star‐Snap
+                sim_class = self.sim.s
+            elif cls == "gas":
+                # gas remains unfiltered
+                sim_class = self.sim.g   # or self.sim.gas
+            else:
+                continue
+
+            self.data[cls] = self.load_particle_data(
+                sim_class,
+                fields[cls],
+                units[cls],
+                cls
+            )
+
+        # for cls in self.data:
+        #    self.logger.info(f"Loaded {cls} data: {self.data[cls].keys()}")
+        #    self.logger.info("Assigning metals to gas particles........")
+
+        # Combine HI and OxMassFrac into a two-column metals field for gas
+        #    self.data["gas"]["metals"] = np.column_stack((self.data["gas"]["HI"],
+        #                                                self.data["gas"]["OxMassFrac"]))
+        #    self.logger.info("Metals assigned to gas particles........")
+        #    self.logger.info("Metals shape is: ", self.data["gas"]["metals"].shape)
 
         hi_data = self.load_particle_data(
             getattr(self.sim, "gas"),
@@ -134,7 +250,8 @@ class PynbodyHandler(BaseHandler):
             {"OxMassFrac": u.dimensionless_unscaled},
             "gas",
         )
-
+        # fe_data = self.load_particle_data(getattr(self.sim, "gas"), {"FeMassFrac": "FeMassFrac"}, {"FeMassFrac": u.dimensionless_unscaled}, "gas")
+        # self.data["gas"]["metals"] = np.column_stack((hi_data["HI"], ox_data["OxMassFrac"]))
         # Create a metals array with 10 columns, filled with zeros initially
         n_particles = hi_data["HI"].shape[0]
         metals = np.zeros((n_particles, 10), dtype=hi_data["HI"].dtype)
@@ -168,6 +285,9 @@ class PynbodyHandler(BaseHandler):
                 # For NIHAO, temperature is directly available as "temp" (if requested).
                 data[field] = np.array(sim_class[sim_field]) * units.get(
                     field, u.dimensionless_unscaled
+                )
+                self.logger.debug(
+                    f"{len(data[field])} particles for {particle_type} loaded from '{sim_field}'"
                 )
             else:
                 self.logger.warning(
