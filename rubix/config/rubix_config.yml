@@ -175,6 +175,57 @@ ssp:
           units: "Lsun/Angstrom" # Luminosity of the template
           in_log: false # If the field is stored in log scale
 
+    MILES:
+      name: "MILES"
+      format: "HDF5" 
+      source: "https://github.com/geckos-survey/ngist/" # Just a reference for where it came from
+      file_name: "MILES_template.h5" # Make sure this matches the output of our python script
+      # Define the Fields in the template and their units
+      fields: 
+        age:
+          name: "age"
+          units: "Gyr" # nGIST encodes age in Gyr (e.g., T10.0000 = 10 Gyr)
+          in_log: false 
+        metallicity:
+          name: "metallicity"
+          units: "" # nGIST uses bracket metallicity [M/H] (e.g., Zp0.00 = 0.00)
+          in_log: false 
+        wavelength:
+          name: "wavelength"
+          units: "Angstrom" 
+          in_log: false 
+        flux:
+          name: "flux"
+          units: "Lsun/Angstrom" # Keep consistent with the pipeline's expected flux units
+          in_log: false
+
+    EMILES:
+      name: "EMILES"
+      format: "HDF5" # Format of the template
+      source: "https://github.com/kateharborne/SimSpin/tree/main/data/" # note: we end with a slash, so that in combination with the file_name, the full URL is formed
+      file_name: "EMILES.h5" # File name of the template, stored in templates directory
+      # Define the Fields in the template and their units
+      # This is used to convert them to the required units
+      fields: # Fields in the template and their units
+        # Name defines the name of the key stored in the hdf5 file
+        age:
+          name: "age"
+          units: "yr" # Age of the template
+          in_log: false # If the field is stored in log scale
+        metallicity:
+          name: "metallicity"
+          units: "" # Metallicity of the template
+          in_log: false # If the field is stored in log scale
+        wavelength:
+          name: "wavelength"
+          units: "Angstrom" # Wavelength of the template
+          in_log: false # If the field is stored in log scale
+        flux:
+          name: "flux"
+          units: "Lsun/Angstrom" # Luminosity of the template
+          in_log: false # If the field is stored in log scale
+
+
     Mastar_CB19_SLOG_1_5:
       name: "Mastar Charlot & Bruzual (2019)"
       # more information on how those models are synthesized: Appendix A of Sanchez et al. 2022
