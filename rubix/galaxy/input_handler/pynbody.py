@@ -110,7 +110,7 @@ class PynbodyHandler(BaseHandler):
             #for 8.26e11 6D space Datentyp: ['ThickDisk', 'ThinDisk', 'PseudoBulge', 'ClassicalBulge', 'Halo']
             #for 2.79e12 6D space Datentyp: ['ThickDisk', 'Bar', 'BPbulge', 'ThinDisk', 'Halo', 'ClassicalBulge']
             #tags = ['ClassicalBulge', 'ThinDisk', 'ThickDisk', 'PseudoBulge', 'Halo']
-            tags = ['ThickDisk', 'Bar', 'BPbulge', 'ThinDisk', 'Halo', 'ClassicalBulge']
+            tags = ['ThickDisk', 'ThinDisk', 'PseudoBulge', 'ClassicalBulge', 'Halo']
             labels = gsf_spliting["label"]           # array of ints same length as iord
             gmm_iords = gsf_spliting["iord"]         # array of star iords
 
