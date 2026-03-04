@@ -10,20 +10,32 @@ from rubix.core.telescope import get_telescope
 from rubix.logger import get_logger
 
 
-def store_fits(config: dict, data: np.ndarray, filepath: str) -> None:
-    """Write the provided datacube as a FITS file.
+def store_fits(config, data, filepath):
+    """
+    Store the datacube in a FITS file.
 
-    Args:
-        config (dict): Simulation and pipeline configuration.
-        data (np.ndarray): Datacube array to serialize.
-        filepath (str): Directory path where the FITS file will be stored.
+    Parameters:
+        config (dict): The configuration dictionary
+        data (dict): The data dictionary
+        filepath (str): The path to save the FITS file
 
     Returns:
-        None: Always returns ``None`` after writing the file.
+        None
     """
     logger_config = config.get("logger", None)
     logger = get_logger(logger_config)
 
+    """
+    if "cube_type" not in config["data"]["args"]:
+        datacube = data.stars.datacube
+        parttype = "stars"
+    elif config["data"]["args"]["cube_type"] == "stars":
+        datacube = data.stars.datacube
+        parttype = "stars"
+    elif config["data"]["args"]["cube_type"] == "gas":
+        datacube = data.gas.datacube
+        parttype = "gas"
+    """
     datacube = data
 
     telescope = get_telescope(config)
@@ -32,15 +44,7 @@ def store_fits(config: dict, data: np.ndarray, filepath: str) -> None:
     hdr["SIMPLE"] = "T /conforms to FITS standard"
     hdr["PIPELINE"] = config["pipeline"]["name"]
     hdr["DIST_z"] = config["galaxy"]["dist_z"]
-    if (
-        config["galaxy"]["rotation"]["type"] == "face-on"
-        or config["galaxy"]["rotation"]["type"] == "edge-on"
-    ):
-        hdr["ROTATION"] = config["galaxy"]["rotation"]["type"]
-    else:
-        hdr["ROT_a"] = config["galaxy"]["rotation"]["alpha"]
-        hdr["ROT_b"] = config["galaxy"]["rotation"]["beta"]
-        hdr["ROT_c"] = config["galaxy"]["rotation"]["gamma"]
+    hdr["ROTATION"] = config["galaxy"]["rotation"]["type"]
     hdr["SIM"] = config["simulation"]["name"]
 
     # For Illustris and NIHAO
@@ -65,7 +69,7 @@ def store_fits(config: dict, data: np.ndarray, filepath: str) -> None:
     hdr1 = fits.Header()
     hdr1["EXTNAME"] = "DATA"
     hdr1["OBJECT"] = object_name
-    hdr1["BUNIT"] = "10**-20 erg/(s*cm^2*A)"  # flux unit per Angstrom
+    hdr1["BUNIT"] = "erg/(s*cm^2*A)"  # flux unit per Angstrom
     hdr1["CRPIX1"] = (datacube.shape[0] - 1) / 2
     hdr1["CRPIX2"] = (datacube.shape[1] - 1) / 2
     hdr1["CD1_1"] = telescope.spatial_res / 3600  # convert arcsec to deg
@@ -91,7 +95,7 @@ def store_fits(config: dict, data: np.ndarray, filepath: str) -> None:
 
     output_filename = (
         f"{filepath}{config['simulation']['name']}_id{galaxy_id}_snap{snapshot}_"
-        f"{config['telescope']['name']}_{config['pipeline']['name']}.fits"
+        f"subset{config['data']['subset']['use_subset']}.fits"
     )
 
     os.makedirs(os.path.dirname(output_filename), exist_ok=True)
@@ -100,14 +104,15 @@ def store_fits(config: dict, data: np.ndarray, filepath: str) -> None:
     logger.info(f"Datacube saved to {output_filename}")
 
 
-def load_fits(filepath: str) -> Cube:
-    """Load a FITS file and return the associated mpdaf cube.
+def load_fits(filepath):
+    """
+    Load a FITS file and return the datacube.
 
-    Args:
-        filepath (str): Path to the FITS file to open.
+    Parameters:
+        filepath (str): The path to the FITS file
 
     Returns:
-        Cube: Loaded mpdaf cube instance.
+        The cube object from mpdaf
     """
     cube = Cube(filename=filepath)
     return cube

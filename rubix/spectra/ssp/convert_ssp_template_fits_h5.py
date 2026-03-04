@@ -11,7 +11,7 @@ template_dir = './templates/MILES/'
 output_h5_file = './templates/MILES_template.h5'
 
 # Solar metallicity reference
-Z_SUN = 0.012
+Z_SUN = 0.0142
 
 # 1. Gather all fits files in the directory
 fits_files = glob.glob(os.path.join(template_dir, '*.fits'))

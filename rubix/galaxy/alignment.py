@@ -1,6 +1,7 @@
+from typing import Tuple, Union
+
 import jax.numpy as jnp
 from beartype import beartype as typechecker
-from beartype.typing import Tuple, Union
 from jax.scipy.spatial.transform import Rotation
 from jaxtyping import Array, Float, jaxtyped
 
@@ -11,20 +12,20 @@ def center_particles(rubixdata: object, key: str) -> object:
     Center the stellar particles around the galaxy center.
 
     Args:
-        rubixdata (object): The RubixData object to update.
-        key (str): Particle key, e.g. "stars" or "gas".
+        rubixdata (object): The RubixData object.
+        key (str): The key to the particle data.
+        stellar_coordinates (jnp.ndarray): The coordinates of the particles.
+        stellar_velocities (jnp.ndarray): The velocities of the particles.
+        galaxy_center (jnp.ndarray): The center of the galaxy.
 
     Returns:
-        object: The same RubixData object with centered coordinates and
-            velocities.
+        The RubixData object with the centered particles, which contain of a new set
+        of coordinates and velocities as jnp.ndarray.
 
-    Raises:
-        ValueError: If the galaxy center lies outside the particle bounds.
-
-    Example:
-
-            >>> from rubix.galaxy.alignment import center_particles
-            >>> rubixdata = center_particles(rubixdata, "stars")
+    Example
+    -------
+    >>> from rubix.galaxy.alignment import center_particles
+    >>> rubixdata = center_particles(rubixdata, "stars")
     """
     if key == "stars":
         particle_coordinates = rubixdata.stars.coords
@@ -69,27 +70,21 @@ def moment_of_inertia_tensor(
     halfmass_radius: Union[Float[Array, "..."], float],
 ) -> Float[Array, "..."]:
     """
-    Calculate the moment of inertia tensor for particles within the half-mass
-    radius.
+    Calculate the moment of inertia tensor for a given set of positions and masses within the half-light radius.
     Assumes the galaxy is already centered.
 
     Args:
-        positions (Float[Array, "..."]): Particle positions.
-        masses (Float[Array, "..."]): Corresponding masses.
-        halfmass_radius (Union[Float[Array, "..."], float]): The half-mass radius of the galaxy used to
-            filter particles.
+        positions (jnp.ndarray): The positions of the particles.
+        masses (jnp.ndarray): The masses of the particles.
+        half_light_radius (float): The half-light radius of the galaxy.
 
     Returns:
-        Float[Array, "..."]: Moment of inertia tensor.
+        The moment of inertia tensor as a jnp.ndarray.
 
-    Example:
-
-            >>> from rubix.galaxy.alignment import moment_of_inertia_tensor
-            >>> I = moment_of_inertia_tensor(
-            ...     rubixdata.stars.coords,
-            ...     rubixdata.stars.mass,
-            ...     rubixdata.galaxy.halfmassrad_stars,
-            ... )
+    Example
+    -------
+    >>> from rubix.galaxy.alignment import moment_of_inertia_tensor
+    >>> I = moment_of_inertia_tensor(rubixdata.stars.coords, rubixdata.stars.mass, rubixdata.galaxy.half_light_radius)
     """
 
     distances = jnp.sqrt(
@@ -130,13 +125,13 @@ def moment_of_inertia_tensor(
 @jaxtyped(typechecker=typechecker)
 def rotation_matrix_from_inertia_tensor(I: Float[Array, "..."]) -> Float[Array, "..."]:
     """
-    Calculate the 3x3 rotation matrix by diagonalizing the moment of inertia tensor.
+    Calculate 3x3 rotation matrix by diagonalization of the moment of inertia tensor.
 
     Args:
-        I (Float[Array, "..."]): The moment of inertia tensor.
+        I (jnp.ndarray): The moment of inertia tensor.
 
     Returns:
-        Float[Array, "..."]: The rotation matrix.
+        The rotation matrix as a jnp.ndarray.
     """
 
     eigen_values, eigen_vectors = jnp.linalg.eigh(I)
@@ -147,17 +142,17 @@ def rotation_matrix_from_inertia_tensor(I: Float[Array, "..."]) -> Float[Array, 
 
 @jaxtyped(typechecker=typechecker)
 def apply_init_rotation(
-    positions: Float[Array, "* 3"], rotation_matrix: Float[Array, "3 3"]
-) -> Float[Array, "* 3"]:
+    positions: Float[Array, "..."], rotation_matrix: Float[Array, "..."]
+) -> Float[Array, "..."]:
     """
-    Apply a rotation matrix to a particle positions array.
+    Apply a rotation matrix to a set of positions.
 
     Args:
-        positions (Float[Array, "* 3"]): The particle positions.
-        rotation_matrix (Float[Array, "3 3"]): The rotation matrix to apply.
+        positions (jnp.ndarray): The positions of the particles.
+        rotation_matrix (jnp.ndarray): The rotation matrix.
 
     Returns:
-        Float[Array, "* 3"]: The rotated positions.
+        The rotated positions as a jnp.ndarray.
     """
 
     return jnp.dot(positions, rotation_matrix)
@@ -218,16 +213,16 @@ def apply_rotation(
     positions: Float[Array, "* 3"], alpha: float, beta: float, gamma: float
 ) -> Float[Array, "* 3"]:
     """
-    Apply an Euler-angle rotation using the combined rotation matrix.
+    Apply a rotation to a set of positions given Euler angles.
 
     Args:
-        positions (Float[Array, "* 3"]): The positions of the particles.
-        alpha (float): Rotation around the x-axis in degrees.
-        beta (float): Rotation around the y-axis in degrees.
-        gamma (float): Rotation around the z-axis in degrees.
+        positions (jnp.ndarray): The positions of the particles.
+        alpha (float): Rotation around the x-axis in degrees
+        beta (float): Rotation around the y-axis in degrees
+        gamma (float): Rotation around the z-axis in degrees
 
     Returns:
-        Float[Array, "* 3"]: The rotated positions.
+        The rotated positions as a jnp.ndarray.
     """
 
     R = euler_rotation_matrix(alpha, beta, gamma)
@@ -236,57 +231,52 @@ def apply_rotation(
 
 @jaxtyped(typechecker=typechecker)
 def rotate_galaxy(
-    positions: Float[Array, "..."],
-    velocities: Float[Array, "..."],
-    positions_stars: Float[Array, "..."],
-    masses_stars: Float[Array, "..."],
+    positions: Float[Array, "* 3"],
+    velocities: Float[Array, "* 3"],
+    masses: Float[Array, "..."],
     halfmass_radius: Union[Float[Array, "..."], float],
     alpha: float,
     beta: float,
     gamma: float,
-    key: str,
+    R=None,  # type: Float[Array, "3 3"] = None
 ) -> Tuple[Float[Array, "* 3"], Float[Array, "* 3"]]:
     """
-    Orientate the galaxy by rotating the particle coordinates by Euler angles.
+    Orientate the galaxy by applying a rotation matrix to the positions of the particles.
 
     Args:
-        positions (Float[Array, "..."]): Particle positions.
-        velocities (Float[Array, "..."]): Particle velocities.
-        positions_stars (Float[Array, "..."]): Star particle positions.
-        masses_stars (Float[Array, "..."]): Star particle masses.
-        halfmass_radius (Union[Float[Array, "..."], float]): Radius used for
-            the moment of inertia calculation.
-        alpha (float): Rotation around the x-axis in degrees.
-        beta (float): Rotation around the y-axis in degrees.
-        gamma (float): Rotation around the z-axis in degrees.
-        key (str): Dataset key ("IllustrisTNG" or "NIHAO").
+        positions (jnp.ndarray): The positions of the particles.
+        velocities (jnp.ndarray): The velocities of the particles.
+        masses (jnp.ndarray): The masses of the particles.
+        halfmass_radius (float): The half-mass radius of the galaxy.
+        alpha (float): Rotation around the x-axis in degrees
+        beta (float): Rotation around the y-axis in degrees
+        gamma (float): Rotation around the z-axis in degrees
 
     Returns:
-        Tuple[Float[Array, "* 3"], Float[Array, "* 3"]]: Rotated positions and
-            velocities.
-
-    Raises:
-        ValueError: If `key` is not supported.
+        The rotated positions and velocities as a jnp.ndarray.
     """
-    # we have to distinguis between IllustrisTNG and NIHAO.
-    # The nihao galaxies are already oriented face-on in the pynbody input handler.
-    # The IllustrisTNG galaxies are not oriented face-on, so we have to calculate the moment of inertia tensor
-    # and apply the rotation matrix to the positions and velocities.
-    # After that the simulations can be treated in the same way.
-    # Then the user specific rotation is applied to the positions and velocities.
-    if key == "IllustrisTNG":
-        I = moment_of_inertia_tensor(positions_stars, masses_stars, halfmass_radius)
+    if R is None:
+        I = moment_of_inertia_tensor(positions, masses, halfmass_radius)
         R = rotation_matrix_from_inertia_tensor(I)
         pos_rot = apply_init_rotation(positions, R)
         vel_rot = apply_init_rotation(velocities, R)
         pos_final = apply_rotation(pos_rot, alpha, beta, gamma)
         vel_final = apply_rotation(vel_rot, alpha, beta, gamma)
-    elif key == "NIHAO":
-        pos_final = apply_rotation(positions, alpha, beta, gamma)
-        vel_final = apply_rotation(velocities, alpha, beta, gamma)
+
     else:
-        raise ValueError(
-            f"Unknown key: {key} for the rotation. Supported keys are 'IllustrisTNG' and 'NIHAO'."
-        )
+        pos_rot = apply_init_rotation(positions, R)
+        vel_rot = apply_init_rotation(velocities, R)
+        #pos_final = apply_rotation(pos_rot, alpha, beta, gamma)
+        #vel_final = apply_rotation(vel_rot, alpha, beta, gamma)
+        #for g2.79e12
+        #pos_final1 = apply_rotation(pos_rot, alpha, 80.0, gamma)
+        #vel_final1 = apply_rotation(vel_rot, alpha, 80.0, gamma)
+        #pos_final = apply_rotation(pos_final1, alpha, beta, 4.0)
+        #vel_final = apply_rotation(vel_final1, alpha, beta, 4.0)
+        #for g8.13e11
+        pos_final1 = apply_rotation(pos_rot, alpha, -40.0, gamma)
+        vel_final1 = apply_rotation(vel_rot, alpha, -40.0, gamma)
+        pos_final = apply_rotation(pos_final1, alpha, beta, 0.0)
+        vel_final = apply_rotation(vel_final1, alpha, beta, 0.0)
 
     return pos_final, vel_final
