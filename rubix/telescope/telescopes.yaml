@@ -2,7 +2,7 @@
 
 HARMONI:
   fov: 4.0
-  spatial_res: 0.025
+  spatial_res: 0.005
   wave_range: [1680.0, 20000.0]
   wave_res: 0.9
   lsf_fwhm: 2.51

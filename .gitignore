@@ -182,3 +182,6 @@ notebooks/data/*
 rubix/spectra/ssp/templates/BC03lr_old.h5
 rubix/spectra/ssp/templates/BC03hr.h5
 rubix/spectra/ssp/templates/EMILES.h5
+rubix/spectra/ssp/templates/MILES_template.h5
+rubix/spectra/ssp/templates/MILES/*
+
