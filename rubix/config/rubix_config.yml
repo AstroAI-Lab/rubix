@@ -199,6 +199,30 @@ ssp:
           units: "Lsun/Angstrom" # Keep consistent with the pipeline's expected flux units
           in_log: false
 
+    EMILES_BASTI_BASE_CH_FITS_safe:
+      name: "EMILES_BASTI_BASE_CH_FITS_safe"
+      format: "HDF5" 
+      source: "https://github.com/geckos-survey/ngist/" # Just a reference for where it came from
+      file_name: "EMILES_template.h5" # Make sure this matches the output of our python script
+      # Define the Fields in the template and their units
+      fields: 
+        age:
+          name: "age"
+          units: "Gyr" # nGIST encodes age in Gyr (e.g., T10.0000 = 10 Gyr)
+          in_log: false 
+        metallicity:
+          name: "metallicity"
+          units: "" # nGIST uses bracket metallicity [M/H] (e.g., Zp0.00 = 0.00)
+          in_log: false 
+        wavelength:
+          name: "wavelength"
+          units: "Angstrom" 
+          in_log: false 
+        flux:
+          name: "flux"
+          units: "Lsun/Angstrom" # Keep consistent with the pipeline's expected flux units
+          in_log: false
+
     EMILES:
       name: "EMILES"
       format: "HDF5" # Format of the template

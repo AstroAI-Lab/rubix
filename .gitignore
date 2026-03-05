@@ -177,6 +177,8 @@ notebooks/data/*
 rubix/spectra/ssp/templates/EMILES.h5
 rubix/spectra/ssp/templates/MILES_template.h5
 rubix/spectra/ssp/templates/MILES/*
+rubix/spectra/ssp/templates/EMILES_template.h5
+rubix/spectra/ssp/templates/EMILES_BASTI_BASE_CH_FITS_safe/*
 
 # don´t add .env files
 *.env
