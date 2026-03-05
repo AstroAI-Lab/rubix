@@ -84,7 +84,7 @@ class PynbodyHandler(BaseHandler):
             pynbody.analysis.angmom.faceon(halo.s)
             ang_mom_vec = pynbody.analysis.angmom.ang_mom_vec(halo.s)
             #rotation_matrix = pynbody.analysis.angmom.calc_sideon_matrix(ang_mom_vec)
-            rotation_matrix = pynbody.analysis.angmom.calc_sideon_matrix(ang_mom_vec)
+            rotation_matrix = pynbody.analysis.angmom.calc_faceon_matrix(ang_mom_vec)
             np.save("./data/rotation_matrix.npy", rotation_matrix)
             self.logger.info(
                 "Rotation matrix calculated and saved to '/notebooks/data/rotation_matrix.npy'."
