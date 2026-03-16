@@ -175,5 +175,7 @@ notebooks/frames
 notebooks/frames/*
 notebooks/data/*
 
+rubix/spectra/ssp/templates/EMILES.h5
+
 # don´t add .env files
 *.env
