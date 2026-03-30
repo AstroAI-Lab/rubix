@@ -1,4 +1,5 @@
 import jax.numpy as jnp
+import jax
 from beartype import beartype as typechecker
 from beartype.typing import Callable
 from jaxtyping import jaxtyped
@@ -61,9 +62,12 @@ def get_apply_noise(config: dict) -> Callable[[RubixData], RubixData]:
     # Get the noise distribution
     noise_distribution = config["telescope"]["noise"]["noise_distribution"]
 
-    logger = get_logger()
+    s2n_magnitude = config["telescope"]["noise"]["s2n_magnitude"]
+
+    logger = get_logger(config.get("logger", None))
 
     def apply_noise(rubixdata: RubixData) -> RubixData:
+
         logger.info(
             "Applying noise to datacube with signal to noise ratio: "
             f"{signal_to_noise} and noise distribution: {noise_distribution}"
@@ -74,11 +78,12 @@ def get_apply_noise(config: dict) -> Callable[[RubixData], RubixData]:
 
         # Calculate the noise cube
         noise_cube = calculate_noise_cube(
-            datacube, S2N, noise_distribution=noise_distribution
+            datacube, S2N, s2n_magnitude, noise_distribution=noise_distribution
         )
 
         # Add noise to the datacube
         rubixdata.stars.datacube += noise_cube
+
         return rubixdata
 
     return apply_noise

@@ -1,8 +1,11 @@
 from typing import Optional
+import jax
 
 import jax.numpy as jnp
 from jax import random as jrandom
 from jaxtyping import Array, Float
+from rubix.spectra.ifu import convert_luminoisty_to_flux
+from rubix.cosmology import PLANCK15
 
 SUPPORTED_NOISE_DISTRIBUTIONS = ["normal", "uniform"]
 
@@ -35,9 +38,14 @@ def sample_noise(
             f"Invalid noise type: {type}. Supported types: {SUPPORTED_NOISE_DISTRIBUTIONS}"
         )
 
+def calculate_target_min_luminosity(magnitude):
+    luminosity = 10 ** (-0.4 * (magnitude - 4.83)) #in solar luminosity
+
+    return luminosity
+
 
 def calculate_S2N(
-    datacube: Float[Array, "n_x n_y n_wave_bins"], observation_signal_to_noise: float
+    datacube: Float[Array, "n_x n_y n_wave_bins"], observation_signal_to_noise: float, s2n_magnitude: float
 ) -> Float[Array, "n_y n_y"]:
     """Calculate the signal-to-noise ratio array from a data cube.
 
@@ -53,22 +61,29 @@ def calculate_S2N(
     """
     # Sum up the spectra along the wavelength bins to get the flux image
     flux_image = jnp.sum(datacube, axis=-1)
+    #jax.debug.print("Calculated flux image with shape: {x} and values: {y}", x=flux_image.shape, y=flux_image)
 
     # Mask out regions where the flux is zero
     nonzero_mask = flux_image > 0
 
     # Calculate the median flux value where the flux is non-zero
-    median_flux = jnp.median(jnp.where(nonzero_mask, flux_image, jnp.nan))
-    median_flux = jnp.nan_to_num(median_flux, nan=0.0)
-
+    #median_flux = jnp.median(jnp.where(nonzero_mask, flux_image, jnp.nan))
+    median_flux = jnp.nanmedian(jnp.where(nonzero_mask, flux_image, jnp.nan))
+    min_luminosity = calculate_target_min_luminosity(s2n_magnitude)
+    #jax.debug.print("Calculated median flux: {x}", x=median_flux)
+    #jax.debug.print("sqrt of median flux: {x}", x=jnp.sqrt(median_flux))
+    #median_flux = jnp.nan_to_num(median_flux, nan=0.0)
+    #jax.debug.print("s2n config: {x}", x=observation_signal_to_noise)
     # Calculate the noise factor
-    noise_factor = jnp.sqrt(median_flux) / observation_signal_to_noise
+    noise_factor = jnp.sqrt(min_luminosity) / observation_signal_to_noise
+    #jax.debug.print("Calculated noise factor: {x}", x=noise_factor)
 
     # Calculate the signal-to-noise ratio for each pixel
     S2N = noise_factor / jnp.sqrt(flux_image)
 
     # Apply the mask to set S2N to zero where the flux is zero
     S2N = jnp.where(nonzero_mask, S2N, 0)
+    jax.debug.print("Calculated S/N array with shape: {x} and values: {y}", x=S2N.shape, y=S2N)
 
     return S2N
 
@@ -76,6 +91,7 @@ def calculate_S2N(
 def calculate_noise_cube(
     cube: Float[Array, "n_x n_y n_wave_bins"],
     signal_to_noise: float,
+    s2n_magnitude: float,
     noise_distribution: str = "normal",
 ) -> Float[Array, "n_x n_y n_wave_bins"]:
     """Calculate the noise cube given the cube and the signal-to-noise ratio.
@@ -94,7 +110,7 @@ def calculate_noise_cube(
     # S2N = jnp.where(
     #     jnp.isinf(S2N), 0, S2N
     # )  # removing infinite noise where particles per pixel = 0
-    S2N = calculate_S2N(cube, signal_to_noise)
+    S2N = calculate_S2N(cube, signal_to_noise, s2n_magnitude)
 
     # Generate noise for each element in the cube based on the S/N
     noise = sample_noise(cube.shape, type=noise_distribution, key=key) * S2N[:, :, None]
