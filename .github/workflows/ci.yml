@@ -72,7 +72,7 @@ jobs:
         ILLUSTRIS_API_KEY: ${{ secrets.ILLUSTRIS_API_KEY }} # need this to run the tests
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v6
       with:
         fail_ci_if_error: true
         files: ./tests/coverage.xml
