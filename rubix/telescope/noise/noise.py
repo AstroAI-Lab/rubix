@@ -58,8 +58,8 @@ def calculate_S2N(
     nonzero_mask = flux_image > 0
 
     # Calculate the median flux value where the flux is non-zero
-    median_flux = jnp.median(jnp.where(nonzero_mask, flux_image, jnp.nan))
-    median_flux = jnp.nan_to_num(median_flux, nan=0.0)
+    median_flux = jnp.nanmedian(jnp.where(nonzero_mask, flux_image, jnp.nan))
+    #median_flux = jnp.nan_to_num(median_flux, nan=0.0)
 
     # Calculate the noise factor
     noise_factor = jnp.sqrt(median_flux) / observation_signal_to_noise
