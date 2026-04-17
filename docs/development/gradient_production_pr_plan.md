@@ -37,8 +37,8 @@ proof-of-concept notebooks to production full-IFU workflows.
 6. `perf(full-ifu-scaling)` (completed)
 - Add chunking/checkpointing controls and consistency tests.
 
-7. `feat(variational-inference)` (current)
+7. `feat(variational-inference)` (completed)
 - Add first VI scaffold (mean-field baseline) on top of inference API.
 
-8. `docs(examples-and-guides)`
+8. `docs(examples-and-guides)` (completed)
 - Add production examples and API docs for inverse modeling workflows.
