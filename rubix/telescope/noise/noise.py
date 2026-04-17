@@ -77,6 +77,7 @@ def calculate_noise_cube(
     cube: Float[Array, "n_x n_y n_wave_bins"],
     signal_to_noise: float,
     noise_distribution: str = "normal",
+    key: Optional[jnp.ndarray] = None,
 ) -> Float[Array, "n_x n_y n_wave_bins"]:
     """Calculate the noise cube given the cube and the signal-to-noise ratio.
 
@@ -86,11 +87,14 @@ def calculate_noise_cube(
         cube (Float[Array, "n_x n_y n_wave_bins"]): The data cube.
         signal_to_noise (float): The signal-to-noise ratio of the observation.
         noise_distribution (str, optional): The type of distribution to sample from. Can be either "normal" or "uniform". Defaults to "normal".
+        key (Optional[jnp.ndarray], optional): JAX random key used to sample
+            noise. If ``None``, a fixed key is used for reproducibility.
 
     Returns:
         Float[Array, "n_x n_y n_wave_bins"]: The noise cube.
     """
-    key = jrandom.PRNGKey(0)
+    if key is None:
+        key = jrandom.PRNGKey(0)
     # S2N = jnp.where(
     #     jnp.isinf(S2N), 0, S2N
     # )  # removing infinite noise where particles per pixel = 0

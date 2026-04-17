@@ -73,8 +73,12 @@ def get_apply_noise(config: dict) -> Callable[[RubixData], RubixData]:
         S2N = jnp.ones(datacube.shape[:2]) * signal_to_noise
 
         # Calculate the noise cube
+        noise_key = rubixdata.noise_key
         noise_cube = calculate_noise_cube(
-            datacube, S2N, noise_distribution=noise_distribution
+            datacube,
+            S2N,
+            noise_distribution=noise_distribution,
+            key=noise_key,
         )
 
         # Add noise to the datacube

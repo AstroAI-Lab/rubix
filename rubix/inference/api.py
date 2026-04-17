@@ -76,6 +76,7 @@ def forward(
     pipeline: Any,
     params: ParamsTree,
     static_data: RubixData,
+    noise_key: Optional[jnp.ndarray] = None,
 ) -> jnp.ndarray:
     """Run the Rubix forward model with updated parameters.
 
@@ -83,11 +84,14 @@ def forward(
         pipeline (Any): Object exposing ``run_sharded(RubixData)``.
         params (ParamsTree): Parameter updates applied to ``static_data``.
         static_data (RubixData): Baseline particle data.
+        noise_key (Optional[jnp.ndarray], optional): Optional PRNG key used by
+            stochastic pipeline elements.
 
     Returns:
         jnp.ndarray: Predicted IFU datacube.
     """
     model_input = apply_params(static_data, params)
+    model_input.noise_key = noise_key
     return pipeline.run_sharded(model_input)
 
 
@@ -97,9 +101,15 @@ def loss(
     static_data: RubixData,
     target: jnp.ndarray,
     loss_fn: Optional[LossFn] = None,
+    noise_key: Optional[jnp.ndarray] = None,
 ) -> jnp.ndarray:
     """Compute a scalar loss between predicted and target datacubes."""
-    prediction = forward(pipeline=pipeline, params=params, static_data=static_data)
+    prediction = forward(
+        pipeline=pipeline,
+        params=params,
+        static_data=static_data,
+        noise_key=noise_key,
+    )
     if loss_fn is None:
         return jnp.sum((prediction - target) ** 2)
     return loss_fn(prediction, target)
@@ -111,6 +121,7 @@ def value_and_grad(
     static_data: RubixData,
     target: jnp.ndarray,
     loss_fn: Optional[LossFn] = None,
+    noise_key: Optional[jnp.ndarray] = None,
 ):
     """Return loss value and gradient with respect to ``params``."""
 
@@ -121,6 +132,7 @@ def value_and_grad(
             static_data=static_data,
             target=target,
             loss_fn=loss_fn,
+            noise_key=noise_key,
         )
 
     return jax.value_and_grad(_loss_fn)(params)

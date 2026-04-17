@@ -234,6 +234,7 @@ class RubixPipeline:
         rubix_spec.galaxy = galaxy_spec
         rubix_spec.stars = stars_spec
         rubix_spec.gas = gas_spec
+        rubix_spec.noise_key = replicate_1d
 
         # 1) Make a pytree of PartitionSpec
         partition_spec_tree = tree_map(
@@ -252,6 +253,9 @@ class RubixPipeline:
                 num_devices,
             )
             inputdata = _pad_particles(inputdata, pad)
+
+        if inputdata.noise_key is None:
+            inputdata.noise_key = jax.random.PRNGKey(0)
 
         inputdata = jax.device_put(inputdata, rubix_spec)
 
