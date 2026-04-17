@@ -15,14 +15,14 @@ proof-of-concept notebooks to production full-IFU workflows.
 
 ## PR stack
 
-1. `feat(inference-api)` (current)
+1. `feat(inference-api)` (completed)
 - Add `rubix.inference` module with:
   - parameter application without mutating baseline `RubixData`
   - `forward`, `loss`, and `value_and_grad` API
 - Add unit tests for copy semantics, deterministic loss calls, and analytical
   gradient checks.
 
-2. `feat(parameterization)`
+2. `feat(parameterization)` (current)
 - Add constrained parameter transforms (age/metallicity first) and tests.
 
 3. `refactor(gradient-modes)`
