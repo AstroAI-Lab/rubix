@@ -34,10 +34,10 @@ proof-of-concept notebooks to production full-IFU workflows.
 5. `test(gradient-vs-fd)` (completed)
 - Add finite-difference validation suite for gradient correctness.
 
-6. `perf(full-ifu-scaling)` (current)
+6. `perf(full-ifu-scaling)` (completed)
 - Add chunking/checkpointing controls and consistency tests.
 
-7. `feat(variational-inference)`
+7. `feat(variational-inference)` (current)
 - Add first VI scaffold (mean-field baseline) on top of inference API.
 
 8. `docs(examples-and-guides)`
