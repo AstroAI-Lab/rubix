@@ -81,12 +81,6 @@ def optimize_params(
         )
 
     opt_state = optimizer.init(trainable_params)
-    loss_history: list[float] = []
-    grad_norm_history: list[float] = []
-    best_loss = jnp.inf
-    best_params = trainable_params
-    converged = False
-    steps_run = 0
 
     def train_loss(train_params):
         if transforms is None:
@@ -106,48 +100,76 @@ def optimize_params(
             noise_key=noise_key,
         )
 
-    for step in range(max_steps):
-        value, grads = jax.value_and_grad(train_loss)(trainable_params)
-        updates, opt_state = optimizer.update(grads, opt_state, trainable_params)
-        trainable_params = optax.apply_updates(trainable_params, updates)
+    def scan_step(carry, _):
+        params, opt_state, best_params, best_loss = carry
+        value, grads = jax.value_and_grad(train_loss)(params)
+        param_updates, new_opt_state = optimizer.update(grads, opt_state, params)
+        new_params = optax.apply_updates(params, param_updates)
 
         grad_norm = optax.global_norm(grads)
-        update_norm = optax.global_norm(updates)
+        update_norm = optax.global_norm(param_updates)
 
-        loss_value = float(value)
-        loss_history.append(loss_value)
-        grad_norm_history.append(float(grad_norm))
+        # Track best params on-device without Python-side branching
+        is_better = value < best_loss
+        new_best_loss = jnp.where(is_better, value, best_loss)
+        new_best_params = jax.tree_util.tree_map(
+            lambda new, old: jnp.where(is_better, new, old),
+            new_params,
+            best_params,
+        )
 
-        if value < best_loss:
-            best_loss = value
-            best_params = trainable_params
+        new_carry = (new_params, new_opt_state, new_best_params, new_best_loss)
+        return new_carry, (value, grad_norm, update_norm)
 
-        steps_run = step + 1
-        if float(update_norm) < tol:
-            converged = True
-            break
+    init_carry = (
+        trainable_params,
+        opt_state,
+        trainable_params,
+        jnp.array(float("inf")),
+    )
+    (final_params, _, final_best_params, best_loss_val), (
+        loss_arr,
+        grad_norm_arr,
+        update_norm_arr,
+    ) = jax.lax.scan(scan_step, init_carry, None, length=max_steps)
+
+    # Detect convergence post-hoc; no device->host sync until here
+    converged_mask = update_norm_arr < tol
+    converged = bool(jnp.any(converged_mask))
+    if converged:
+        steps_run = int(jnp.argmax(converged_mask)) + 1
+    else:
+        steps_run = max_steps
+
+    # Materialize history once at the end
+    loss_history: list[float] = loss_arr[:steps_run].tolist()
+    grad_norm_history: list[float] = grad_norm_arr[:steps_run].tolist()
 
     if transforms is None:
-        final_params = trainable_params
-        final_best_params = best_params
+        result_params = _tree_to_dict(final_params)
+        result_best_params = _tree_to_dict(final_best_params)
     else:
-        final_params = apply_transforms(
-            params=trainable_params,
-            transforms=transforms,
-            direction="forward",
+        result_params = _tree_to_dict(
+            apply_transforms(
+                params=final_params,
+                transforms=transforms,
+                direction="forward",
+            )
         )
-        final_best_params = apply_transforms(
-            params=best_params,
-            transforms=transforms,
-            direction="forward",
+        result_best_params = _tree_to_dict(
+            apply_transforms(
+                params=final_best_params,
+                transforms=transforms,
+                direction="forward",
+            )
         )
 
     return OptimizationResult(
-        params=_tree_to_dict(final_params),
-        best_params=_tree_to_dict(final_best_params),
+        params=result_params,
+        best_params=result_best_params,
         loss_history=loss_history,
         grad_norm_history=grad_norm_history,
-        best_loss=float(best_loss),
+        best_loss=float(best_loss_val),
         steps_run=steps_run,
         converged=converged,
     )
