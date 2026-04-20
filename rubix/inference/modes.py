@@ -79,6 +79,12 @@ def make_inference_pipeline(user_config: dict, mode: InferenceMode) -> RubixPipe
 
     Returns:
         RubixPipeline: Pipeline instance using mode-specific pipeline graph.
+
+    Note:
+        In stochastic mode, ``apply_noise`` is intentionally excluded from the
+        sharded pipeline graph.  Instead, noise is applied once to the fully
+        aggregated datacube after the cross-device reduction, which avoids
+        incorrect noise statistics caused by summing independently-noised shards.
     """
     config_copy = deepcopy(user_config)
     base_name = config_copy["pipeline"]["name"]

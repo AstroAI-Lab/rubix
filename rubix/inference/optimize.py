@@ -16,13 +16,33 @@ ParamsTree = Mapping[str, Mapping[str, Any]]
 
 @dataclass
 class OptimizationResult:
-    """Container for optimization outputs."""
+    """Container for optimization outputs.
+
+    Attributes:
+        params (dict[str, dict[str, Any]]): Final parameters (constrained
+            space) after ``steps_run`` steps.
+        best_params (dict[str, dict[str, Any]]): Parameters (constrained space)
+            that achieved ``best_loss``.
+        loss_history (list[float]): Loss values recorded at the *pre-update* parameters each
+            step, for the first ``steps_run`` steps.  ``loss_history[-1]``
+            therefore corresponds to the step *before* the final parameter
+            update, not to ``params``.  Use ``final_loss`` for the loss at
+            ``params``.
+        grad_norm_history (list[float]): Global gradient-norm for each active step.
+        best_loss (float): Minimum loss seen across all active steps; equals
+            ``loss(pipeline, best_params, ...)``.
+        final_loss (float): Loss evaluated at the returned ``params`` (post-update).
+        steps_run (int): Number of active (non-frozen) optimization steps taken.
+        converged (bool): ``True`` if update-norm fell below ``tol`` before
+            ``max_steps``.
+    """
 
     params: dict[str, dict[str, Any]]
     best_params: dict[str, dict[str, Any]]
     loss_history: list[float]
     grad_norm_history: list[float]
     best_loss: float
+    final_loss: float
     steps_run: int
     converged: bool
 
@@ -68,7 +88,8 @@ def optimize_params(
             Optax optimizer. Defaults to ``None`` (Adam with ``learning_rate``).
 
     Returns:
-        OptimizationResult: Final/best params and optimization traces.
+        OptimizationResult: Final/best params, optimization traces, and the
+            loss evaluated at the returned ``params`` (``final_loss``).
     """
     if optimizer is None:
         optimizer = optax.adam(learning_rate)
@@ -83,7 +104,6 @@ def optimize_params(
         )
 
     opt_state = optimizer.init(trainable_params)
-    best_loss0 = jnp.asarray(jnp.inf, dtype=jnp.float32)
 
     def train_loss(train_params):
         if transforms is None:
@@ -104,65 +124,104 @@ def optimize_params(
         )
 
     def scan_step(carry, _):
-        current_params, current_opt_state, best_params, best_loss = carry
-        value, grads = jax.value_and_grad(train_loss)(current_params)
-        updates, next_opt_state = optimizer.update(
-            grads, current_opt_state, current_params
-        )
-        next_params = optax.apply_updates(current_params, updates)
-        grad_norm = optax.global_norm(grads)
-        update_norm = optax.global_norm(updates)
+        params, opt_state, best_params, best_loss, done = carry
 
-        better = value < best_loss
-        next_best_loss = jnp.where(better, value, best_loss)
-        next_best_params = jax.tree_util.tree_map(
-            lambda new, old: jnp.where(better, new, old),  # noqa: B023
-            next_params,
-            best_params,
-        )
-        next_carry = (next_params, next_opt_state, next_best_params, next_best_loss)
-        metrics = (value, grad_norm, update_norm)
-        return next_carry, metrics
+        def active_step(active_carry):
+            params, opt_state, best_params, best_loss, _ = active_carry
+            value, grads = jax.value_and_grad(train_loss)(params)
+            param_updates, new_opt_state = optimizer.update(grads, opt_state, params)
+            new_params = optax.apply_updates(params, param_updates)
 
-    init_carry = (trainable_params, opt_state, trainable_params, best_loss0)
-    final_carry, metrics = jax.lax.scan(
-        scan_step, init_carry, xs=None, length=max_steps
+            grad_norm = optax.global_norm(grads)
+            update_norm = optax.global_norm(param_updates)
+
+            # Track best params on-device without Python-side branching.
+            # `value` is evaluated at the pre-update `params`, so keep
+            # `best_params` aligned with that same parameter state.
+            is_better = value < best_loss
+            new_best_loss = jnp.where(is_better, value, best_loss)
+            new_best_params = jax.tree_util.tree_map(
+                lambda current, old: jnp.where(is_better, current, old),
+                params,
+                best_params,
+            )
+            new_done = update_norm < tol
+            new_carry = (
+                new_params,
+                new_opt_state,
+                new_best_params,
+                new_best_loss,
+                new_done,
+            )
+            return new_carry, (value, grad_norm, update_norm)
+
+        def finished_step(finished_carry):
+            params, opt_state, best_params, best_loss, done = finished_carry
+            zero = jnp.array(0.0)
+            return (
+                params,
+                opt_state,
+                best_params,
+                best_loss,
+                done,
+            ), (best_loss, zero, zero)
+
+        return jax.lax.cond(done, finished_step, active_step, carry)
+
+    init_carry = (
+        trainable_params,
+        opt_state,
+        trainable_params,
+        jnp.array(jnp.inf),
+        jnp.array(False),
     )
-    trainable_params, _, best_params, best_loss = final_carry
-    loss_arr, grad_norm_arr, update_norm_arr = metrics
+    (final_params, _, final_best_params, best_loss_val, converged_flag), (
+        loss_arr,
+        grad_norm_arr,
+        update_norm_arr,
+    ) = jax.lax.scan(scan_step, init_carry, None, length=max_steps)
 
+    # Detect convergence post-hoc; no device->host sync until here.
+    # Because the scan freezes once `update_norm < tol`, the first True marks
+    # the actual stopping point and later iterations cannot invalidate it.
     converged_mask = update_norm_arr < tol
-    converged = bool(jnp.any(converged_mask))
-    if converged:
-        first_converged_step = int(jnp.argmax(converged_mask)) + 1
-        steps_run = first_converged_step
-    else:
-        steps_run = max_steps
+    converged = bool(converged_flag)
+    steps_run = (int(jnp.argmax(converged_mask)) + 1) if converged else max_steps
 
-    loss_history = loss_arr[:steps_run].tolist()
-    grad_norm_history = grad_norm_arr[:steps_run].tolist()
+    # Materialize history once at the end
+    loss_history: list[float] = loss_arr[:steps_run].tolist()
+    grad_norm_history: list[float] = grad_norm_arr[:steps_run].tolist()
+
+    # Compute loss at the returned final params so callers have a value
+    # consistent with `result.params` (`loss_history` is pre-update).
+    final_loss_val = float(train_loss(final_params))
 
     if transforms is None:
-        final_params = trainable_params
-        final_best_params = best_params
+        result_params = _tree_to_dict(final_params)
+        result_best_params = _tree_to_dict(final_best_params)
     else:
-        final_params = apply_transforms(
-            params=trainable_params,
-            transforms=transforms,
-            direction="forward",
+        result_params = _tree_to_dict(
+            apply_transforms(
+                params=final_params,
+                transforms=transforms,
+                direction="forward",
+            )
         )
-        final_best_params = apply_transforms(
-            params=best_params,
-            transforms=transforms,
-            direction="forward",
+        result_best_params = _tree_to_dict(
+            apply_transforms(
+                params=final_best_params,
+                transforms=transforms,
+                direction="forward",
+            )
         )
 
     return OptimizationResult(
-        params=_tree_to_dict(final_params),
-        best_params=_tree_to_dict(final_best_params),
+        params=result_params,
+        best_params=result_best_params,
         loss_history=loss_history,
         grad_norm_history=grad_norm_history,
-        best_loss=float(best_loss),
+        best_loss=float(best_loss_val),
+        final_loss=final_loss_val,
         steps_run=steps_run,
         converged=converged,
     )

@@ -102,10 +102,7 @@ def get_apply_noise(config: dict) -> Callable[[RubixData], RubixData]:
             f"{SUPPORTED_NOISE_DISTRIBUTIONS}"
         )
 
-    # Get the signal to noise ratio
     signal_to_noise = config["telescope"]["noise"]["signal_to_noise"]
-
-    # Get the noise distribution
     noise_distribution = config["telescope"]["noise"]["noise_distribution"]
 
     logger = get_logger()
@@ -117,7 +114,6 @@ def get_apply_noise(config: dict) -> Callable[[RubixData], RubixData]:
         )
         datacube = rubixdata.stars.datacube
 
-        # Calculate the noise cube
         noise_key = rubixdata.noise_key
         noise_cube = calculate_noise_cube(
             datacube,
@@ -126,7 +122,6 @@ def get_apply_noise(config: dict) -> Callable[[RubixData], RubixData]:
             key=noise_key,
         )
 
-        # Add noise to the datacube
         rubixdata.stars.datacube += noise_cube
         return rubixdata
 
