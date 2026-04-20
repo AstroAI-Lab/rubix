@@ -170,6 +170,17 @@ The returned ``VariationalResult`` includes diagnostics such as
 ``best_step``, ``final_objective``, ``final_reconstruction``, ``final_kl``,
 and per-step ``grad_norm_history``/``update_norm_history``.
 
+To benchmark full-cube VI performance:
+
+.. code-block:: bash
+
+   python bench/benchmark_variational_inference.py \
+     --nx 25 --ny 25 --nw 256 \
+     --repeats 3 \
+     --max-steps 300 \
+     --num-samples 4 \
+     --use-mask --use-huber
+
 
 Performance Notes
 -----------------

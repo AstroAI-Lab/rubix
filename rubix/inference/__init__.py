@@ -30,6 +30,11 @@ from .variational import (
     optimize_variational_posterior,
     sample_diag_gaussian,
 )
+from .vi_benchmark import (
+    VIBenchmarkResult,
+    benchmark_variational_inference,
+    vi_benchmark_result_to_dict,
+)
 
 __all__ = [
     "IdentityTransform",
@@ -40,6 +45,7 @@ __all__ = [
     "IFUCubeBenchmarkResult",
     "OptimizationResult",
     "VariationalResult",
+    "VIBenchmarkResult",
     "apply_params",
     "apply_transforms",
     "build_age_metallicity_transforms",
@@ -62,6 +68,8 @@ __all__ = [
     "initialize_mean_field_params",
     "kl_diag_gaussian_to_standard_normal",
     "optimize_ifu_cube",
+    "benchmark_variational_inference",
+    "vi_benchmark_result_to_dict",
     "optimize_variational_ifu_cube",
     "optimize_variational_posterior",
     "optimize_params",
