@@ -25,10 +25,10 @@ proof-of-concept notebooks to production full-IFU workflows.
 2. `feat(parameterization)` (completed)
 - Add constrained parameter transforms (age/metallicity first) and tests.
 
-3. `refactor(gradient-modes)` (current)
+3. `refactor(gradient-modes)` (completed)
 - Separate deterministic and stochastic (PRNG-keyed) gradient paths.
 
-4. `feat(optimizer-loop)`
+4. `feat(optimizer-loop)` (current)
 - Add reusable Optax optimization loop with histories/checkpoints.
 
 5. `test(gradient-vs-fd)`
