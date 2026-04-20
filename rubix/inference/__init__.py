@@ -1,6 +1,13 @@
 """Inference helpers for gradient-based modeling workflows."""
 
 from .api import apply_params, forward, loss, value_and_grad
+from .benchmark import (
+    IFUCubeBenchmarkResult,
+    benchmark_callable,
+    benchmark_ifu_cube_optimization,
+    benchmark_result_to_dict,
+    estimate_array_nbytes,
+)
 from .modes import get_pipeline_name_for_mode, make_inference_pipeline
 from .objectives import build_ifu_cube_loss, masked_weighted_mse
 from .optimize import OptimizationResult, optimize_ifu_cube, optimize_params
@@ -28,12 +35,17 @@ __all__ = [
     "SigmoidBounds",
     "SoftplusLowerBound",
     "GradientComparison",
+    "IFUCubeBenchmarkResult",
     "OptimizationResult",
     "VariationalResult",
     "apply_params",
     "apply_transforms",
     "build_age_metallicity_transforms",
+    "benchmark_callable",
+    "benchmark_ifu_cube_optimization",
+    "benchmark_result_to_dict",
     "compare_gradients",
+    "estimate_array_nbytes",
     "finite_difference_grad",
     "forward",
     "get_pipeline_name_for_mode",

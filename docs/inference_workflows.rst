@@ -148,3 +148,17 @@ For large particle counts, configure optional IFU accumulation controls:
   particle step function for memory/computation tradeoffs
 
 These settings are used by the particlewise IFU builders in ``rubix.core.ifu``.
+
+Benchmarking Full-IFU Optimization
+----------------------------------
+
+Use the benchmark harness to profile optimization runtime and objective-side
+memory diagnostics for full IFU cubes.
+
+.. code-block:: bash
+
+   python bench/benchmark_ifu_cube_optimization.py \
+     --nx 25 --ny 25 --nw 256 \
+     --repeats 3 \
+     --max-steps 200 \
+     --use-mask --use-weights
