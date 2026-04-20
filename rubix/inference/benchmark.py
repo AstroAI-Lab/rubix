@@ -193,9 +193,7 @@ def benchmark_ifu_cube_optimization(
                 if not normalize_loss:
                     return numerator
                 denom = jnp.asarray(residual_sq.size, dtype=residual_sq.dtype)
-                denom = jnp.maximum(
-                    denom, jnp.asarray(1e-12, dtype=residual_sq.dtype)
-                )
+                denom = jnp.maximum(denom, jnp.asarray(1e-12, dtype=residual_sq.dtype))
                 return numerator / denom
 
             weights_f = weights.astype(residual_sq.dtype)
