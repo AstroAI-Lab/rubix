@@ -68,12 +68,20 @@ def compare_gradients(autodiff_grad: Any, fd_grad: Any) -> GradientComparison:
         autodiff_grad (Any): Gradient pytree from autodiff.
         fd_grad (Any): Gradient pytree from finite differences.
 
+    Raises:
+        ValueError: If the flattened gradient vectors do not have the same shape.
+
     Returns:
         GradientComparison: Error metrics for the flattened gradient vectors.
     """
     auto_flat, _ = ravel_pytree(autodiff_grad)
     fd_flat, _ = ravel_pytree(fd_grad)
 
+    if auto_flat.shape != fd_flat.shape:
+        raise ValueError(
+            "autodiff_grad and fd_grad must flatten to the same shape; "
+            f"got {auto_flat.shape} and {fd_flat.shape}"
+        )
     diff = auto_flat - fd_flat
     max_abs_error = jnp.max(jnp.abs(diff))
     l2_error = jnp.linalg.norm(diff)
