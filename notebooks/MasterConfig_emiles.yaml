@@ -1,7 +1,7 @@
 # This is a test config file
 GENERAL :
-  RUN_ID : 'g2.79e12_None'
-  INPUT : 'NIHAO_idg2.79e12_snap1024_subsetFalse.fits'
+  RUN_ID : 'g8.26e11_PseudoBulge_ThickDisc_ThinDisc_Halo'
+  INPUT : 'NIHAO_idg8.26e11_snap1024_subsetFalse.fits'
   OUTPUT : . # Output directory. The output of this run will be collected in a subdirectory named RUN_ID. The specified path is relative to the output path given in defaultDir.
   REDSHIFT : 0.01 # Initial guess on the redshift of the system [in z]. Spectra are shifted to rest-frame, according to this redshift.
   PARALLEL: True # Use multiprocessing [True/False]
@@ -30,7 +30,7 @@ SPATIAL_MASKING :
 # Spatial binning module
 SPATIAL_BINNING :
   METHOD : 'voronoi' # Name of the routine in spatialBinning/ (without .py) to perform the tasks. Set False to turn off module. Set 'voronoi' to use the standard GIST implementation, exploiting the Voronoi tesselation routine of Cappellari & Copin (2003).
-  TARGET_SNR : 500.0 # Target signal-to-noise ratio for the Voronoi binning
+  TARGET_SNR : 200.0 # Target signal-to-noise ratio for the Voronoi binning
   COVARIANCE : 0.0 # Correct for spatial correlations of the noise during the Voronoi binning process according to the empirical equation SNR /= 1 + COVAR_VOR * np.log10(NSPAXEL) with NSPAXEL being the number of spaxels per bin (see e.g. Garcia-Benito et al. 2015).
 
 

@@ -89,8 +89,8 @@ config_NIHAO = {
 
     "telescope":
         {"name": "MUSE_WFM",
-         "psf": {"name": "gaussian", "size": 5, "sigma": 0.6},
-         "lsf": {"sigma": 0.5},
+         "psf": {"name": "gaussian", "size": 300, "sigma": 3.0},
+         "lsf": {"sigma": 1.0},
          "noise": {"signal_to_noise": 100,"noise_distribution": "normal"},},
     "cosmology":
         {"name": "PLANCK15"},

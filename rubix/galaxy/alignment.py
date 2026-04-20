@@ -269,14 +269,14 @@ def rotate_galaxy(
         #pos_final = apply_rotation(pos_rot, alpha, beta, gamma)
         #vel_final = apply_rotation(vel_rot, alpha, beta, gamma)
         #for g2.79e12
-        pos_final1 = apply_rotation(pos_rot, alpha, 80.0, gamma)
-        vel_final1 = apply_rotation(vel_rot, alpha, 80.0, gamma)
-        pos_final = apply_rotation(pos_final1, alpha, beta, 4.0)
-        vel_final = apply_rotation(vel_final1, alpha, beta, 4.0)
+        #pos_final1 = apply_rotation(pos_rot, alpha, 80.0, gamma)
+        #vel_final1 = apply_rotation(vel_rot, alpha, 80.0, gamma)
+        #pos_final = apply_rotation(pos_final1, alpha, beta, 4.0)
+        #vel_final = apply_rotation(vel_final1, alpha, beta, 4.0)
         #for g8.13e11
-        #pos_final1 = apply_rotation(pos_rot, alpha, -40.0, gamma)
-        #vel_final1 = apply_rotation(vel_rot, alpha, -40.0, gamma)
-        #pos_final = apply_rotation(pos_final1, alpha, beta, 0.0)
-        #vel_final = apply_rotation(vel_final1, alpha, beta, 0.0)
+        pos_final1 = apply_rotation(pos_rot, alpha, -40.0, gamma)
+        vel_final1 = apply_rotation(vel_rot, alpha, -40.0, gamma)
+        pos_final = apply_rotation(pos_final1, alpha, beta, 0.0)
+        vel_final = apply_rotation(vel_final1, alpha, beta, 0.0)
 
     return pos_final, vel_final
