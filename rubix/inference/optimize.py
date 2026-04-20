@@ -6,6 +6,8 @@ import jax.numpy as jnp
 import optax
 from beartype.typing import Any
 
+from rubix.core.data import RubixData
+
 from .api import LossFn, loss
 from .parameterization import TransformTree, apply_transforms
 
@@ -33,7 +35,7 @@ def _tree_to_dict(tree: ParamsTree) -> dict[str, dict[str, Any]]:
 def optimize_params(
     pipeline: Any,
     params_init: ParamsTree,
-    static_data: Any,
+    static_data: RubixData,
     target: jnp.ndarray,
     learning_rate: float = 1e-3,
     max_steps: int = 500,
@@ -48,7 +50,7 @@ def optimize_params(
     Args:
         pipeline (Any): Pipeline-like object consumed by :func:`rubix.inference.loss`.
         params_init (ParamsTree): Initial parameters in constrained space.
-        static_data (Any): Baseline RubixData passed to the forward model.
+        static_data (RubixData): Baseline RubixData passed to the forward model.
         target (jnp.ndarray): Target datacube or statistic.
         learning_rate (float, optional): Step size for default Adam optimizer.
             Defaults to 1e-3.
