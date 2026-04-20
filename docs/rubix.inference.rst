@@ -12,6 +12,14 @@ rubix.inference.api module
    :undoc-members:
    :show-inheritance:
 
+rubix.inference.benchmark module
+--------------------------------
+
+.. automodule:: rubix.inference.benchmark
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 rubix.inference.modes module
 ----------------------------
 
