@@ -33,12 +33,20 @@ def finite_difference_grad(
 
     Raises:
         ValueError: If ``eps`` is not strictly positive.
+        ValueError: If ``loss_fn`` does not return a scalar.
 
     Returns:
         Any: Pytree gradient matching the structure of ``params``.
     """
     if eps <= 0:
         raise ValueError("eps must be strictly positive")
+
+    sample_output = loss_fn(params)
+    if jnp.ndim(sample_output) != 0:
+        raise ValueError(
+            "loss_fn must return a scalar; "
+            f"got output with shape {jnp.shape(sample_output)}"
+        )
 
     flat, unravel = ravel_pytree(params)
 

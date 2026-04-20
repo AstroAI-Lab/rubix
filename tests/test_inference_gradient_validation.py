@@ -142,3 +142,21 @@ def test_finite_difference_grad_rejects_non_positive_eps():
 
     with pytest.raises(ValueError, match="eps must be strictly positive"):
         finite_difference_grad(lambda p: jnp.sum(p["stars"]["age"]), params, eps=0.0)
+
+
+def test_finite_difference_grad_rejects_non_scalar_loss_fn():
+    params = _params_init()
+
+    def non_scalar_loss(p):
+        return p["stars"]["age"]  # returns a 1-D array, not a scalar
+
+    with pytest.raises(ValueError, match="loss_fn must return a scalar"):
+        finite_difference_grad(non_scalar_loss, params)
+
+
+def test_compare_gradients_rejects_mismatched_shapes():
+    grad_a = {"stars": {"age": jnp.array([1.0, 2.0])}}
+    grad_b = {"stars": {"age": jnp.array([1.0, 2.0, 3.0])}}
+
+    with pytest.raises(ValueError, match="same shape"):
+        compare_gradients(grad_a, grad_b)
