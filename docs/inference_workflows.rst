@@ -21,6 +21,9 @@ Deterministic vs Stochastic Modes
 
 Use deterministic mode for stable gradient-based fitting and finite-difference
 validation, and stochastic mode for likelihood/noise-aware workflows.
+For ``calc_gradient``, both modes use the same transformer graph and the
+post-aggregation noise switch is configured via
+``pipeline_config.yml -> calc_gradient.options.post_aggregation_noise_by_mode``.
 
 .. code-block:: python
 
