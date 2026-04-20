@@ -21,6 +21,88 @@ from .telescope import get_telescope
 
 
 @jaxtyped(typechecker=typechecker)
+def _get_performance_options(config: dict) -> tuple[int, bool]:
+    """Read optional particlewise performance settings from the config.
+
+    Args:
+        config (dict): Runtime configuration dictionary.
+
+    Returns:
+        tuple[int, bool]:
+            ``(chunk_size, use_remat)`` where ``chunk_size == 0`` means
+            unchunked execution.
+    """
+    perf_config = config.get("performance", {})
+    chunk_size = perf_config.get("particle_chunk_size", 0)
+    if (
+        not isinstance(chunk_size, int)
+        or isinstance(chunk_size, bool)
+        or chunk_size <= 0
+    ):
+        chunk_size = 0
+
+    use_remat = bool(perf_config.get("remat_particlewise", False))
+    return chunk_size, use_remat
+
+
+@jaxtyped(typechecker=typechecker)
+def _scan_particles(
+    init_cube: Float[Array, "n_spaxels n_wave_bins"],
+    nstar: int,
+    step_fn: Callable,
+    chunk_size: int,
+) -> Float[Array, "n_spaxels n_wave_bins"]:
+    """Accumulate per-particle contributions with optional chunking.
+
+    Args:
+        init_cube (Float[Array, "n_spaxels n_wave_bins"]): Initial cube.
+        nstar (int): Number of particles.
+        step_fn (Callable): Particle step function of signature
+            ``(cube, index) -> (cube, aux)``.
+        chunk_size (int): Chunk size; ``0`` disables chunking.
+
+    Returns:
+        Float[Array, "n_spaxels n_wave_bins"]: Accumulated flat cube.
+    """
+    if nstar == 0:
+        return init_cube
+
+    if chunk_size <= 0:
+        cube_flat, _ = lax.scan(step_fn, init_cube, jnp.arange(nstar, dtype=jnp.int32))
+        return cube_flat
+
+    n_chunks = (nstar + chunk_size - 1) // chunk_size
+    max_index = nstar - 1
+
+    def chunk_body(cube, chunk_idx):
+        start = chunk_idx * chunk_size
+        local = jnp.arange(chunk_size, dtype=jnp.int32)
+        idx = start + local
+        idx_safe = jnp.minimum(idx, max_index)
+        valid = idx < nstar
+
+        def inner_body(i, cube_inner):
+            def do_step(current_cube):
+                cube_new, _ = step_fn(current_cube, idx_safe[i])
+                return cube_new
+
+            return lax.cond(
+                valid[i],
+                do_step,
+                lambda current_cube: current_cube,
+                cube_inner,
+            )
+
+        cube = lax.fori_loop(0, chunk_size, inner_body, cube)
+        return cube, None
+
+    cube_flat, _ = lax.scan(
+        chunk_body, init_cube, jnp.arange(n_chunks, dtype=jnp.int32)
+    )
+    return cube_flat
+
+
+@jaxtyped(typechecker=typechecker)
 def get_calculate_datacube_particlewise(config: dict) -> Callable:
     """Prepare a per-particle datacube builder for the star component.
 
@@ -57,6 +139,7 @@ def get_calculate_datacube_particlewise(config: dict) -> Callable:
     ssp_wave0 = cosmological_doppler_shift(
         z=z_obs, wavelength=ssp_model.wavelength
     )  # (n_wave_ssp,)
+    chunk_size, use_remat = _get_performance_options(config)
 
     @jaxtyped(typechecker=typechecker)
     def calculate_datacube_particlewise(rubixdata: RubixData) -> RubixData:
@@ -109,10 +192,15 @@ def get_calculate_datacube_particlewise(config: dict) -> Callable:
             cube = cube.at[pix_i].add(spec_tel)
             return cube, None
 
-        cube_flat, _ = lax.scan(
-            body,
-            init_cube,
-            jnp.arange(nstar, dtype=jnp.int32),
+        particle_step = body
+        if use_remat:
+            particle_step = jax.checkpoint(body)
+
+        cube_flat = _scan_particles(
+            init_cube=init_cube,
+            nstar=nstar,
+            step_fn=particle_step,
+            chunk_size=chunk_size,
         )
 
         cube_3d = cube_flat.reshape(ns, ns, -1)
@@ -160,6 +248,7 @@ def get_calculate_dusty_datacube_particlewise(config: dict) -> Callable:
     ssp_wave0 = cosmological_doppler_shift(
         z=z_obs, wavelength=ssp_model.wavelength
     )  # (n_wave_ssp,)
+    chunk_size, use_remat = _get_performance_options(config)
 
     @jaxtyped(typechecker=typechecker)
     def calculate_dusty_datacube_particlewise(
@@ -237,10 +326,15 @@ def get_calculate_dusty_datacube_particlewise(config: dict) -> Callable:
             cube = cube.at[pix_i].add(spec_extincted)
             return cube, None
 
-        cube_flat, _ = lax.scan(
-            body,
-            init_cube,
-            jnp.arange(nstar, dtype=jnp.int32),
+        particle_step = body
+        if use_remat:
+            particle_step = jax.checkpoint(body)
+
+        cube_flat = _scan_particles(
+            init_cube=init_cube,
+            nstar=nstar,
+            step_fn=particle_step,
+            chunk_size=chunk_size,
         )
 
         cube_3d = cube_flat.reshape(ns, ns, -1)
