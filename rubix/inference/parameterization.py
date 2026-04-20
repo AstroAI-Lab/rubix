@@ -4,8 +4,7 @@ from typing import Mapping
 import jax
 import jax.numpy as jnp
 from beartype.typing import Any
-
-ParamsTree = Mapping[str, Mapping[str, Any]]
+from rubix.inference.api import ParamsTree
 TransformTree = Mapping[str, Mapping[str, "ParameterTransform"]]
 
 
