@@ -125,7 +125,7 @@ def optimize_params(
         trainable_params,
         opt_state,
         trainable_params,
-        jnp.array(float("inf")),
+        jnp.array(jnp.inf),
     )
     (final_params, _, final_best_params, best_loss_val), (
         loss_arr,
@@ -133,13 +133,12 @@ def optimize_params(
         update_norm_arr,
     ) = jax.lax.scan(scan_step, init_carry, None, length=max_steps)
 
-    # Detect convergence post-hoc; no device->host sync until here
+    # Detect convergence post-hoc; no device->host sync until here.
+    # argmax over a boolean array returns the index of the first True; the
+    # `converged` guard ensures it is only used when at least one True exists.
     converged_mask = update_norm_arr < tol
     converged = bool(jnp.any(converged_mask))
-    if converged:
-        steps_run = int(jnp.argmax(converged_mask)) + 1
-    else:
-        steps_run = max_steps
+    steps_run = (int(jnp.argmax(converged_mask)) + 1) if converged else max_steps
 
     # Materialize history once at the end
     loss_history: list[float] = loss_arr[:steps_run].tolist()
