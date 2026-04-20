@@ -12,16 +12,20 @@ from .parameterization import (
     build_age_metallicity_transforms,
     inverse_transforms,
 )
+from .validation import GradientComparison, compare_gradients, finite_difference_grad
 
 __all__ = [
     "IdentityTransform",
     "ParameterTransform",
     "SigmoidBounds",
     "SoftplusLowerBound",
+    "GradientComparison",
     "OptimizationResult",
     "apply_params",
     "apply_transforms",
     "build_age_metallicity_transforms",
+    "compare_gradients",
+    "finite_difference_grad",
     "forward",
     "get_pipeline_name_for_mode",
     "inverse_transforms",

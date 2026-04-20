@@ -28,13 +28,13 @@ proof-of-concept notebooks to production full-IFU workflows.
 3. `refactor(gradient-modes)` (completed)
 - Separate deterministic and stochastic (PRNG-keyed) gradient paths.
 
-4. `feat(optimizer-loop)` (current)
+4. `feat(optimizer-loop)` (completed)
 - Add reusable Optax optimization loop with histories/checkpoints.
 
-5. `test(gradient-vs-fd)`
+5. `test(gradient-vs-fd)` (completed)
 - Add finite-difference validation suite for gradient correctness.
 
-6. `perf(full-ifu-scaling)`
+6. `perf(full-ifu-scaling)` (current)
 - Add chunking/checkpointing controls and consistency tests.
 
 7. `feat(variational-inference)`
