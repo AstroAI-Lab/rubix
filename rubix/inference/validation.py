@@ -32,8 +32,8 @@ def finite_difference_grad(
         eps (float, optional): Central-difference step size. Defaults to 1e-5.
 
     Raises:
-        ValueError: If ``eps`` is not strictly positive.
-        ValueError: If ``loss_fn`` does not return a scalar.
+        ValueError: If ``eps`` is not strictly positive, or if ``loss_fn``
+            does not return a scalar.
 
     Returns:
         Any: Pytree gradient matching the structure of ``params``.
