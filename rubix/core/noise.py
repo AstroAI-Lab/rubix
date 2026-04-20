@@ -104,11 +104,23 @@ def build_post_aggregation_noise_fn(
     """
     noise_cfg = config.get("telescope", {}).get("noise", {})
     signal_to_noise = noise_cfg.get("signal_to_noise")
-    noise_distribution = noise_cfg.get("noise_distribution", "normal")
 
     if signal_to_noise is None:
         return None
 
+    if "noise_distribution" not in noise_cfg:
+        raise ValueError(
+            "Missing required noise configuration key 'noise_distribution' "
+            "under config['telescope']['noise'] when 'signal_to_noise' is set."
+        )
+
+    noise_distribution = noise_cfg["noise_distribution"]
+    if noise_distribution not in SUPPORTED_NOISE_DISTRIBUTIONS:
+        raise ValueError(
+            f"Unsupported noise distribution '{noise_distribution}'. "
+            f"Supported noise distributions are: "
+            f"{sorted(SUPPORTED_NOISE_DISTRIBUTIONS)}."
+        )
     logger = get_logger()
 
     def _apply(cube, key):
