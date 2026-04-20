@@ -34,7 +34,11 @@ def _get_performance_options(config: dict) -> tuple[int, bool]:
     """
     perf_config = config.get("performance", {})
     chunk_size = perf_config.get("particle_chunk_size", 0)
-    if not isinstance(chunk_size, int) or chunk_size <= 0:
+    if (
+        not isinstance(chunk_size, int)
+        or isinstance(chunk_size, bool)
+        or chunk_size <= 0
+    ):
         chunk_size = 0
 
     use_remat = bool(perf_config.get("remat_particlewise", False))
