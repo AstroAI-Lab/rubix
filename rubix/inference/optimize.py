@@ -114,12 +114,14 @@ def optimize_params(
             grad_norm = optax.global_norm(grads)
             update_norm = optax.global_norm(param_updates)
 
-            # Track best params on-device without Python-side branching
+            # Track best params on-device without Python-side branching.
+            # `value` is evaluated at the pre-update `params`, so keep
+            # `best_params` aligned with that same parameter state.
             is_better = value < best_loss
             new_best_loss = jnp.where(is_better, value, best_loss)
             new_best_params = jax.tree_util.tree_map(
-                lambda new, old: jnp.where(is_better, new, old),
-                new_params,
+                lambda current, old: jnp.where(is_better, current, old),
+                params,
                 best_params,
             )
             new_done = update_norm < tol
