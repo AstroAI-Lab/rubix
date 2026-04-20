@@ -151,6 +151,7 @@ class RubixPipeline:
         needed_transformer_names = {
             node["name"]
             for node in self.pipeline_config.get("Transformers", {}).values()
+            if isinstance(node, dict) and "name" in node
         }
         if "apply_noise" in needed_transformer_names:
             functions.append(get_apply_noise(self.user_config))
