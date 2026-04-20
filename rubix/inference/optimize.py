@@ -4,7 +4,7 @@ from typing import Mapping, Optional
 import jax
 import jax.numpy as jnp
 import optax
-from beartype.typing import Any, Callable
+from beartype.typing import Any
 
 from .api import LossFn, loss
 from .parameterization import TransformTree, apply_transforms
