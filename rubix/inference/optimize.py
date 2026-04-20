@@ -103,43 +103,66 @@ def optimize_params(
         )
 
     def scan_step(carry, _):
-        params, opt_state, best_params, best_loss = carry
-        value, grads = jax.value_and_grad(train_loss)(params)
-        param_updates, new_opt_state = optimizer.update(grads, opt_state, params)
-        new_params = optax.apply_updates(params, param_updates)
+        params, opt_state, best_params, best_loss, done = carry
 
-        grad_norm = optax.global_norm(grads)
-        update_norm = optax.global_norm(param_updates)
+        def active_step(active_carry):
+            params, opt_state, best_params, best_loss, _ = active_carry
+            value, grads = jax.value_and_grad(train_loss)(params)
+            param_updates, new_opt_state = optimizer.update(grads, opt_state, params)
+            new_params = optax.apply_updates(params, param_updates)
 
-        # Track best params on-device without Python-side branching
-        is_better = value < best_loss
-        new_best_loss = jnp.where(is_better, value, best_loss)
-        new_best_params = jax.tree_util.tree_map(
-            lambda new, old: jnp.where(is_better, new, old),
-            new_params,
-            best_params,
-        )
+            grad_norm = optax.global_norm(grads)
+            update_norm = optax.global_norm(param_updates)
 
-        new_carry = (new_params, new_opt_state, new_best_params, new_best_loss)
-        return new_carry, (value, grad_norm, update_norm)
+            # Track best params on-device without Python-side branching
+            is_better = value < best_loss
+            new_best_loss = jnp.where(is_better, value, best_loss)
+            new_best_params = jax.tree_util.tree_map(
+                lambda new, old: jnp.where(is_better, new, old),
+                new_params,
+                best_params,
+            )
+            new_done = update_norm < tol
+            new_carry = (
+                new_params,
+                new_opt_state,
+                new_best_params,
+                new_best_loss,
+                new_done,
+            )
+            return new_carry, (value, grad_norm, update_norm)
+
+        def finished_step(finished_carry):
+            params, opt_state, best_params, best_loss, done = finished_carry
+            zero = jnp.array(0.0)
+            return (
+                params,
+                opt_state,
+                best_params,
+                best_loss,
+                done,
+            ), (best_loss, zero, zero)
+
+        return jax.lax.cond(done, finished_step, active_step, carry)
 
     init_carry = (
         trainable_params,
         opt_state,
         trainable_params,
         jnp.array(jnp.inf),
+        jnp.array(False),
     )
-    (final_params, _, final_best_params, best_loss_val), (
+    (final_params, _, final_best_params, best_loss_val, converged_flag), (
         loss_arr,
         grad_norm_arr,
         update_norm_arr,
     ) = jax.lax.scan(scan_step, init_carry, None, length=max_steps)
 
     # Detect convergence post-hoc; no device->host sync until here.
-    # argmax over a boolean array returns the index of the first True; the
-    # `converged` guard ensures it is only used when at least one True exists.
+    # Because the scan freezes once `update_norm < tol`, the first True marks
+    # the actual stopping point and later iterations cannot invalidate it.
     converged_mask = update_norm_arr < tol
-    converged = bool(jnp.any(converged_mask))
+    converged = bool(converged_flag)
     steps_run = (int(jnp.argmax(converged_mask)) + 1) if converged else max_steps
 
     # Materialize history once at the end
