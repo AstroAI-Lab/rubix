@@ -166,6 +166,9 @@ Use ``optimize_variational_posterior`` for a first diagonal-Gaussian posterior.
 
 For full IFU cubes, use ``optimize_variational_ifu_cube`` with uncertainty
 maps and optional robust Huber regularization in the reconstruction term.
+The returned ``VariationalResult`` includes diagnostics such as
+``best_step``, ``final_objective``, ``final_reconstruction``, ``final_kl``,
+and per-step ``grad_norm_history``/``update_norm_history``.
 
 
 Performance Notes
