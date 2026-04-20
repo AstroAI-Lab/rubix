@@ -80,67 +80,10 @@ calc_dusty_ifu:
       kwargs: {}
 
 calc_gradient:
-  Transformers:
-    rotate_galaxy:
-      name: rotate_galaxy
-      depends_on: null
-      args: []
-      kwargs: {}
-    spaxel_assignment:
-      name: spaxel_assignment
-      depends_on: rotate_galaxy
-      args: []
-      kwargs: {}
-    calculate_datacube_particlewise:
-      name: calculate_datacube_particlewise
-      depends_on: spaxel_assignment
-      args: []
-      kwargs: {}
-    convolve_psf:
-      name: convolve_psf
-      depends_on: calculate_datacube_particlewise
-      args: []
-      kwargs: {}
-    convolve_lsf:
-      name: convolve_lsf
-      depends_on: convolve_psf
-      args: []
-      kwargs: {}
-    apply_noise:
-      name: apply_noise
-      depends_on: convolve_lsf
-      args: []
-      kwargs: {}
-
-calc_gradient_deterministic:
-  Transformers:
-    rotate_galaxy:
-      name: rotate_galaxy
-      depends_on: null
-      args: []
-      kwargs: {}
-    spaxel_assignment:
-      name: spaxel_assignment
-      depends_on: rotate_galaxy
-      args: []
-      kwargs: {}
-    calculate_datacube_particlewise:
-      name: calculate_datacube_particlewise
-      depends_on: spaxel_assignment
-      args: []
-      kwargs: {}
-    convolve_psf:
-      name: convolve_psf
-      depends_on: calculate_datacube_particlewise
-      args: []
-      kwargs: {}
-    convolve_lsf:
-      name: convolve_lsf
-      depends_on: convolve_psf
-      args: []
-      kwargs: {}
-
-calc_gradient_stochastic:
+  options:
+    post_aggregation_noise_by_mode:
+      deterministic: false
+      stochastic: true
   Transformers:
     rotate_galaxy:
       name: rotate_galaxy
