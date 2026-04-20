@@ -99,12 +99,12 @@ def benchmark_callable(
         raise ValueError("repeats must be >= 1")
 
     if warmup:
-        _ = run_once()
+        _block_tree(run_once())
 
     runtimes_s: list[float] = []
     for _ in range(repeats):
         start = perf_counter()
-        _ = run_once()
+        _block_tree(run_once())
         runtimes_s.append(perf_counter() - start)
 
     return runtimes_s
