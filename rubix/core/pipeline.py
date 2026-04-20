@@ -33,7 +33,7 @@ from .ifu import (
     get_calculate_dusty_datacube_particlewise,
 )
 from .lsf import get_convolve_lsf
-from .noise import get_apply_noise
+from .noise import build_post_aggregation_noise_fn, get_apply_noise
 from .psf import get_convolve_psf
 from .rotation import get_galaxy_rotation
 from .ssp import get_ssp
@@ -46,6 +46,12 @@ class RubixPipeline:
     Args:
         user_config (Union[dict, str]):
             Parsed configuration dictionary or path to a configuration file.
+        apply_noise_post_aggregation (bool):
+            When ``True``, noise is applied *once* to the fully aggregated
+            datacube after the cross-device psum in :py:meth:`run_sharded`,
+            rather than inside each shard.  Set by
+            :py:func:`~rubix.inference.modes.make_inference_pipeline` for
+            stochastic gradient mode.  Defaults to ``False``.
 
     Example:
 
@@ -61,7 +67,11 @@ class RubixPipeline:
             >>> gradient_data = pipe.gradient(inputdata, target_datacube)
     """
 
-    def __init__(self, user_config: Union[dict, str]):
+    def __init__(
+        self,
+        user_config: Union[dict, str],
+        apply_noise_post_aggregation: bool = False,
+    ):
         self.user_config = get_config(user_config)
         pipeline_name = self.user_config["pipeline"]["name"]
         self.pipeline_config = get_pipeline_config(pipeline_name)
@@ -69,6 +79,12 @@ class RubixPipeline:
         self.ssp = get_ssp(self.user_config)
         self.telescope = get_telescope(self.user_config)
         self.func = None
+        self._apply_noise_post_aggregation = apply_noise_post_aggregation
+        self._post_noise_fn = (
+            build_post_aggregation_noise_fn(self.user_config)
+            if apply_noise_post_aggregation
+            else None
+        )
 
     def prepare_data(self):
         """
@@ -116,7 +132,6 @@ class RubixPipeline:
         )
         convolve_psf = get_convolve_psf(self.user_config)
         convolve_lsf = get_convolve_lsf(self.user_config)
-        apply_noise = get_apply_noise(self.user_config)
 
         functions = [
             rotate_galaxy,
@@ -127,8 +142,20 @@ class RubixPipeline:
             calculate_dusty_datacube_particlewise,
             convolve_psf,
             convolve_lsf,
-            apply_noise,
         ]
+
+        # Only build and register apply_noise when it is actually referenced by
+        # the selected pipeline config.  Pipelines like calc_gradient omit this
+        # node, so constructing it would raise a ValueError if telescope.noise
+        # is absent from the user config – even though noise is never applied.
+        needed_transformer_names = {
+            node["name"]
+            for node in self.pipeline_config.get("Transformers", {}).values()
+            if isinstance(node, dict) and "name" in node
+        }
+        if "apply_noise" in needed_transformer_names:
+            functions.append(get_apply_noise(self.user_config))
+
         return functions
 
     def run_sharded(
@@ -234,6 +261,7 @@ class RubixPipeline:
         rubix_spec.galaxy = galaxy_spec
         rubix_spec.stars = stars_spec
         rubix_spec.gas = gas_spec
+        rubix_spec.noise_key = replicate_1d
 
         # 1) Make a pytree of PartitionSpec
         partition_spec_tree = tree_map(
@@ -252,6 +280,14 @@ class RubixPipeline:
                 num_devices,
             )
             inputdata = _pad_particles(inputdata, pad)
+
+        # Capture noise_key before device_put for post-aggregation use
+        # without mutating the caller-provided inputdata.
+        noise_key_for_post = (
+            inputdata.noise_key
+            if inputdata.noise_key is not None
+            else jax.random.PRNGKey(0)
+        )
 
         inputdata = jax.device_put(inputdata, rubix_spec)
 
@@ -272,6 +308,12 @@ class RubixPipeline:
         )
 
         sharded_result = sharded_pipeline(inputdata)
+
+        # Apply noise once to the fully aggregated cube (stochastic mode only).
+        # This avoids the incorrect noise-scaling that would result from applying
+        # noise inside each shard before the cross-device psum.
+        if self._post_noise_fn is not None:
+            sharded_result = self._post_noise_fn(sharded_result, noise_key_for_post)
 
         time_end = time.time()
         self.logger.info(

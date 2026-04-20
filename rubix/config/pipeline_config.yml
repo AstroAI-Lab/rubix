@@ -80,6 +80,10 @@ calc_dusty_ifu:
       kwargs: {}
 
 calc_gradient:
+  options:
+    post_aggregation_noise_by_mode:
+      deterministic: false
+      stochastic: true
   Transformers:
     rotate_galaxy:
       name: rotate_galaxy
@@ -104,10 +108,5 @@ calc_gradient:
     convolve_lsf:
       name: convolve_lsf
       depends_on: convolve_psf
-      args: []
-      kwargs: {}
-    apply_noise:
-      name: apply_noise
-      depends_on: convolve_lsf
       args: []
       kwargs: {}
