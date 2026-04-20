@@ -28,6 +28,14 @@ rubix.inference.optimize module
    :undoc-members:
    :show-inheritance:
 
+rubix.inference.objectives module
+---------------------------------
+
+.. automodule:: rubix.inference.objectives
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 rubix.inference.parameterization module
 ---------------------------------------
 
