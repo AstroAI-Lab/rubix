@@ -37,6 +37,7 @@ Gradient-Based Optimization
 ---------------------------
 
 The standard optimization entrypoint is ``optimize_params``.
+For full-cube fitting with voxel masks/weights, use ``optimize_ifu_cube``.
 
 .. code-block:: python
 
@@ -65,6 +66,22 @@ The standard optimization entrypoint is ``optimize_params``.
    )
 
    optimized = result.params
+
+.. code-block:: python
+
+   from rubix.inference import optimize_ifu_cube
+
+   result = optimize_ifu_cube(
+       pipeline=pipe_det,
+       params_init=params_init,
+       static_data=static_data,
+       target=target_cube,
+       mask=valid_voxel_mask,
+       weights=inverse_variance_weights,
+       normalize_loss=True,
+       learning_rate=1e-2,
+       max_steps=500,
+   )
 
 
 Science Loss Functions
@@ -158,3 +175,17 @@ For large particle counts, configure optional IFU accumulation controls:
   particle step function for memory/computation tradeoffs
 
 These settings are used by the particlewise IFU builders in ``rubix.core.ifu``.
+
+Benchmarking Full-IFU Optimization
+----------------------------------
+
+Use the benchmark harness to profile optimization runtime and objective-side
+memory diagnostics for full IFU cubes.
+
+.. code-block:: bash
+
+   python bench/benchmark_ifu_cube_optimization.py \
+     --nx 25 --ny 25 --nw 256 \
+     --repeats 3 \
+     --max-steps 200 \
+     --use-mask --use-weights

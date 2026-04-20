@@ -9,6 +9,7 @@ from beartype.typing import Any
 from rubix.core.data import RubixData
 
 from .api import LossFn, loss
+from .objectives import build_ifu_cube_loss
 from .parameterization import TransformTree, apply_transforms
 
 ParamsTree = Mapping[str, Mapping[str, Any]]
@@ -224,4 +225,87 @@ def optimize_params(
         final_loss=final_loss_val,
         steps_run=steps_run,
         converged=converged,
+    )
+
+
+def optimize_ifu_cube(
+    pipeline: Any,
+    params_init: ParamsTree,
+    static_data: RubixData,
+    target: jnp.ndarray,
+    mask: Optional[jnp.ndarray] = None,
+    weights: Optional[jnp.ndarray] = None,
+    normalize_loss: bool = True,
+    learning_rate: float = 1e-3,
+    max_steps: int = 500,
+    tol: float = 1e-6,
+    noise_key: Optional[jnp.ndarray] = None,
+    transforms: Optional[TransformTree] = None,
+    optimizer: Optional[optax.GradientTransformation] = None,
+) -> OptimizationResult:
+    """Optimize parameters against a full IFU cube with optional weighting.
+
+    Args:
+        pipeline (Any): Pipeline-like object consumed by :func:`optimize_params`.
+        params_init (ParamsTree): Initial parameters in constrained space.
+        static_data (RubixData): Baseline RubixData passed to the forward model.
+        target (jnp.ndarray): Target IFU datacube.
+        mask (Optional[jnp.ndarray], optional): Optional binary voxel mask with
+            same shape as ``target``. Defaults to ``None``.
+        weights (Optional[jnp.ndarray], optional): Optional per-voxel weights
+            with same shape as ``target``. Defaults to ``None``.
+        normalize_loss (bool, optional): Whether to normalize weighted squared
+            residuals by effective weight sum. Defaults to ``True``.
+        learning_rate (float, optional): Step size for default Adam optimizer.
+            Defaults to 1e-3.
+        max_steps (int, optional): Maximum optimization steps. Defaults to 500.
+        tol (float, optional): Convergence threshold on global update norm.
+            Defaults to 1e-6.
+        noise_key (Optional[jnp.ndarray], optional): Optional key for stochastic
+            pipelines. Defaults to ``None``.
+        transforms (Optional[TransformTree], optional): Optional transform tree
+            for constrained optimization. Defaults to ``None``.
+        optimizer (Optional[optax.GradientTransformation], optional): Custom
+            Optax optimizer. Defaults to ``None`` (Adam with ``learning_rate``).
+
+    Raises:
+        ValueError: If ``target`` is not a 3D IFU datacube.
+        ValueError: If ``weights`` contains non-finite values.
+        ValueError: If ``weights`` contains negative values.
+        ValueError: If ``mask`` contains negative values.
+
+    Returns:
+        OptimizationResult: Standard optimization traces and best/final params.
+    """
+    if target.ndim != 3:
+        raise ValueError("target must be a 3D IFU datacube")
+
+    if weights is not None:
+        if not bool(jnp.all(jnp.isfinite(weights))):
+            raise ValueError("weights must be finite")
+        if not bool(jnp.all(weights >= 0)):
+            raise ValueError("weights must be non-negative")
+
+    if mask is not None:
+        if not bool(jnp.all(mask >= 0)):
+            raise ValueError("mask must be non-negative")
+
+    cube_loss_fn = build_ifu_cube_loss(
+        mask=mask,
+        weights=weights,
+        normalize=normalize_loss,
+    )
+
+    return optimize_params(
+        pipeline=pipeline,
+        params_init=params_init,
+        static_data=static_data,
+        target=target,
+        learning_rate=learning_rate,
+        max_steps=max_steps,
+        tol=tol,
+        loss_fn=cube_loss_fn,
+        noise_key=noise_key,
+        transforms=transforms,
+        optimizer=optimizer,
     )

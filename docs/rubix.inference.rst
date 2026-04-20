@@ -19,6 +19,14 @@ rubix.inference.losses module
    :members:
    :undoc-members:
    :show-inheritance:
+   
+rubix.inference.benchmark module
+--------------------------------
+
+.. automodule:: rubix.inference.benchmark
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 rubix.inference.modes module
 ----------------------------
@@ -32,6 +40,14 @@ rubix.inference.optimize module
 -------------------------------
 
 .. automodule:: rubix.inference.optimize
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+rubix.inference.objectives module
+---------------------------------
+
+.. automodule:: rubix.inference.objectives
    :members:
    :undoc-members:
    :show-inheritance:
