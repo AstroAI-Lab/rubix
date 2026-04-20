@@ -72,7 +72,7 @@ finite-difference estimates.
 
 .. code-block:: python
 
-   from rubix.inference import compare_gradients, finite_difference_grad, value_and_grad
+   from rubix.inference import compare_gradients, finite_difference_grad, loss, value_and_grad
 
    def objective(p):
        return loss(
