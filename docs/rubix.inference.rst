@@ -12,6 +12,14 @@ rubix.inference.api module
    :undoc-members:
    :show-inheritance:
 
+rubix.inference.losses module
+-----------------------------
+
+.. automodule:: rubix.inference.losses
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 rubix.inference.modes module
 ----------------------------
 
