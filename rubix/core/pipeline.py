@@ -33,7 +33,7 @@ from .ifu import (
     get_calculate_dusty_datacube_particlewise,
 )
 from .lsf import get_convolve_lsf
-from .noise import get_apply_noise, build_post_aggregation_noise_fn
+from .noise import build_post_aggregation_noise_fn, get_apply_noise
 from .psf import get_convolve_psf
 from .rotation import get_galaxy_rotation
 from .ssp import get_ssp

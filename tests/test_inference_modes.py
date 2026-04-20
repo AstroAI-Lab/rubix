@@ -1,5 +1,6 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 from rubix.inference import get_pipeline_name_for_mode
 from rubix.inference.modes import make_inference_pipeline
