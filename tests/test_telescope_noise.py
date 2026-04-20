@@ -82,3 +82,24 @@ def test_sample_noise_invalid_type():
 
     with pytest.raises(ValueError, match="Invalid noise type: invalid"):
         sample_noise(shape, type="invalid", key=key)
+
+
+def test_calculate_noise_cube_is_reproducible_with_same_key():
+    cube = jrandom.uniform(jrandom.PRNGKey(0), shape=(4, 4, 8))
+    key = jrandom.PRNGKey(123)
+
+    noise_cube_1 = calculate_noise_cube(cube, 0.8, key=key)
+    noise_cube_2 = calculate_noise_cube(cube, 0.8, key=key)
+
+    assert jnp.allclose(noise_cube_1, noise_cube_2)
+
+
+def test_calculate_noise_cube_changes_with_different_keys():
+    cube = jrandom.uniform(jrandom.PRNGKey(0), shape=(4, 4, 8))
+    key_1 = jrandom.PRNGKey(123)
+    key_2 = jrandom.PRNGKey(456)
+
+    noise_cube_1 = calculate_noise_cube(cube, 0.8, key=key_1)
+    noise_cube_2 = calculate_noise_cube(cube, 0.8, key=key_2)
+
+    assert not jnp.allclose(noise_cube_1, noise_cube_2)

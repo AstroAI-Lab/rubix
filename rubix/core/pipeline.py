@@ -33,7 +33,7 @@ from .ifu import (
     get_calculate_dusty_datacube_particlewise,
 )
 from .lsf import get_convolve_lsf
-from .noise import get_apply_noise
+from .noise import get_apply_noise, build_post_aggregation_noise_fn
 from .psf import get_convolve_psf
 from .rotation import get_galaxy_rotation
 from .ssp import get_ssp
@@ -46,6 +46,12 @@ class RubixPipeline:
     Args:
         user_config (Union[dict, str]):
             Parsed configuration dictionary or path to a configuration file.
+        apply_noise_post_aggregation (bool):
+            When ``True``, noise is applied *once* to the fully aggregated
+            datacube after the cross-device psum in :py:meth:`run_sharded`,
+            rather than inside each shard.  Set by
+            :py:func:`~rubix.inference.modes.make_inference_pipeline` for
+            stochastic gradient mode.  Defaults to ``False``.
 
     Example:
 
@@ -61,7 +67,11 @@ class RubixPipeline:
             >>> gradient_data = pipe.gradient(inputdata, target_datacube)
     """
 
-    def __init__(self, user_config: Union[dict, str]):
+    def __init__(
+        self,
+        user_config: Union[dict, str],
+        apply_noise_post_aggregation: bool = False,
+    ):
         self.user_config = get_config(user_config)
         pipeline_name = self.user_config["pipeline"]["name"]
         self.pipeline_config = get_pipeline_config(pipeline_name)
@@ -69,6 +79,12 @@ class RubixPipeline:
         self.ssp = get_ssp(self.user_config)
         self.telescope = get_telescope(self.user_config)
         self.func = None
+        self._apply_noise_post_aggregation = apply_noise_post_aggregation
+        self._post_noise_fn = (
+            build_post_aggregation_noise_fn(self.user_config)
+            if apply_noise_post_aggregation
+            else None
+        )
 
     def prepare_data(self):
         """
@@ -234,6 +250,7 @@ class RubixPipeline:
         rubix_spec.galaxy = galaxy_spec
         rubix_spec.stars = stars_spec
         rubix_spec.gas = gas_spec
+        rubix_spec.noise_key = replicate_1d
 
         # 1) Make a pytree of PartitionSpec
         partition_spec_tree = tree_map(
@@ -252,6 +269,12 @@ class RubixPipeline:
                 num_devices,
             )
             inputdata = _pad_particles(inputdata, pad)
+
+        if inputdata.noise_key is None:
+            inputdata.noise_key = jax.random.PRNGKey(0)
+
+        # Capture noise_key before device_put for post-aggregation use
+        noise_key_for_post = inputdata.noise_key
 
         inputdata = jax.device_put(inputdata, rubix_spec)
 
@@ -272,6 +295,12 @@ class RubixPipeline:
         )
 
         sharded_result = sharded_pipeline(inputdata)
+
+        # Apply noise once to the fully aggregated cube (stochastic mode only).
+        # This avoids the incorrect noise-scaling that would result from applying
+        # noise inside each shard before the cross-device psum.
+        if self._post_noise_fn is not None:
+            sharded_result = self._post_noise_fn(sharded_result, noise_key_for_post)
 
         time_end = time.time()
         self.logger.info(

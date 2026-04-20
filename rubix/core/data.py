@@ -223,11 +223,14 @@ class RubixData:
         galaxy (Optional[Galaxy]): Galaxy metadata.
         stars (Optional[StarsData]): Stellar part data.
         gas (Optional[GasData]): Gas part data.
+        noise_key (Optional[Any]): Optional JAX PRNG key used by stochastic
+            pipeline elements such as noise injection.
     """
 
     galaxy: Optional[Galaxy] = None
     stars: Optional[StarsData] = None
     gas: Optional[GasData] = None
+    noise_key: Optional[Any] = None
 
     def __repr__(self):
         representationString = ["RubixData:"]
@@ -237,7 +240,7 @@ class RubixData:
 
     def tree_flatten(self):
         """Flatten the RubixData object into children and aux data."""
-        children = (self.galaxy, self.stars, self.gas)
+        children = (self.galaxy, self.stars, self.gas, self.noise_key)
         aux_data = {}
         return children, aux_data
 

@@ -1,6 +1,7 @@
 """Inference helpers for gradient-based modeling workflows."""
 
 from .api import apply_params, forward, loss, value_and_grad
+from .modes import get_pipeline_name_for_mode, make_inference_pipeline
 from .parameterization import (
     IdentityTransform,
     ParameterTransform,
@@ -20,7 +21,9 @@ __all__ = [
     "apply_transforms",
     "build_age_metallicity_transforms",
     "forward",
+    "get_pipeline_name_for_mode",
     "inverse_transforms",
     "loss",
+    "make_inference_pipeline",
     "value_and_grad",
 ]

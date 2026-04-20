@@ -1,6 +1,5 @@
-import jax.numpy as jnp
 from beartype import beartype as typechecker
-from beartype.typing import Callable
+from beartype.typing import Any, Callable, Optional
 from jaxtyping import jaxtyped
 
 from rubix.logger import get_logger
@@ -69,12 +68,14 @@ def get_apply_noise(config: dict) -> Callable[[RubixData], RubixData]:
             f"{signal_to_noise} and noise distribution: {noise_distribution}"
         )
         datacube = rubixdata.stars.datacube
-        # Define S2n for each spaxel
-        S2N = jnp.ones(datacube.shape[:2]) * signal_to_noise
 
         # Calculate the noise cube
+        noise_key = rubixdata.noise_key
         noise_cube = calculate_noise_cube(
-            datacube, S2N, noise_distribution=noise_distribution
+            datacube,
+            signal_to_noise,
+            noise_distribution=noise_distribution,
+            key=noise_key,
         )
 
         # Add noise to the datacube
@@ -82,3 +83,46 @@ def get_apply_noise(config: dict) -> Callable[[RubixData], RubixData]:
         return rubixdata
 
     return apply_noise
+
+
+def build_post_aggregation_noise_fn(
+    config: dict,
+) -> Optional[Callable[[Any, Any], Any]]:
+    """Return a callable that adds noise to a raw datacube, or ``None``.
+
+    This is used by :py:class:`~rubix.core.pipeline.RubixPipeline` in
+    stochastic mode to apply noise *once* to the fully aggregated cube after
+    the cross-device reduction, avoiding the incorrect noise statistics that
+    arise when noise is applied independently on each shard before the psum.
+
+    Args:
+        config (dict): Standard Rubix configuration dictionary.  Noise is
+            configured under ``config["telescope"]["noise"]``.
+
+    Returns:
+        Callable[[cube, key], cube] if noise is configured, else ``None``.
+    """
+    noise_cfg = config.get("telescope", {}).get("noise", {})
+    signal_to_noise = noise_cfg.get("signal_to_noise")
+    noise_distribution = noise_cfg.get("noise_distribution", "normal")
+
+    if signal_to_noise is None:
+        return None
+
+    logger = get_logger()
+
+    def _apply(cube, key):
+        logger.info(
+            "Applying post-aggregation noise (S/N=%s, dist=%s).",
+            signal_to_noise,
+            noise_distribution,
+        )
+        noise_cube = calculate_noise_cube(
+            cube,
+            signal_to_noise,
+            noise_distribution=noise_distribution,
+            key=key,
+        )
+        return cube + noise_cube
+
+    return _apply

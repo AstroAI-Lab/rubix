@@ -22,10 +22,10 @@ proof-of-concept notebooks to production full-IFU workflows.
 - Add unit tests for copy semantics, deterministic loss calls, and analytical
   gradient checks.
 
-2. `feat(parameterization)` (current)
+2. `feat(parameterization)` (completed)
 - Add constrained parameter transforms (age/metallicity first) and tests.
 
-3. `refactor(gradient-modes)`
+3. `refactor(gradient-modes)` (current)
 - Separate deterministic and stochastic (PRNG-keyed) gradient paths.
 
 4. `feat(optimizer-loop)`
