@@ -132,7 +132,6 @@ class RubixPipeline:
         )
         convolve_psf = get_convolve_psf(self.user_config)
         convolve_lsf = get_convolve_lsf(self.user_config)
-        apply_noise = get_apply_noise(self.user_config)
 
         functions = [
             rotate_galaxy,
@@ -143,8 +142,19 @@ class RubixPipeline:
             calculate_dusty_datacube_particlewise,
             convolve_psf,
             convolve_lsf,
-            apply_noise,
         ]
+
+        # Only build and register apply_noise when it is actually referenced by
+        # the selected pipeline config.  Pipelines like calc_gradient omit this
+        # node, so constructing it would raise a ValueError if telescope.noise
+        # is absent from the user config – even though noise is never applied.
+        needed_transformer_names = {
+            node["name"]
+            for node in self.pipeline_config.get("Transformers", {}).values()
+        }
+        if "apply_noise" in needed_transformer_names:
+            functions.append(get_apply_noise(self.user_config))
+
         return functions
 
     def run_sharded(
