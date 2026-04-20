@@ -174,7 +174,9 @@ def test_optimize_ifu_cube_with_weights_converges():
 
     # Target: scale=3 -> template*3; only first voxel gets high weight
     target = jnp.full((2, 2, 2), 3.0) * template
-    weights = jnp.zeros((2, 2, 2)).at[0, 0, 0].set(10.0).at[0, 0, 1].set(1.0)
+    weights = jnp.zeros((2, 2, 2))
+    weights = weights.at[0, 0, 0].set(10.0)
+    weights = weights.at[0, 0, 1].set(1.0)
 
     result = optimize_ifu_cube(
         pipeline=pipeline,
