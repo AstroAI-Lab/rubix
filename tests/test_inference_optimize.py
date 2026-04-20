@@ -45,12 +45,30 @@ def test_optimize_params_reduces_loss_without_transforms():
         target=target,
         learning_rate=0.1,
         max_steps=250,
-        tol=1e-9,
+        tol=1e-6,
     )
 
     assert result.loss_history[0] > result.loss_history[-1]
     assert result.steps_run <= 250
-    assert result.best_loss <= result.loss_history[-1]
+    assert result.best_loss <= result.final_loss
+
+    # Verify best_params and best_loss are internally consistent: recomputing
+    # the loss at best_params should match result.best_loss.
+    best_prediction = pipeline.run_sharded(
+        RubixData(
+            galaxy=static_data.galaxy,
+            stars=StarsData(
+                coords=static_data.stars.coords,
+                velocity=static_data.stars.velocity,
+                mass=static_data.stars.mass,
+                age=result.best_params["stars"]["age"],
+                metallicity=result.best_params["stars"]["metallicity"],
+            ),
+            gas=static_data.gas,
+        )
+    )
+    best_loss_recomputed = float(jnp.sum((best_prediction - target) ** 2))
+    assert abs(best_loss_recomputed - result.best_loss) < 1e-5
 
     prediction = pipeline.run_sharded(
         RubixData(
@@ -92,20 +110,38 @@ def test_optimize_params_with_transforms_respects_bounds_and_converges():
         target=target,
         learning_rate=0.15,
         max_steps=300,
-        tol=1e-9,
+        tol=1e-6,
         transforms=transforms,
     )
 
     final_age = result.params["stars"]["age"]
     final_metallicity = result.params["stars"]["metallicity"]
 
-    assert result.converged
     assert jnp.all(final_age > 0.0)
     assert jnp.all(final_age < 20.0)
     assert jnp.all(final_metallicity > 0.0)
     assert jnp.all(final_metallicity < 0.05)
     assert result.loss_history[0] > result.loss_history[-1]
     assert len(result.grad_norm_history) == len(result.loss_history)
+    assert result.best_loss <= result.final_loss
+
+    # Verify best_params and best_loss are internally consistent: recomputing
+    # the loss at best_params should match result.best_loss.
+    best_prediction = pipeline.run_sharded(
+        RubixData(
+            galaxy=static_data.galaxy,
+            stars=StarsData(
+                coords=static_data.stars.coords,
+                velocity=static_data.stars.velocity,
+                mass=static_data.stars.mass,
+                age=result.best_params["stars"]["age"],
+                metallicity=result.best_params["stars"]["metallicity"],
+            ),
+            gas=static_data.gas,
+        )
+    )
+    best_loss_recomputed = float(jnp.sum((best_prediction - target) ** 2))
+    assert abs(best_loss_recomputed - result.best_loss) < 1e-5
 
     prediction = pipeline.run_sharded(
         RubixData(

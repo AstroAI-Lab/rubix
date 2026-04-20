@@ -16,13 +16,31 @@ ParamsTree = Mapping[str, Mapping[str, Any]]
 
 @dataclass
 class OptimizationResult:
-    """Container for optimization outputs."""
+    """Container for optimization outputs.
+
+    Attributes:
+        params: Final parameters (constrained space) after ``steps_run`` steps.
+        best_params: Parameters (constrained space) that achieved ``best_loss``.
+        loss_history: Loss values recorded at the *pre-update* parameters each
+            step, for the first ``steps_run`` steps.  ``loss_history[-1]``
+            therefore corresponds to the step *before* the final parameter
+            update, not to ``params``.  Use ``final_loss`` for the loss at
+            ``params``.
+        grad_norm_history: Global gradient-norm for each active step.
+        best_loss: Minimum loss seen across all active steps; equals
+            ``loss(pipeline, best_params, ...)``.
+        final_loss: Loss evaluated at the returned ``params`` (post-update).
+        steps_run: Number of active (non-frozen) optimization steps taken.
+        converged: ``True`` if update-norm fell below ``tol`` before
+            ``max_steps``.
+    """
 
     params: dict[str, dict[str, Any]]
     best_params: dict[str, dict[str, Any]]
     loss_history: list[float]
     grad_norm_history: list[float]
     best_loss: float
+    final_loss: float
     steps_run: int
     converged: bool
 
@@ -68,7 +86,8 @@ def optimize_params(
             Optax optimizer. Defaults to ``None`` (Adam with ``learning_rate``).
 
     Returns:
-        OptimizationResult: Final/best params and optimization traces.
+        OptimizationResult: Final/best params, optimization traces, and the
+            loss evaluated at the returned ``params`` (``final_loss``).
     """
     if optimizer is None:
         optimizer = optax.adam(learning_rate)
@@ -171,6 +190,10 @@ def optimize_params(
     loss_history: list[float] = loss_arr[:steps_run].tolist()
     grad_norm_history: list[float] = grad_norm_arr[:steps_run].tolist()
 
+    # Compute loss at the returned final params so callers have a value
+    # consistent with `result.params` (`loss_history` is pre-update).
+    final_loss_val = float(train_loss(final_params))
+
     if transforms is None:
         result_params = _tree_to_dict(final_params)
         result_best_params = _tree_to_dict(final_best_params)
@@ -196,6 +219,7 @@ def optimize_params(
         loss_history=loss_history,
         grad_norm_history=grad_norm_history,
         best_loss=float(best_loss_val),
+        final_loss=final_loss_val,
         steps_run=steps_run,
         converged=converged,
     )
