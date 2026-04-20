@@ -45,6 +45,7 @@ If you use the code in your research, please cite the following paper: :ref:`pub
    installation
    versions
    publications
+   inference_workflows
    license
    acknowledgments
 
@@ -80,6 +81,7 @@ Code base documentation
    rubix.core
    rubix.cosmology
    rubix.galaxy
+   rubix.inference
    rubix.pipeline
    rubix.spectra
    rubix.telescope

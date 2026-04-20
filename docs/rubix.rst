@@ -10,6 +10,7 @@ Subpackages
    rubix.core
    rubix.cosmology
    rubix.galaxy
+   rubix.inference
    rubix.pipeline
    rubix.spectra
    rubix.telescope
