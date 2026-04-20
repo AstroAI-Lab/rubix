@@ -99,9 +99,25 @@ def test_optimize_params_with_transforms_respects_bounds_and_converges():
     final_age = result.params["stars"]["age"]
     final_metallicity = result.params["stars"]["metallicity"]
 
+    assert result.converged
     assert jnp.all(final_age > 0.0)
     assert jnp.all(final_age < 20.0)
     assert jnp.all(final_metallicity > 0.0)
     assert jnp.all(final_metallicity < 0.05)
     assert result.loss_history[0] > result.loss_history[-1]
     assert len(result.grad_norm_history) == len(result.loss_history)
+
+    prediction = pipeline.run_sharded(
+        RubixData(
+            galaxy=static_data.galaxy,
+            stars=StarsData(
+                coords=static_data.stars.coords,
+                velocity=static_data.stars.velocity,
+                mass=static_data.stars.mass,
+                age=final_age,
+                metallicity=final_metallicity,
+            ),
+            gas=static_data.gas,
+        )
+    )
+    assert jnp.allclose(prediction, target, atol=2e-2, rtol=0.0)
