@@ -8,6 +8,7 @@ from .benchmark import (
     benchmark_result_to_dict,
     estimate_array_nbytes,
 )
+from .losses import combine_loss_fns, huber_data_loss, masked_gaussian_nll
 from .modes import get_pipeline_name_for_mode, make_inference_pipeline
 from .objectives import build_ifu_cube_loss, masked_weighted_mse
 from .optimize import OptimizationResult, optimize_ifu_cube, optimize_params
@@ -41,6 +42,7 @@ __all__ = [
     "apply_params",
     "apply_transforms",
     "build_age_metallicity_transforms",
+    "combine_loss_fns",
     "benchmark_callable",
     "benchmark_ifu_cube_optimization",
     "benchmark_result_to_dict",
@@ -49,6 +51,11 @@ __all__ = [
     "finite_difference_grad",
     "forward",
     "get_pipeline_name_for_mode",
+    "huber_data_loss",
+    "inverse_transforms",
+    "loss",
+    "make_inference_pipeline",
+    "masked_gaussian_nll",
     "build_ifu_cube_loss",
     "inverse_transforms",
     "loss",

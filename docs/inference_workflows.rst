@@ -84,6 +84,33 @@ For full-cube fitting with voxel masks/weights, use ``optimize_ifu_cube``.
    )
 
 
+Science Loss Functions
+----------------------
+
+Rubix provides reusable loss builders for robust and probabilistic IFU fitting.
+
+.. code-block:: python
+
+   from rubix.inference import combine_loss_fns, huber_data_loss, masked_gaussian_nll
+
+   def gaussian_term(pred, target):
+       return masked_gaussian_nll(
+           pred,
+           target,
+           inv_variance=inverse_variance_cube,
+           mask=valid_voxel_mask,
+           normalize=True,
+       )
+
+   def robust_term(pred, target):
+       return huber_data_loss(pred, target, delta=0.2, mask=valid_voxel_mask)
+
+   loss_fn = combine_loss_fns(
+       [gaussian_term, robust_term],
+       weights=[1.0, 0.1],
+   )
+
+
 Finite-Difference Gradient Validation
 -------------------------------------
 
