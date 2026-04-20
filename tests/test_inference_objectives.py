@@ -117,7 +117,9 @@ def test_optimize_ifu_cube_rejects_non_finite_weights():
     pipeline = CubeScalePipeline(jnp.ones((2, 2, 2)))
     static_data = _make_rubix_data()
     params_init = {"stars": {"age": jnp.array([0.2])}}
-    bad_weights = jnp.array([[[1.0, float("inf")], [1.0, 1.0]], [[1.0, 1.0], [1.0, 1.0]]])
+    bad_weights = jnp.array(
+        [[[1.0, float("inf")], [1.0, 1.0]], [[1.0, 1.0], [1.0, 1.0]]]
+    )
 
     with pytest.raises(ValueError, match="weights must be finite"):
         _ = optimize_ifu_cube(

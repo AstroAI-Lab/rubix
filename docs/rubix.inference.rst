@@ -19,7 +19,7 @@ rubix.inference.losses module
    :members:
    :undoc-members:
    :show-inheritance:
-   
+
 rubix.inference.benchmark module
 --------------------------------
 

@@ -1,7 +1,6 @@
 """Inference helpers for gradient-based modeling workflows."""
 
 from .api import apply_params, forward, loss, value_and_grad
-from .losses import combine_loss_fns, huber_data_loss, masked_gaussian_nll
 from .benchmark import (
     IFUCubeBenchmarkResult,
     benchmark_callable,
@@ -9,6 +8,7 @@ from .benchmark import (
     benchmark_result_to_dict,
     estimate_array_nbytes,
 )
+from .losses import combine_loss_fns, huber_data_loss, masked_gaussian_nll
 from .modes import get_pipeline_name_for_mode, make_inference_pipeline
 from .objectives import build_ifu_cube_loss, masked_weighted_mse
 from .optimize import OptimizationResult, optimize_ifu_cube, optimize_params
