@@ -14,11 +14,21 @@ ParamsTree = Mapping[str, Mapping[str, Any]]
 
 @dataclass
 class VariationalResult:
-    """Container for mean-field variational optimization outputs."""
+    """Container for mean-field variational optimization outputs.
+
+    All ``*_params`` fields are in the **latent (unconstrained)** space so that
+    ``posterior_mean_params`` and ``posterior_log_std_params`` consistently
+    describe the same diagonal Gaussian that was optimized.  When transforms
+    were supplied the corresponding ``*_constrained_params`` fields hold the
+    mapped constrained values; without transforms they are identical to the
+    latent fields.
+    """
 
     posterior_mean_params: dict[str, dict[str, Any]]
     posterior_log_std_params: dict[str, dict[str, Any]]
+    posterior_mean_constrained_params: dict[str, dict[str, Any]]
     best_posterior_mean_params: dict[str, dict[str, Any]]
+    best_posterior_mean_constrained_params: dict[str, dict[str, Any]]
     objective_history: list[float]
     reconstruction_history: list[float]
     kl_history: list[float]
@@ -206,24 +216,28 @@ def optimize_variational_posterior(
         objective = reconstruction + beta_kl * kl
         return objective, (reconstruction, kl)
 
-    def objective_only(current_params, step_key):
-        value, _ = objective_fn(current_params, step_key)
-        return value
-
     for step in range(max_steps):
         key, step_key = jax.random.split(key)
-        value, grads = jax.value_and_grad(objective_only)(variational_params, step_key)
-        updates, opt_state = optimizer.update(grads, opt_state, variational_params)
-        variational_params = optax.apply_updates(variational_params, updates)
 
-        _, (reconstruction_value, kl_value) = objective_fn(variational_params, step_key)
-        objective_history.append(float(value))
-        reconstruction_history.append(float(reconstruction_value))
-        kl_history.append(float(kl_value))
+        # Compute objective, auxiliary metrics, and gradients all at the
+        # *same* pre-update parameter state so that the three history arrays
+        # remain consistent with each other.
+        (value, (reconstruction_value, kl_value)), grads = jax.value_and_grad(
+            objective_fn, has_aux=True
+        )(variational_params, step_key)
 
+        # Record the best parameter state *before* applying the update so that
+        # best_mean and best_objective correspond to the same parameter state.
         if value < best_objective:
             best_objective = value
             best_mean = variational_params["mean"]
+
+        updates, opt_state = optimizer.update(grads, opt_state, variational_params)
+        variational_params = optax.apply_updates(variational_params, updates)
+
+        objective_history.append(float(value))
+        reconstruction_history.append(float(reconstruction_value))
+        kl_history.append(float(kl_value))
 
         steps_run = step + 1
         if float(optax.global_norm(updates)) < tol:
@@ -249,9 +263,13 @@ def optimize_variational_posterior(
         )
 
     return VariationalResult(
-        posterior_mean_params=_tree_to_dict(posterior_mean_constrained),
+        posterior_mean_params=_tree_to_dict(final_mean),
         posterior_log_std_params=_tree_to_dict(final_log_std),
-        best_posterior_mean_params=_tree_to_dict(best_posterior_mean_constrained),
+        posterior_mean_constrained_params=_tree_to_dict(posterior_mean_constrained),
+        best_posterior_mean_params=_tree_to_dict(best_mean),
+        best_posterior_mean_constrained_params=_tree_to_dict(
+            best_posterior_mean_constrained
+        ),
         objective_history=objective_history,
         reconstruction_history=reconstruction_history,
         kl_history=kl_history,
