@@ -186,11 +186,28 @@ def benchmark_ifu_cube_optimization(
             raise ValueError("weights must have the same shape as target")
 
         residual_sq = (prediction - truth) ** 2
-        mask_f = (
-            mask.astype(residual_sq.dtype)
-            if mask is not None
-            else jnp.ones_like(residual_sq)
-        )
+
+        if mask is None:
+            if weights is None:
+                numerator = jnp.sum(residual_sq)
+                if not normalize_loss:
+                    return numerator
+                denom = jnp.asarray(residual_sq.size, dtype=residual_sq.dtype)
+                denom = jnp.maximum(
+                    denom, jnp.asarray(1e-12, dtype=residual_sq.dtype)
+                )
+                return numerator / denom
+
+            weights_f = weights.astype(residual_sq.dtype)
+            residual_sq = residual_sq * weights_f
+            numerator = jnp.sum(residual_sq)
+            if not normalize_loss:
+                return numerator
+            denom = jnp.sum(weights_f)
+            denom = jnp.maximum(denom, jnp.asarray(1e-12, dtype=residual_sq.dtype))
+            return numerator / denom
+
+        mask_f = mask.astype(residual_sq.dtype)
         residual_sq = residual_sq * mask_f
 
         if weights is not None:
