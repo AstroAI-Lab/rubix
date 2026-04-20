@@ -49,9 +49,9 @@ class RubixPipeline:
         apply_noise_post_aggregation (bool):
             When ``True``, noise is applied *once* to the fully aggregated
             datacube after the cross-device psum in :py:meth:`run_sharded`,
-            rather than inside each shard.  Set by
+            rather than inside each shard. Set by
             :py:func:`~rubix.inference.modes.make_inference_pipeline` for
-            stochastic gradient mode.  Defaults to ``False``.
+            stochastic gradient mode. Defaults to ``False``.
 
     Example:
 
@@ -79,7 +79,6 @@ class RubixPipeline:
         self.ssp = get_ssp(self.user_config)
         self.telescope = get_telescope(self.user_config)
         self.func = None
-        self._apply_noise_post_aggregation = apply_noise_post_aggregation
         self._post_noise_fn = (
             build_post_aggregation_noise_fn(self.user_config)
             if apply_noise_post_aggregation

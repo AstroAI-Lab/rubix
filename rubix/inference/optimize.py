@@ -19,19 +19,21 @@ class OptimizationResult:
     """Container for optimization outputs.
 
     Attributes:
-        params: Final parameters (constrained space) after ``steps_run`` steps.
-        best_params: Parameters (constrained space) that achieved ``best_loss``.
-        loss_history: Loss values recorded at the *pre-update* parameters each
+        params (dict[str, dict[str, Any]]): Final parameters (constrained
+            space) after ``steps_run`` steps.
+        best_params (dict[str, dict[str, Any]]): Parameters (constrained space)
+            that achieved ``best_loss``.
+        loss_history (list[float]): Loss values recorded at the *pre-update* parameters each
             step, for the first ``steps_run`` steps.  ``loss_history[-1]``
             therefore corresponds to the step *before* the final parameter
             update, not to ``params``.  Use ``final_loss`` for the loss at
             ``params``.
-        grad_norm_history: Global gradient-norm for each active step.
-        best_loss: Minimum loss seen across all active steps; equals
+        grad_norm_history (list[float]): Global gradient-norm for each active step.
+        best_loss (float): Minimum loss seen across all active steps; equals
             ``loss(pipeline, best_params, ...)``.
-        final_loss: Loss evaluated at the returned ``params`` (post-update).
-        steps_run: Number of active (non-frozen) optimization steps taken.
-        converged: ``True`` if update-norm fell below ``tol`` before
+        final_loss (float): Loss evaluated at the returned ``params`` (post-update).
+        steps_run (int): Number of active (non-frozen) optimization steps taken.
+        converged (bool): ``True`` if update-norm fell below ``tol`` before
             ``max_steps``.
     """
 

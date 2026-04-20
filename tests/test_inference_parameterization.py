@@ -45,6 +45,15 @@ def test_softplus_lower_bound_forward_and_inverse():
     assert jnp.allclose(recovered, unconstrained, atol=1e-5, rtol=1e-5)
 
 
+def test_softplus_lower_bound_inverse_is_stable_for_large_values():
+    transform = SoftplusLowerBound(lower=0.0)
+    constrained = jnp.array([1e2, 1e4], dtype=jnp.float32)
+    recovered = transform.inverse(constrained)
+
+    assert not jnp.isnan(recovered).any()
+    assert not jnp.isinf(recovered).any()
+
+
 def test_apply_transforms_tree_roundtrip():
     params = {
         "stars": {
