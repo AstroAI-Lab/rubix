@@ -49,7 +49,15 @@ def finite_difference_grad(
         basis = jnp.zeros_like(flat).at[i].set(1.0)
         return (f_flat(flat + eps * basis) - f_flat(flat - eps * basis)) / (2.0 * eps)
 
-    grad_flat = jax.vmap(fd_at_index)(jnp.arange(flat.size))
+    def body_fun(i, grad_accum):
+        return grad_accum.at[i].set(fd_at_index(i))
+
+    grad_flat = jax.lax.fori_loop(
+        0,
+        flat.size,
+        body_fun,
+        jnp.zeros_like(flat),
+    )
     return unravel(grad_flat)
 
 
