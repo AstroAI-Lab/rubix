@@ -167,8 +167,3 @@ calc_gradient_stochastic:
       depends_on: convolve_psf
       args: []
       kwargs: {}
-    apply_noise:
-      name: apply_noise
-      depends_on: convolve_lsf
-      args: []
-      kwargs: {}
