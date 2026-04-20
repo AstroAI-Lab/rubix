@@ -1,5 +1,5 @@
 from beartype import beartype as typechecker
-from beartype.typing import Callable, Optional
+from beartype.typing import Any, Callable, Optional
 from jaxtyping import jaxtyped
 
 from rubix.logger import get_logger
@@ -87,7 +87,7 @@ def get_apply_noise(config: dict) -> Callable[[RubixData], RubixData]:
 
 def build_post_aggregation_noise_fn(
     config: dict,
-) -> Optional[Callable]:
+) -> Optional[Callable[[Any, Any], Any]]:
     """Return a callable that adds noise to a raw datacube, or ``None``.
 
     This is used by :py:class:`~rubix.core.pipeline.RubixPipeline` in
