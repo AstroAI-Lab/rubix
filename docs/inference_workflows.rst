@@ -164,6 +164,9 @@ Use ``optimize_variational_posterior`` for a first diagonal-Gaussian posterior.
    posterior_mean = vi.posterior_mean_params
    posterior_log_std = vi.posterior_log_std_params
 
+For full IFU cubes, use ``optimize_variational_ifu_cube`` with uncertainty
+maps and optional robust Huber regularization in the reconstruction term.
+
 
 Performance Notes
 -----------------

@@ -6,6 +6,7 @@ from rubix.inference import (
     build_age_metallicity_transforms,
     initialize_mean_field_params,
     kl_diag_gaussian_to_standard_normal,
+    optimize_variational_ifu_cube,
     optimize_variational_posterior,
     sample_diag_gaussian,
 )
@@ -159,3 +160,84 @@ def test_optimize_variational_rejects_non_positive_num_samples():
             target=jnp.array([[[5.0]]]),
             num_samples=0,
         )
+
+
+def test_optimize_variational_ifu_cube_rejects_non_3d_target():
+    with pytest.raises(ValueError, match="target must be a 3D IFU datacube"):
+        optimize_variational_ifu_cube(
+            pipeline=DummyPipeline(),
+            params_init={
+                "stars": {
+                    "age": jnp.array([0.5]),
+                    "metallicity": jnp.array([0.001]),
+                }
+            },
+            static_data=_make_rubix_data(),
+            target=jnp.ones((2, 2)),
+        )
+
+
+def test_optimize_variational_ifu_cube_rejects_invalid_huber_settings():
+    with pytest.raises(ValueError, match="huber_weight must be non-negative"):
+        optimize_variational_ifu_cube(
+            pipeline=DummyPipeline(),
+            params_init={
+                "stars": {
+                    "age": jnp.array([0.5]),
+                    "metallicity": jnp.array([0.001]),
+                }
+            },
+            static_data=_make_rubix_data(),
+            target=jnp.ones((1, 1, 1)),
+            huber_weight=-0.1,
+        )
+
+    with pytest.raises(
+        ValueError, match="huber_delta must be provided when huber_weight > 0"
+    ):
+        optimize_variational_ifu_cube(
+            pipeline=DummyPipeline(),
+            params_init={
+                "stars": {
+                    "age": jnp.array([0.5]),
+                    "metallicity": jnp.array([0.001]),
+                }
+            },
+            static_data=_make_rubix_data(),
+            target=jnp.ones((1, 1, 1)),
+            huber_weight=0.2,
+        )
+
+
+def test_optimize_variational_ifu_cube_improves_objective():
+    pipeline = DummyPipeline()
+    static_data = _make_rubix_data()
+    params_init = {
+        "stars": {
+            "age": jnp.array([0.5]),
+            "metallicity": jnp.array([0.001]),
+        }
+    }
+    target = jnp.array([[[5.0]]])
+    sigma = jnp.ones_like(target) * 0.5
+    mask = jnp.ones_like(target)
+
+    result = optimize_variational_ifu_cube(
+        pipeline=pipeline,
+        params_init=params_init,
+        static_data=static_data,
+        target=target,
+        sigma=sigma,
+        mask=mask,
+        huber_delta=0.2,
+        huber_weight=0.1,
+        learning_rate=5e-2,
+        max_steps=120,
+        tol=1e-9,
+        num_samples=4,
+        beta_kl=1e-4,
+        seed=21,
+    )
+
+    assert result.objective_history[0] > result.objective_history[-1]
+    assert result.best_objective <= result.objective_history[-1]
