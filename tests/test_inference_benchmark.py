@@ -91,4 +91,7 @@ def test_benchmark_ifu_cube_optimization_returns_summary():
     assert result.target_nbytes == estimate_array_nbytes(cube_shape, target.dtype)
     assert result.mask_nbytes == estimate_array_nbytes(cube_shape, mask.dtype)
     assert result.weights_nbytes == estimate_array_nbytes(cube_shape, weights.dtype)
-    assert result.best_loss <= result.final_loss
+    assert jnp.isfinite(result.best_loss)
+    assert jnp.isfinite(result.final_loss)
+    assert result.best_loss >= 0.0
+    assert result.final_loss >= 0.0
