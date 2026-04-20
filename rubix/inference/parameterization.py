@@ -44,7 +44,9 @@ class SoftplusLowerBound(ParameterTransform):
     def inverse(self, constrained: Any) -> Any:
         shifted = constrained - self.lower - self.eps
         safe = jnp.maximum(shifted, jnp.asarray(self.eps, dtype=shifted.dtype))
-        overflow_threshold = jnp.log(jnp.asarray(jnp.finfo(safe.dtype).max, dtype=safe.dtype))
+        overflow_threshold = jnp.log(
+            jnp.asarray(jnp.finfo(safe.dtype).max, dtype=safe.dtype)
+        )
         return jnp.where(safe > overflow_threshold, safe, jnp.log(jnp.expm1(safe)))
 
 
