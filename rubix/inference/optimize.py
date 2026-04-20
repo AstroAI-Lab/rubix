@@ -270,12 +270,25 @@ def optimize_ifu_cube(
 
     Raises:
         ValueError: If ``target`` is not a 3D IFU datacube.
+        ValueError: If ``weights`` contains non-finite values.
+        ValueError: If ``weights`` contains negative values.
+        ValueError: If ``mask`` contains negative values.
 
     Returns:
         OptimizationResult: Standard optimization traces and best/final params.
     """
     if target.ndim != 3:
         raise ValueError("target must be a 3D IFU datacube")
+
+    if weights is not None:
+        if not bool(jnp.all(jnp.isfinite(weights))):
+            raise ValueError("weights must be finite")
+        if not bool(jnp.all(weights >= 0)):
+            raise ValueError("weights must be non-negative")
+
+    if mask is not None:
+        if not bool(jnp.all(mask >= 0)):
+            raise ValueError("mask must be non-negative")
 
     cube_loss_fn = build_ifu_cube_loss(
         mask=mask,

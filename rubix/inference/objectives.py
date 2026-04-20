@@ -49,15 +49,19 @@ def masked_weighted_mse(
     if mask is not None:
         mask_f = mask.astype(residual_sq.dtype)
         residual_sq = residual_sq * mask_f
-    else:
-        mask_f = jnp.ones_like(residual_sq)
 
     if weights is not None:
         weights_f = weights.astype(residual_sq.dtype)
         residual_sq = residual_sq * weights_f
-        denom = jnp.sum(weights_f * mask_f)
+        if mask is not None:
+            denom = jnp.sum(weights_f * mask_f)
+        else:
+            denom = jnp.sum(weights_f)
     else:
-        denom = jnp.sum(mask_f)
+        if mask is not None:
+            denom = jnp.sum(mask_f)
+        else:
+            denom = jnp.asarray(residual_sq.size, dtype=residual_sq.dtype)
 
     numerator = jnp.sum(residual_sq)
 
