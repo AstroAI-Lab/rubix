@@ -4,7 +4,9 @@ from typing import Mapping, Optional
 import jax
 import jax.numpy as jnp
 import optax
-from beartype.typing import Any, Callable
+from beartype.typing import Any
+
+from rubix.core.data import RubixData
 
 from .api import LossFn, loss
 from .parameterization import TransformTree, apply_transforms
@@ -33,7 +35,7 @@ def _tree_to_dict(tree: ParamsTree) -> dict[str, dict[str, Any]]:
 def optimize_params(
     pipeline: Any,
     params_init: ParamsTree,
-    static_data: Any,
+    static_data: RubixData,
     target: jnp.ndarray,
     learning_rate: float = 1e-3,
     max_steps: int = 500,
@@ -48,7 +50,7 @@ def optimize_params(
     Args:
         pipeline (Any): Pipeline-like object consumed by :func:`rubix.inference.loss`.
         params_init (ParamsTree): Initial parameters in constrained space.
-        static_data (Any): Baseline RubixData passed to the forward model.
+        static_data (RubixData): Baseline RubixData passed to the forward model.
         target (jnp.ndarray): Target datacube or statistic.
         learning_rate (float, optional): Step size for default Adam optimizer.
             Defaults to 1e-3.
@@ -81,12 +83,7 @@ def optimize_params(
         )
 
     opt_state = optimizer.init(trainable_params)
-    loss_history: list[float] = []
-    grad_norm_history: list[float] = []
-    best_loss = jnp.inf
-    best_params = trainable_params
-    converged = False
-    steps_run = 0
+    best_loss0 = jnp.asarray(jnp.inf, dtype=jnp.float32)
 
     def train_loss(train_params):
         if transforms is None:
@@ -106,26 +103,44 @@ def optimize_params(
             noise_key=noise_key,
         )
 
-    for step in range(max_steps):
-        value, grads = jax.value_and_grad(train_loss)(trainable_params)
-        updates, opt_state = optimizer.update(grads, opt_state, trainable_params)
-        trainable_params = optax.apply_updates(trainable_params, updates)
-
+    def scan_step(carry, _):
+        current_params, current_opt_state, best_params, best_loss = carry
+        value, grads = jax.value_and_grad(train_loss)(current_params)
+        updates, next_opt_state = optimizer.update(
+            grads, current_opt_state, current_params
+        )
+        next_params = optax.apply_updates(current_params, updates)
         grad_norm = optax.global_norm(grads)
         update_norm = optax.global_norm(updates)
 
-        loss_value = float(value)
-        loss_history.append(loss_value)
-        grad_norm_history.append(float(grad_norm))
+        better = value < best_loss
+        next_best_loss = jnp.where(better, value, best_loss)
+        next_best_params = jax.tree_util.tree_map(
+            lambda new, old: jnp.where(better, new, old),  # noqa: B023
+            next_params,
+            best_params,
+        )
+        next_carry = (next_params, next_opt_state, next_best_params, next_best_loss)
+        metrics = (value, grad_norm, update_norm)
+        return next_carry, metrics
 
-        if value < best_loss:
-            best_loss = value
-            best_params = trainable_params
+    init_carry = (trainable_params, opt_state, trainable_params, best_loss0)
+    final_carry, metrics = jax.lax.scan(
+        scan_step, init_carry, xs=None, length=max_steps
+    )
+    trainable_params, _, best_params, best_loss = final_carry
+    loss_arr, grad_norm_arr, update_norm_arr = metrics
 
-        steps_run = step + 1
-        if float(update_norm) < tol:
-            converged = True
-            break
+    converged_mask = update_norm_arr < tol
+    converged = bool(jnp.any(converged_mask))
+    if converged:
+        first_converged_step = int(jnp.argmax(converged_mask)) + 1
+        steps_run = first_converged_step
+    else:
+        steps_run = max_steps
+
+    loss_history = loss_arr[:steps_run].tolist()
+    grad_norm_history = grad_norm_arr[:steps_run].tolist()
 
     if transforms is None:
         final_params = trainable_params

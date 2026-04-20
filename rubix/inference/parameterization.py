@@ -5,7 +5,8 @@ import jax
 import jax.numpy as jnp
 from beartype.typing import Any
 
-ParamsTree = Mapping[str, Mapping[str, Any]]
+from .api import ParamsTree
+
 TransformTree = Mapping[str, Mapping[str, "ParameterTransform"]]
 
 
@@ -45,7 +46,10 @@ class SoftplusLowerBound(ParameterTransform):
     def inverse(self, constrained: Any) -> Any:
         shifted = constrained - self.lower - self.eps
         safe = jnp.maximum(shifted, jnp.asarray(self.eps, dtype=shifted.dtype))
-        return jnp.log(jnp.expm1(safe))
+        overflow_threshold = jnp.log(
+            jnp.asarray(jnp.finfo(safe.dtype).max, dtype=safe.dtype)
+        )
+        return jnp.where(safe > overflow_threshold, safe, jnp.log(jnp.expm1(safe)))
 
 
 @dataclass(frozen=True)

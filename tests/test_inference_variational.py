@@ -136,8 +136,8 @@ def test_optimize_variational_with_transforms_respects_bounds():
         seed=13,
     )
 
-    mean_age = result.posterior_mean_params["stars"]["age"]
-    mean_metallicity = result.posterior_mean_params["stars"]["metallicity"]
+    mean_age = result.posterior_mean_constrained_params["stars"]["age"]
+    mean_metallicity = result.posterior_mean_constrained_params["stars"]["metallicity"]
 
     assert jnp.all(mean_age > 0.0)
     assert jnp.all(mean_age < 20.0)

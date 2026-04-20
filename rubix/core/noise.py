@@ -1,6 +1,6 @@
 import jax.numpy as jnp
 from beartype import beartype as typechecker
-from beartype.typing import Callable
+from beartype.typing import Callable, Optional
 from jaxtyping import jaxtyped
 
 from rubix.logger import get_logger
@@ -10,6 +10,53 @@ from rubix.telescope.noise.noise import (
 )
 
 from .data import RubixData
+
+
+def build_post_aggregation_noise_fn(
+    config: dict,
+) -> Callable[[jnp.ndarray, Optional[jnp.ndarray]], jnp.ndarray]:
+    """Build a post-aggregation noise function from telescope settings.
+
+    This helper applies noise to an already aggregated datacube, which avoids
+    applying noise independently on each shard before cross-device reduction.
+
+    Args:
+        config (dict): Configuration dict that includes ``telescope.noise``.
+
+    Returns:
+        Callable[[jnp.ndarray, Optional[jnp.ndarray]], jnp.ndarray]:
+            Callable that maps ``(cube, key) -> noisy_cube``.
+
+    Raises:
+        ValueError: When required noise configuration keys are missing.
+    """
+    if "noise" not in config["telescope"]:
+        raise ValueError("Noise information not provided in telescope config")
+
+    if "signal_to_noise" not in config["telescope"]["noise"]:
+        raise ValueError("Signal to noise information not provided in noise config")
+
+    if "noise_distribution" not in config["telescope"]["noise"]:
+        raise ValueError(
+            "Noise distribution missing. Supported ones: "
+            f"{SUPPORTED_NOISE_DISTRIBUTIONS}"
+        )
+
+    signal_to_noise = config["telescope"]["noise"]["signal_to_noise"]
+    noise_distribution = config["telescope"]["noise"]["noise_distribution"]
+
+    def apply_noise_to_cube(
+        cube: jnp.ndarray, key: Optional[jnp.ndarray]
+    ) -> jnp.ndarray:
+        noise_cube = calculate_noise_cube(
+            cube,
+            signal_to_noise,
+            noise_distribution=noise_distribution,
+            key=key,
+        )
+        return cube + noise_cube
+
+    return apply_noise_to_cube
 
 
 @jaxtyped(typechecker=typechecker)
@@ -69,14 +116,12 @@ def get_apply_noise(config: dict) -> Callable[[RubixData], RubixData]:
             f"{signal_to_noise} and noise distribution: {noise_distribution}"
         )
         datacube = rubixdata.stars.datacube
-        # Define S2n for each spaxel
-        S2N = jnp.ones(datacube.shape[:2]) * signal_to_noise
 
         # Calculate the noise cube
         noise_key = rubixdata.noise_key
         noise_cube = calculate_noise_cube(
             datacube,
-            S2N,
+            signal_to_noise,
             noise_distribution=noise_distribution,
             key=noise_key,
         )

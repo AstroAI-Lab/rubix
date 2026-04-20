@@ -33,7 +33,7 @@ from .ifu import (
     get_calculate_dusty_datacube_particlewise,
 )
 from .lsf import get_convolve_lsf
-from .noise import get_apply_noise
+from .noise import build_post_aggregation_noise_fn, get_apply_noise
 from .psf import get_convolve_psf
 from .rotation import get_galaxy_rotation
 from .ssp import get_ssp
@@ -46,6 +46,9 @@ class RubixPipeline:
     Args:
         user_config (Union[dict, str]):
             Parsed configuration dictionary or path to a configuration file.
+        apply_noise_post_aggregation (bool):
+            If ``True``, noise is applied once on the aggregated output cube
+            after cross-device reduction instead of inside per-shard execution.
 
     Example:
 
@@ -61,7 +64,11 @@ class RubixPipeline:
             >>> gradient_data = pipe.gradient(inputdata, target_datacube)
     """
 
-    def __init__(self, user_config: Union[dict, str]):
+    def __init__(
+        self,
+        user_config: Union[dict, str],
+        apply_noise_post_aggregation: bool = False,
+    ):
         self.user_config = get_config(user_config)
         pipeline_name = self.user_config["pipeline"]["name"]
         self.pipeline_config = get_pipeline_config(pipeline_name)
@@ -69,6 +76,10 @@ class RubixPipeline:
         self.ssp = get_ssp(self.user_config)
         self.telescope = get_telescope(self.user_config)
         self.func = None
+        self.apply_noise_post_aggregation = apply_noise_post_aggregation
+        self._post_noise_fn = None
+        if self.apply_noise_post_aggregation:
+            self._post_noise_fn = build_post_aggregation_noise_fn(self.user_config)
 
     def prepare_data(self):
         """
@@ -256,6 +267,7 @@ class RubixPipeline:
 
         if inputdata.noise_key is None:
             inputdata.noise_key = jax.random.PRNGKey(0)
+        host_noise_key = inputdata.noise_key
 
         inputdata = jax.device_put(inputdata, rubix_spec)
 
@@ -276,6 +288,8 @@ class RubixPipeline:
         )
 
         sharded_result = sharded_pipeline(inputdata)
+        if self._post_noise_fn is not None:
+            sharded_result = self._post_noise_fn(sharded_result, host_noise_key)
 
         time_end = time.time()
         self.logger.info(

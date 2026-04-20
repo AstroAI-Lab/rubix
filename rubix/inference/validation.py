@@ -32,13 +32,21 @@ def finite_difference_grad(
         eps (float, optional): Central-difference step size. Defaults to 1e-5.
 
     Raises:
-        ValueError: If ``eps`` is not strictly positive.
+        ValueError: If ``eps`` is not strictly positive or if ``loss_fn`` does
+            not return a scalar.
 
     Returns:
         Any: Pytree gradient matching the structure of ``params``.
     """
     if eps <= 0:
         raise ValueError("eps must be strictly positive")
+
+    sample_value = loss_fn(params)
+    if jnp.ndim(sample_value) != 0:
+        raise ValueError(
+            "loss_fn must return a scalar. "
+            f"Got shape {jnp.shape(sample_value)} instead."
+        )
 
     flat, unravel = ravel_pytree(params)
 
@@ -49,7 +57,15 @@ def finite_difference_grad(
         basis = jnp.zeros_like(flat).at[i].set(1.0)
         return (f_flat(flat + eps * basis) - f_flat(flat - eps * basis)) / (2.0 * eps)
 
-    grad_flat = jax.vmap(fd_at_index)(jnp.arange(flat.size))
+    def body_fun(i, grad_accum):
+        return grad_accum.at[i].set(fd_at_index(i))
+
+    grad_flat = jax.lax.fori_loop(
+        0,
+        flat.size,
+        body_fun,
+        jnp.zeros_like(flat),
+    )
     return unravel(grad_flat)
 
 
@@ -60,11 +76,19 @@ def compare_gradients(autodiff_grad: Any, fd_grad: Any) -> GradientComparison:
         autodiff_grad (Any): Gradient pytree from autodiff.
         fd_grad (Any): Gradient pytree from finite differences.
 
+    Raises:
+        ValueError: If flattened gradient vectors have different shapes.
+
     Returns:
         GradientComparison: Error metrics for the flattened gradient vectors.
     """
     auto_flat, _ = ravel_pytree(autodiff_grad)
     fd_flat, _ = ravel_pytree(fd_grad)
+    if auto_flat.shape != fd_flat.shape:
+        raise ValueError(
+            "autodiff_grad and fd_grad must flatten to the same shape; "
+            f"got {auto_flat.shape} and {fd_flat.shape}"
+        )
 
     diff = auto_flat - fd_flat
     max_abs_error = jnp.max(jnp.abs(diff))

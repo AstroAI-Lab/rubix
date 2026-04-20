@@ -6,6 +6,8 @@ import jax.numpy as jnp
 import optax
 from beartype.typing import Any
 
+from rubix.core.data import RubixData
+
 from .api import LossFn, loss
 from .parameterization import TransformTree, apply_transforms
 
@@ -18,7 +20,9 @@ class VariationalResult:
 
     posterior_mean_params: dict[str, dict[str, Any]]
     posterior_log_std_params: dict[str, dict[str, Any]]
+    posterior_mean_constrained_params: dict[str, dict[str, Any]]
     best_posterior_mean_params: dict[str, dict[str, Any]]
+    best_posterior_mean_constrained_params: dict[str, dict[str, Any]]
     objective_history: list[float]
     reconstruction_history: list[float]
     kl_history: list[float]
@@ -96,7 +100,7 @@ def kl_diag_gaussian_to_standard_normal(
 def optimize_variational_posterior(
     pipeline: Any,
     params_init: ParamsTree,
-    static_data: Any,
+    static_data: RubixData,
     target: jnp.ndarray,
     learning_rate: float = 5e-3,
     max_steps: int = 500,
@@ -115,7 +119,7 @@ def optimize_variational_posterior(
     Args:
         pipeline (Any): Pipeline-like object consumed by :func:`rubix.inference.loss`.
         params_init (ParamsTree): Initial constrained parameter point.
-        static_data (Any): Baseline RubixData passed to the forward model.
+        static_data (RubixData): Baseline RubixData passed to the forward model.
         target (jnp.ndarray): Target datacube or statistic.
         learning_rate (float, optional): Step size for default Adam optimizer.
             Defaults to 5e-3.
@@ -206,24 +210,23 @@ def optimize_variational_posterior(
         objective = reconstruction + beta_kl * kl
         return objective, (reconstruction, kl)
 
-    def objective_only(current_params, step_key):
-        value, _ = objective_fn(current_params, step_key)
-        return value
-
     for step in range(max_steps):
         key, step_key = jax.random.split(key)
-        value, grads = jax.value_and_grad(objective_only)(variational_params, step_key)
+        (value, (reconstruction_value, kl_value)), grads = jax.value_and_grad(
+            objective_fn, has_aux=True
+        )(variational_params, step_key)
+
+        current_mean = variational_params["mean"]
+        if value < best_objective:
+            best_objective = value
+            best_mean = current_mean
+
         updates, opt_state = optimizer.update(grads, opt_state, variational_params)
         variational_params = optax.apply_updates(variational_params, updates)
 
-        _, (reconstruction_value, kl_value) = objective_fn(variational_params, step_key)
         objective_history.append(float(value))
         reconstruction_history.append(float(reconstruction_value))
         kl_history.append(float(kl_value))
-
-        if value < best_objective:
-            best_objective = value
-            best_mean = variational_params["mean"]
 
         steps_run = step + 1
         if float(optax.global_norm(updates)) < tol:
@@ -249,9 +252,13 @@ def optimize_variational_posterior(
         )
 
     return VariationalResult(
-        posterior_mean_params=_tree_to_dict(posterior_mean_constrained),
+        posterior_mean_params=_tree_to_dict(final_mean),
         posterior_log_std_params=_tree_to_dict(final_log_std),
-        best_posterior_mean_params=_tree_to_dict(best_posterior_mean_constrained),
+        posterior_mean_constrained_params=_tree_to_dict(posterior_mean_constrained),
+        best_posterior_mean_params=_tree_to_dict(best_mean),
+        best_posterior_mean_constrained_params=_tree_to_dict(
+            best_posterior_mean_constrained
+        ),
         objective_history=objective_history,
         reconstruction_history=reconstruction_history,
         kl_history=kl_history,
