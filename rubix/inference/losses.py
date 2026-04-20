@@ -110,11 +110,15 @@ def huber_data_loss(
         eps (float, optional): Denominator floor. Defaults to 1e-12.
 
     Raises:
-        ValueError: If array shapes are inconsistent.
+        ValueError: If ``delta`` is not strictly positive or array shapes are
+            inconsistent.
 
     Returns:
         jnp.ndarray: Scalar Huber loss.
     """
+    if delta <= 0:
+        raise ValueError("delta must be strictly positive")
+
     if prediction.shape != target.shape:
         raise ValueError("prediction and target must have the same shape")
 

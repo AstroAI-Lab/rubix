@@ -68,6 +68,17 @@ def test_masked_gaussian_nll_rejects_ambiguous_uncertainty_inputs():
         )
 
 
+def test_huber_data_loss_rejects_non_positive_delta():
+    prediction = jnp.ones((1, 1, 1))
+    target = jnp.ones((1, 1, 1))
+
+    with pytest.raises(ValueError, match="delta must be strictly positive"):
+        huber_data_loss(prediction, target, delta=0.0)
+
+    with pytest.raises(ValueError, match="delta must be strictly positive"):
+        huber_data_loss(prediction, target, delta=-1.0)
+
+
 def test_huber_data_loss_reduces_outlier_sensitivity_vs_quadratic():
     prediction = jnp.array([[[10.0]]])
     target = jnp.array([[[0.0]]])
@@ -118,4 +129,5 @@ def test_composed_loss_works_with_optimize_params():
     )
 
     assert result.loss_history[0] > result.loss_history[-1]
-    assert result.best_loss <= result.final_loss
+    assert jnp.allclose(result.best_loss, jnp.min(result.loss_history))
+    assert result.final_loss < result.loss_history[0]
