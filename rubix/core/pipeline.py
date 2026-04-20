@@ -270,11 +270,13 @@ class RubixPipeline:
             )
             inputdata = _pad_particles(inputdata, pad)
 
-        if inputdata.noise_key is None:
-            inputdata.noise_key = jax.random.PRNGKey(0)
-
         # Capture noise_key before device_put for post-aggregation use
-        noise_key_for_post = inputdata.noise_key
+        # without mutating the caller-provided inputdata.
+        noise_key_for_post = (
+            inputdata.noise_key
+            if inputdata.noise_key is not None
+            else jax.random.PRNGKey(0)
+        )
 
         inputdata = jax.device_put(inputdata, rubix_spec)
 
