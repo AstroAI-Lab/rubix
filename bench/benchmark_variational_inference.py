@@ -44,21 +44,93 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Benchmark full-IFU variational inference runtime and diagnostics.",
     )
-    parser.add_argument("--nx", type=int, default=25)
-    parser.add_argument("--ny", type=int, default=25)
-    parser.add_argument("--nw", type=int, default=128)
-    parser.add_argument("--repeats", type=int, default=3)
-    parser.add_argument("--max-steps", type=int, default=200)
-    parser.add_argument("--num-samples", type=int, default=4)
-    parser.add_argument("--learning-rate", type=float, default=5e-2)
-    parser.add_argument("--beta-kl", type=float, default=1e-3)
-    parser.add_argument("--tol", type=float, default=1e-6)
-    parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--use-mask", action="store_true")
-    parser.add_argument("--use-huber", action="store_true")
-    parser.add_argument("--huber-delta", type=float, default=0.2)
-    parser.add_argument("--huber-weight", type=float, default=0.1)
-    parser.add_argument("--no-warmup", action="store_true")
+    parser.add_argument(
+        "--nx",
+        type=int,
+        default=25,
+        help="Number of spatial pixels along the x axis.",
+    )
+    parser.add_argument(
+        "--ny",
+        type=int,
+        default=25,
+        help="Number of spatial pixels along the y axis.",
+    )
+    parser.add_argument(
+        "--nw",
+        type=int,
+        default=128,
+        help="Number of wavelength bins in the synthetic IFU cube.",
+    )
+    parser.add_argument(
+        "--repeats",
+        type=int,
+        default=3,
+        help="Number of benchmark repetitions to run.",
+    )
+    parser.add_argument(
+        "--max-steps",
+        type=int,
+        default=200,
+        help="Maximum number of optimization steps per run.",
+    )
+    parser.add_argument(
+        "--num-samples",
+        type=int,
+        default=4,
+        help="Number of variational samples used per optimization step.",
+    )
+    parser.add_argument(
+        "--learning-rate",
+        type=float,
+        default=5e-2,
+        help="Optimizer learning rate.",
+    )
+    parser.add_argument(
+        "--beta-kl",
+        type=float,
+        default=1e-3,
+        help="Weight applied to the KL-divergence term.",
+    )
+    parser.add_argument(
+        "--tol",
+        type=float,
+        default=1e-6,
+        help="Convergence tolerance for early stopping.",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=0,
+        help="Random seed for reproducible benchmark runs.",
+    )
+    parser.add_argument(
+        "--use-mask",
+        action="store_true",
+        help="Apply a central spatial mask to the synthetic target cube.",
+    )
+    parser.add_argument(
+        "--use-huber",
+        action="store_true",
+        help="Use a Huber loss term instead of pure squared error.",
+    )
+    parser.add_argument(
+        "--huber-delta",
+        type=float,
+        default=0.2,
+        help="Delta threshold for the Huber loss.",
+    )
+    parser.add_argument(
+        "--huber-weight",
+        type=float,
+        default=0.1,
+        help="Weight assigned to the Huber loss term.",
+    )
+    parser.add_argument(
+        "--no-warmup",
+        action="store_true",
+        help="Disable any warmup run before timing benchmark repetitions.",
+    )
     return parser.parse_args()
 
 
