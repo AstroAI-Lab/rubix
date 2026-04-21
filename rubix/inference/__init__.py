@@ -10,6 +10,7 @@ from .benchmark import (
 )
 from .losses import combine_loss_fns, huber_data_loss, masked_gaussian_nll
 from .modes import get_pipeline_name_for_mode, make_inference_pipeline
+from .objective_config import build_loss_from_config, build_loss_from_user_config
 from .objectives import build_ifu_cube_loss, masked_weighted_mse
 from .optimize import OptimizationResult, optimize_ifu_cube, optimize_params
 from .parameterization import (
@@ -50,6 +51,8 @@ __all__ = [
     "apply_transforms",
     "build_age_metallicity_transforms",
     "build_ifu_cube_loss",
+    "build_loss_from_config",
+    "build_loss_from_user_config",
     "combine_loss_fns",
     "benchmark_callable",
     "benchmark_ifu_cube_optimization",

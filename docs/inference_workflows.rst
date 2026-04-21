@@ -110,6 +110,26 @@ Rubix provides reusable loss builders for robust and probabilistic IFU fitting.
        weights=[1.0, 0.1],
    )
 
+You can also build these objectives directly from runtime config:
+
+.. code-block:: python
+
+   from rubix.inference import build_loss_from_user_config
+
+   cfg["inference"] = {
+       "objective": {
+           "kind": "combined",
+           "terms": [
+               {"kind": "gaussian_nll", "inv_variance_key": "ivar", "mask_key": "mask"},
+               {"kind": "huber", "delta": 0.2, "mask_key": "mask", "weight": 0.1},
+           ],
+       }
+   }
+   loss_fn = build_loss_from_user_config(
+       cfg,
+       tensors={"ivar": inverse_variance_cube, "mask": valid_voxel_mask},
+   )
+
 
 Finite-Difference Gradient Validation
 -------------------------------------

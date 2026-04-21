@@ -44,6 +44,14 @@ rubix.inference.optimize module
    :undoc-members:
    :show-inheritance:
 
+rubix.inference.objective_config module
+---------------------------------------
+
+.. automodule:: rubix.inference.objective_config
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 rubix.inference.objectives module
 ---------------------------------
 
