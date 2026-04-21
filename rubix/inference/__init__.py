@@ -35,6 +35,12 @@ from .parameterization import (
     build_age_metallicity_transforms,
     inverse_transforms,
 )
+from .posterior_predictive import (
+    compute_residual_products,
+    sample_posterior_predictive_cubes,
+    summarize_masked_metrics,
+    summarize_predictive_cube_samples,
+)
 from .validation import GradientComparison, compare_gradients, finite_difference_grad
 from .variational import (
     VariationalResult,
@@ -77,6 +83,7 @@ __all__ = [
     "benchmark_ifu_cube_optimization",
     "benchmark_result_to_dict",
     "compare_gradients",
+    "compute_residual_products",
     "estimate_array_nbytes",
     "finite_difference_grad",
     "forward",
@@ -97,7 +104,10 @@ __all__ = [
     "optimize_params",
     "resume_optimization_from_checkpoint",
     "resume_variational_from_checkpoint",
+    "sample_posterior_predictive_cubes",
     "sample_diag_gaussian",
+    "summarize_masked_metrics",
+    "summarize_predictive_cube_samples",
     "save_checkpoint",
     "value_and_grad",
 ]

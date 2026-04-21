@@ -52,6 +52,14 @@ rubix.inference.optimize module
    :undoc-members:
    :show-inheritance:
 
+rubix.inference.posterior_predictive module
+-------------------------------------------
+
+.. automodule:: rubix.inference.posterior_predictive
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 rubix.inference.objective_config module
 ---------------------------------------
 

@@ -247,6 +247,32 @@ Both optimization and VI now support resumable state plus checkpoint helpers.
    )
 
 
+Posterior Predictive Outputs
+----------------------------
+
+Generate posterior predictive cubes and science-ready residual summaries:
+
+.. code-block:: python
+
+   from rubix.inference import (
+       compute_residual_products,
+       sample_posterior_predictive_cubes,
+       summarize_masked_metrics,
+       summarize_predictive_cube_samples,
+   )
+
+   samples = sample_posterior_predictive_cubes(
+       pipeline=pipe_det,
+       posterior_mean_params=vi.posterior_mean_params,
+       posterior_log_std_params=vi.posterior_log_std_params,
+       static_data=static_data,
+       num_samples=16,
+   )
+   summary = summarize_predictive_cube_samples(samples)
+   residual_maps = compute_residual_products(summary["mean"], target_cube)
+   metrics = summarize_masked_metrics(summary["mean"], target_cube, mask=valid_voxel_mask)
+
+
 Performance Notes
 -----------------
 
