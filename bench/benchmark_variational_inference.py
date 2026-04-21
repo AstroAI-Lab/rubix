@@ -112,7 +112,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--use-huber",
         action="store_true",
-        help="Use a Huber loss term instead of pure squared error.",
+        help="Add a Huber loss term to the Gaussian loss.",
     )
     parser.add_argument(
         "--huber-delta",
