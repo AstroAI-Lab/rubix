@@ -166,6 +166,31 @@ Use ``optimize_variational_posterior`` for a first diagonal-Gaussian posterior.
 
 For full IFU cubes, use ``optimize_variational_ifu_cube`` with uncertainty
 maps and optional robust Huber regularization in the reconstruction term.
+The returned ``VariationalResult`` includes diagnostics such as
+``best_step``, ``final_objective``, ``final_reconstruction``, ``final_kl``,
+and per-step ``grad_norm_history``/``update_norm_history``.
+
+To benchmark full-cube VI performance:
+
+.. code-block:: bash
+
+   python bench/benchmark_variational_inference.py \
+     --nx 25 --ny 25 --nw 256 \
+     --repeats 3 \
+     --max-steps 300 \
+     --num-samples 4 \
+     --use-mask --use-huber
+
+End-to-End Smoke Validation
+---------------------------
+
+Rubix includes a synthetic end-to-end smoke test that exercises deterministic
+optimization, stochastic optimization with explicit noise keys, and VI on a
+small IFU cube:
+
+.. code-block:: bash
+
+   pytest -q tests/test_inference_e2e_smoke.py
 
 
 Performance Notes

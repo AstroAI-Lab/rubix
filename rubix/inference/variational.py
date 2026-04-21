@@ -27,9 +27,15 @@ class VariationalResult:
     objective_history: list[float]
     reconstruction_history: list[float]
     kl_history: list[float]
+    grad_norm_history: list[float]
+    update_norm_history: list[float]
     best_objective: float
-    steps_run: int
-    converged: bool
+    best_step: int
+    final_objective: float
+    final_reconstruction: float
+    final_kl: float = float("nan")
+    steps_run: int = -1
+    converged: bool = False
 
 
 def _tree_to_dict(tree: ParamsTree) -> dict[str, dict[str, Any]]:
@@ -172,9 +178,12 @@ def optimize_variational_posterior(
     objective_history: list[float] = []
     reconstruction_history: list[float] = []
     kl_history: list[float] = []
+    grad_norm_history: list[float] = []
+    update_norm_history: list[float] = []
 
     best_objective = jnp.inf
     best_mean = mean
+    best_step = -1
     converged = False
     steps_run = 0
     key = jax.random.PRNGKey(seed)
@@ -221,16 +230,22 @@ def optimize_variational_posterior(
         if value < best_objective:
             best_objective = value
             best_mean = current_mean
+            best_step = step
 
         updates, opt_state = optimizer.update(grads, opt_state, variational_params)
         variational_params = optax.apply_updates(variational_params, updates)
 
+        grad_norm = float(optax.global_norm(grads))
+        update_norm = float(optax.global_norm(updates))
+
         objective_history.append(float(value))
         reconstruction_history.append(float(reconstruction_value))
         kl_history.append(float(kl_value))
+        grad_norm_history.append(grad_norm)
+        update_norm_history.append(update_norm)
 
         steps_run = step + 1
-        if float(optax.global_norm(updates)) < tol:
+        if update_norm < tol:
             converged = True
             break
 
@@ -252,6 +267,19 @@ def optimize_variational_posterior(
             direction="forward",
         )
 
+    if len(objective_history) == 0:
+        final_objective = float("nan")
+        final_reconstruction = float("nan")
+        final_kl = float("nan")
+    else:
+        key, final_eval_key = jax.random.split(key)
+        final_value, (final_reconstruction_value, final_kl_value) = objective_fn(
+            variational_params, final_eval_key
+        )
+        final_objective = float(final_value)
+        final_reconstruction = float(final_reconstruction_value)
+        final_kl = float(final_kl_value)
+
     return VariationalResult(
         posterior_mean_params=_tree_to_dict(final_mean),
         posterior_log_std_params=_tree_to_dict(final_log_std),
@@ -263,7 +291,13 @@ def optimize_variational_posterior(
         objective_history=objective_history,
         reconstruction_history=reconstruction_history,
         kl_history=kl_history,
+        grad_norm_history=grad_norm_history,
+        update_norm_history=update_norm_history,
         best_objective=float(best_objective),
+        best_step=best_step,
+        final_objective=final_objective,
+        final_reconstruction=final_reconstruction,
+        final_kl=final_kl,
         steps_run=steps_run,
         converged=converged,
     )

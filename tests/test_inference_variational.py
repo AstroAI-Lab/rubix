@@ -104,6 +104,15 @@ def test_optimize_variational_posterior_improves_objective():
     assert result.objective_history[0] > result.objective_history[-1]
     assert len(result.reconstruction_history) == len(result.objective_history)
     assert len(result.kl_history) == len(result.objective_history)
+    assert len(result.grad_norm_history) == len(result.objective_history)
+    assert len(result.update_norm_history) == len(result.objective_history)
+    assert result.best_step >= 0
+    assert result.best_step < len(result.objective_history)
+    assert result.best_objective == min(result.objective_history)
+    assert jnp.isfinite(result.final_objective)
+    assert jnp.isfinite(result.final_reconstruction)
+    assert jnp.isfinite(result.final_kl)
+    assert result.final_objective >= result.best_objective
     assert result.steps_run <= 200
 
 
@@ -241,3 +250,4 @@ def test_optimize_variational_ifu_cube_improves_objective():
 
     assert result.objective_history[0] > result.objective_history[-1]
     assert result.best_objective <= result.objective_history[-1]
+    assert result.final_objective <= result.objective_history[0]
