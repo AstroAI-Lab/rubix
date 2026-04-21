@@ -371,9 +371,7 @@ def optimize_variational_ifu_cube(
         raise ValueError("target must be a 3D IFU datacube")
 
     if sigma is not None and inv_variance is not None:
-        raise ValueError(
-            "only one of sigma or inv_variance may be provided, not both"
-        )
+        raise ValueError("only one of sigma or inv_variance may be provided, not both")
 
     if sigma is not None and sigma.shape != target.shape:
         raise ValueError(
