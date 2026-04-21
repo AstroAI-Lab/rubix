@@ -235,9 +235,9 @@ Both optimization and VI now support resumable state plus checkpoint helpers.
        max_steps=200,
        return_state=True,
    )
-   save_checkpoint(\"checkpoints/opt.pkl\", make_optimization_checkpoint(result, state))
+   save_checkpoint("checkpoints/opt.pkl", make_optimization_checkpoint(result, state))
 
-   ckpt = load_checkpoint(\"checkpoints/opt.pkl\")
+   ckpt = load_checkpoint("checkpoints/opt.pkl")
    resumed_result, resumed_state = resume_optimization_from_checkpoint(
        ckpt,
        pipeline=pipe_det,
