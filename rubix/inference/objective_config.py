@@ -129,6 +129,11 @@ def build_loss_from_config(
     terms = objective_config.get("terms")
     if not isinstance(terms, list) or len(terms) == 0:
         raise ValueError("combined objective requires non-empty 'terms' list")
+    for idx, term in enumerate(terms):
+        if not isinstance(term, Mapping):
+            raise ValueError(
+                f"combined objective term at index {idx} must be a mapping"
+            )
 
     term_losses = [_build_single_loss_from_config(term, tensors) for term in terms]
 
