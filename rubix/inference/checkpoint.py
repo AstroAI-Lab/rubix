@@ -36,6 +36,11 @@ def save_checkpoint(path: CheckpointPath, payload: Mapping[str, Any]) -> None:
 def load_checkpoint(path: CheckpointPath) -> dict[str, Any]:
     """Load a checkpoint payload from disk.
 
+    .. warning::
+        This function uses :mod:`pickle`, which can execute arbitrary code when
+        loading data from untrusted files.  Only load checkpoints from sources
+        you trust.
+
     Args:
         path (CheckpointPath): Checkpoint path.
 
@@ -55,13 +60,45 @@ def load_checkpoint(path: CheckpointPath) -> dict[str, Any]:
 def make_optimization_checkpoint(
     result: OptimizationResult,
     state: OptimizationState,
+    transforms: Optional[TransformTree] = None,
+    learning_rate: float = 1e-3,
+    tol: float = 1e-6,
     metadata: Optional[Mapping[str, Any]] = None,
 ) -> dict[str, Any]:
-    """Build a checkpoint payload for optimization resume."""
+    """Build a checkpoint payload for optimization resume.
+
+    The supplied configuration (``transforms``, ``learning_rate``, ``tol``) is
+    stored in the checkpoint so that :func:`resume_optimization_from_checkpoint`
+    can fall back to these values when they are not re-supplied by the caller,
+    making resumes reproducible without requiring the caller to re-specify every
+    hyperparameter.
+
+    Args:
+        result (OptimizationResult): Result from the completed optimization run.
+        state (OptimizationState): Internal state from the completed run.
+        transforms (Optional[TransformTree], optional): Transform tree used
+            during the run.  Stored so that :func:`resume_optimization_from_checkpoint`
+            can default to it on resume.  Defaults to ``None``.
+        learning_rate (float, optional): Learning rate used during the run.
+            Defaults to 1e-3.
+        tol (float, optional): Convergence tolerance used during the run.
+            Defaults to 1e-6.
+        metadata (Optional[Mapping[str, Any]], optional): Arbitrary extra
+            metadata to embed in the checkpoint.  Defaults to ``None``.
+
+    Returns:
+        dict[str, Any]: Serializable checkpoint mapping.
+    """
+    config = {
+        "transforms": transforms,
+        "learning_rate": learning_rate,
+        "tol": tol,
+    }
     return {
         "kind": "optimization",
         "result": result,
         "state": state,
+        "config": config,
         "metadata": dict(metadata or {}),
     }
 
@@ -69,13 +106,58 @@ def make_optimization_checkpoint(
 def make_variational_checkpoint(
     result: VariationalResult,
     state: VariationalState,
+    transforms: Optional[TransformTree] = None,
+    learning_rate: float = 5e-3,
+    tol: float = 1e-6,
+    num_samples: int = 4,
+    beta_kl: float = 1e-3,
+    init_log_std: float = -2.0,
+    seed: int = 0,
     metadata: Optional[Mapping[str, Any]] = None,
 ) -> dict[str, Any]:
-    """Build a checkpoint payload for variational resume."""
+    """Build a checkpoint payload for variational inference resume.
+
+    The supplied configuration is stored so that
+    :func:`resume_variational_from_checkpoint` can fall back to these values
+    when they are not re-supplied by the caller.
+
+    Args:
+        result (VariationalResult): Result from the completed VI run.
+        state (VariationalState): Internal state from the completed run.
+        transforms (Optional[TransformTree], optional): Transform tree used
+            during the run.  Defaults to ``None``.
+        learning_rate (float, optional): Learning rate used during the run.
+            Defaults to 5e-3.
+        tol (float, optional): Convergence tolerance used during the run.
+            Defaults to 1e-6.
+        num_samples (int, optional): MC samples per step used during the run.
+            Defaults to 4.
+        beta_kl (float, optional): KL weight used during the run.
+            Defaults to 1e-3.
+        init_log_std (float, optional): Initial posterior log-std used at the
+            start of the run.  Defaults to -2.0.
+        seed (int, optional): Random seed used at the start of the run.
+            Defaults to 0.
+        metadata (Optional[Mapping[str, Any]], optional): Arbitrary extra
+            metadata.  Defaults to ``None``.
+
+    Returns:
+        dict[str, Any]: Serializable checkpoint mapping.
+    """
+    config = {
+        "transforms": transforms,
+        "learning_rate": learning_rate,
+        "tol": tol,
+        "num_samples": num_samples,
+        "beta_kl": beta_kl,
+        "init_log_std": init_log_std,
+        "seed": seed,
+    }
     return {
         "kind": "variational",
         "result": result,
         "state": state,
+        "config": config,
         "metadata": dict(metadata or {}),
     }
 
