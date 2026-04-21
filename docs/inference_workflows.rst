@@ -320,6 +320,48 @@ residual metrics) and persist science-ready outputs:
      --vi-steps 200 \
      --num-posterior-draws 16
 
+
+Production IFU Experiment
+-------------------------
+
+Run a full configuration-driven IFU experiment with optional checkpointing and
+resume support:
+
+.. code-block:: bash
+
+   python scripts/run_ifu_science_experiment.py \
+     --config rubix/config/inference_experiment_template.yml
+
+The template supports:
+
+- deterministic or stochastic mode selection
+- runtime objective selection via ``run.objective``
+- chunked optimization/VI with stage checkpoints
+- posterior predictive output products and masked science metrics
+
+
+Real Data Runbook
+-----------------
+
+1. Prepare cube-side arrays as ``.npy`` or ``.npz`` files with matching
+   ``(nx, ny, nw)`` shapes:
+   ``target``, optional ``mask``, optional ``weights``, optional ``sigma`` or
+   ``inv_variance``.
+2. Copy and edit
+   ``rubix/config/inference_experiment_template.yml``:
+   set ``run.rubix_config_path``, ``data.*_path``, and stage hyperparameters.
+3. Run deterministic fitting first:
+
+   .. code-block:: bash
+
+      python scripts/run_ifu_science_experiment.py \
+        --config rubix/config/inference_experiment_template.yml
+
+4. If interrupted, resume from latest stage checkpoint by setting
+   ``optimization.resume_checkpoint`` or ``variational.resume_checkpoint``.
+5. Inspect outputs in ``run.output_dir``:
+   ``summary.json``, ``predictive_summary.npz``, ``residual_products.npz``.
+
 Benchmarking Full-IFU Optimization
 ----------------------------------
 
@@ -333,3 +375,14 @@ memory diagnostics for full IFU cubes.
      --repeats 3 \
      --max-steps 200 \
      --use-mask --use-weights
+
+For CI-style threshold checks on a representative synthetic IFU size:
+
+.. code-block:: bash
+
+   python bench/check_inference_guardrails.py \
+     --nx 8 --ny 8 --nw 64 \
+     --max-steps 120 \
+     --max-mean-runtime-s 3.0 \
+     --max-final-loss 1e-3 \
+     --output-json outputs/guardrails/opt_guardrail.json

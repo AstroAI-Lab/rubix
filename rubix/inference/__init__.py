@@ -16,6 +16,11 @@ from .checkpoint import (
     resume_variational_from_checkpoint,
     save_checkpoint,
 )
+from .experiment import (
+    normalize_experiment_config,
+    run_ifu_experiment,
+    save_ifu_experiment_outputs,
+)
 from .losses import combine_loss_fns, huber_data_loss, masked_gaussian_nll
 from .modes import get_pipeline_name_for_mode, make_inference_pipeline
 from .objective_config import build_loss_from_config, build_loss_from_user_config
@@ -87,6 +92,7 @@ __all__ = [
     "load_checkpoint",
     "make_optimization_checkpoint",
     "make_variational_checkpoint",
+    "normalize_experiment_config",
     "build_age_metallicity_transforms",
     "build_ifu_cube_loss",
     "build_loss_from_config",
@@ -124,6 +130,8 @@ __all__ = [
     "summarize_masked_metrics",
     "summarize_predictive_cube_samples",
     "save_checkpoint",
+    "run_ifu_experiment",
+    "save_ifu_experiment_outputs",
     "value_and_grad",
     "run_synthetic_science_recipe",
     "save_science_recipe_outputs",
