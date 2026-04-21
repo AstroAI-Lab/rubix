@@ -1,14 +1,13 @@
 from dataclasses import asdict, dataclass
-from time import perf_counter
 from typing import Any, Mapping, Optional
 
-import jax
 import jax.numpy as jnp
 import numpy as np
 import optax
 
 from rubix.core.data import RubixData
 
+from .benchmark import _block_tree, benchmark_callable, estimate_array_nbytes
 from .parameterization import TransformTree
 from .variational import VariationalResult, optimize_variational_ifu_cube
 
@@ -32,18 +31,6 @@ class VIBenchmarkResult:
     final_reconstruction: float
     final_kl: float
     target_nbytes: int
-
-
-def estimate_array_nbytes(shape: tuple[int, ...], dtype: Any) -> int:
-    """Estimate memory footprint of a dense array in bytes."""
-    return int(np.prod(shape, dtype=np.int64) * np.dtype(dtype).itemsize)
-
-
-def _block_tree(tree: Any) -> None:
-    """Block on all JAX leaves in a pytree to ensure accurate timing."""
-    for leaf in jax.tree_util.tree_leaves(tree):
-        if hasattr(leaf, "block_until_ready"):
-            leaf.block_until_ready()
 
 
 def benchmark_variational_inference(
@@ -148,14 +135,7 @@ def benchmark_variational_inference(
         _block_tree(last_result)
         return last_result
 
-    if warmup:
-        _ = _run_once()
-
-    runtimes_s: list[float] = []
-    for _ in range(repeats):
-        start = perf_counter()
-        _ = _run_once()
-        runtimes_s.append(perf_counter() - start)
+    runtimes_s = benchmark_callable(_run_once, repeats=repeats, warmup=warmup)
 
     if last_result is None:  # pragma: no cover
         raise RuntimeError("benchmark did not produce a variational result")
