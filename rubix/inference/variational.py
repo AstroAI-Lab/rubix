@@ -360,13 +360,36 @@ def optimize_variational_ifu_cube(
         seed (int, optional): Random seed for VI sampling. Defaults to 0.
 
     Raises:
-        ValueError: If ``target`` is not 3D, or if Huber settings are invalid.
+        ValueError: If ``target`` is not 3D, if Huber settings are invalid, if
+            both ``sigma`` and ``inv_variance`` are provided, or if the shape of
+            ``sigma``, ``inv_variance``, or ``mask`` does not match ``target``.
 
     Returns:
         VariationalResult: Posterior statistics and optimization traces.
     """
     if target.ndim != 3:
         raise ValueError("target must be a 3D IFU datacube")
+
+    if sigma is not None and inv_variance is not None:
+        raise ValueError(
+            "only one of sigma or inv_variance may be provided, not both"
+        )
+
+    if sigma is not None and sigma.shape != target.shape:
+        raise ValueError(
+            f"sigma shape {sigma.shape} does not match target shape {target.shape}"
+        )
+
+    if inv_variance is not None and inv_variance.shape != target.shape:
+        raise ValueError(
+            f"inv_variance shape {inv_variance.shape} does not match target shape "
+            f"{target.shape}"
+        )
+
+    if mask is not None and mask.shape != target.shape:
+        raise ValueError(
+            f"mask shape {mask.shape} does not match target shape {target.shape}"
+        )
 
     if huber_weight < 0.0:
         raise ValueError("huber_weight must be non-negative")
@@ -376,6 +399,7 @@ def optimize_variational_ifu_cube(
 
     if huber_weight > 0.0 and huber_delta <= 0.0:
         raise ValueError("huber_delta must be > 0 when huber_weight > 0")
+
     gaussian_loss: LossFn = lambda pred, truth: masked_gaussian_nll(
         prediction=pred,
         target=truth,
