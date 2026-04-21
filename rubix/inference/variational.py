@@ -272,9 +272,13 @@ def optimize_variational_posterior(
         final_reconstruction = float("nan")
         final_kl = float("nan")
     else:
-        final_objective = objective_history[-1]
-        final_reconstruction = reconstruction_history[-1]
-        final_kl = kl_history[-1]
+        key, final_eval_key = jax.random.split(key)
+        final_value, (final_reconstruction_value, final_kl_value) = objective_fn(
+            variational_params, final_eval_key
+        )
+        final_objective = float(final_value)
+        final_reconstruction = float(final_reconstruction_value)
+        final_kl = float(final_kl_value)
 
     return VariationalResult(
         posterior_mean_params=_tree_to_dict(final_mean),
