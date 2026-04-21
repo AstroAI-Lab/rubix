@@ -469,11 +469,16 @@ def optimize_variational_ifu_cube(
             f"mask shape {mask.shape} does not match target shape {target.shape}"
         )
 
+    huber_weight = float(huber_weight)
+
     if huber_weight < 0.0:
         raise ValueError("huber_weight must be non-negative")
 
     if huber_weight > 0.0 and huber_delta is None:
         raise ValueError("huber_delta must be provided when huber_weight > 0")
+
+    if huber_weight > 0.0:
+        huber_delta = float(huber_delta)
 
     if huber_weight > 0.0 and huber_delta <= 0.0:
         raise ValueError("huber_delta must be > 0 when huber_weight > 0")
@@ -491,7 +496,7 @@ def optimize_variational_ifu_cube(
         huber_loss: LossFn = lambda pred, truth: huber_data_loss(
             prediction=pred,
             target=truth,
-            delta=float(huber_delta),
+            delta=huber_delta,
             mask=mask,
             normalize=normalize_loss,
         )
