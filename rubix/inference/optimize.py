@@ -83,6 +83,9 @@ def optimize_params(
     Args:
         pipeline (Any): Pipeline-like object consumed by :func:`rubix.inference.loss`.
         params_init (ParamsTree): Initial parameters in constrained space.
+            **Ignored when** ``state_init`` **is provided**; the optimizer
+            resumes from ``state_init.trainable_params`` instead.  Pass
+            ``None`` or any placeholder when resuming to make this explicit.
         static_data (RubixData): Baseline RubixData passed to the forward model.
         target (jnp.ndarray): Target datacube or statistic.
         learning_rate (float, optional): Step size for default Adam optimizer.
@@ -100,7 +103,9 @@ def optimize_params(
         optimizer (Optional[optax.GradientTransformation], optional): Custom
             Optax optimizer. Defaults to ``None`` (Adam with ``learning_rate``).
         state_init (Optional[OptimizationState], optional): Optional internal
-            state for exact resume. Defaults to ``None``.
+            state for exact resume.  When provided, ``params_init`` is ignored
+            and optimization continues from the persisted trainable parameters
+            and optimizer state.  Defaults to ``None``.
         return_state (bool, optional): If ``True``, also return updated
             :class:`OptimizationState`. Defaults to ``False``.
 

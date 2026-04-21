@@ -146,6 +146,8 @@ def optimize_variational_posterior(
     Args:
         pipeline (Any): Pipeline-like object consumed by :func:`rubix.inference.loss`.
         params_init (ParamsTree): Initial constrained parameter point.
+            **Ignored when** ``state_init`` **is provided**; the optimizer
+            resumes from ``state_init.variational_params`` instead.
         static_data (RubixData): Baseline RubixData passed to the forward model.
         target (jnp.ndarray): Target datacube or statistic.
         learning_rate (float, optional): Step size for default Adam optimizer.
@@ -155,7 +157,9 @@ def optimize_variational_posterior(
             Defaults to 1e-6.
         num_samples (int, optional): Monte Carlo samples per step. Defaults to 4.
         beta_kl (float, optional): KL weight. Defaults to 1e-3.
-        init_log_std (float, optional): Initial posterior log-std. Defaults to -2.0.
+        init_log_std (float, optional): Initial posterior log-std.  **Ignored
+            when** ``state_init`` **is provided**; the posterior is resumed
+            from the persisted variational parameters.  Defaults to -2.0.
         loss_fn (Optional[LossFn], optional): Optional custom reconstruction loss.
             Defaults to ``None`` (sum-of-squares).
         noise_key (Optional[jnp.ndarray], optional): Optional key for stochastic
@@ -165,9 +169,14 @@ def optimize_variational_posterior(
             Defaults to ``None``.
         optimizer (Optional[optax.GradientTransformation], optional): Custom
             optimizer. Defaults to ``None`` (Adam).
-        seed (int, optional): Random seed for VI sampling. Defaults to 0.
+        seed (int, optional): Random seed for VI sampling.  **Ignored when**
+            ``state_init`` **is provided**; the PRNG key is resumed from
+            ``state_init.key``.  Defaults to 0.
         state_init (Optional[VariationalState], optional): Optional resumable
-            variational state. Defaults to ``None``.
+            variational state.  When provided, ``params_init``, ``init_log_std``,
+            and ``seed`` are all ignored and the run continues exactly from the
+            persisted variational parameters, optimizer state, and PRNG key.
+            Defaults to ``None``.
         return_state (bool, optional): If ``True``, also return updated
             :class:`VariationalState`. Defaults to ``False``.
 
@@ -226,6 +235,7 @@ def optimize_variational_posterior(
         steps_run = int(state_init.steps_run)
 
     converged = False
+    step_offset = steps_run
 
     def objective_fn(current_params, step_key):
         current_mean = current_params["mean"]
@@ -269,7 +279,7 @@ def optimize_variational_posterior(
         if value < best_objective:
             best_objective = value
             best_mean = current_mean
-            best_step = steps_run + step
+            best_step = step_offset + step
 
         updates, opt_state = optimizer.update(grads, opt_state, variational_params)
         variational_params = optax.apply_updates(variational_params, updates)
@@ -310,7 +320,13 @@ def optimize_variational_posterior(
         final_objective = float("nan")
         final_reconstruction = float("nan")
         final_kl = float("nan")
+        state_key = key
     else:
+        # Capture the training-loop key state before the final evaluation so
+        # that the VariationalState records the PRNG state at which the loop
+        # ended.  This ensures resumed runs continue with the same key
+        # sequence as a continuous run of the same total length would.
+        state_key = key
         key, final_eval_key = jax.random.split(key)
         final_value, (final_reconstruction_value, final_kl_value) = objective_fn(
             variational_params, final_eval_key
@@ -347,7 +363,7 @@ def optimize_variational_posterior(
         best_mean=_tree_to_dict(best_mean),
         best_objective=float(best_objective),
         best_step=best_step,
-        key=key,
+        key=state_key,
         objective_history=objective_history,
         reconstruction_history=reconstruction_history,
         kl_history=kl_history,

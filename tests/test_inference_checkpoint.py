@@ -69,7 +69,10 @@ def test_optimize_state_resume_matches_single_run(tmp_path):
     )
 
     ckpt_path = tmp_path / "opt.pkl"
-    save_checkpoint(ckpt_path, make_optimization_checkpoint(first, state))
+    save_checkpoint(
+        ckpt_path,
+        make_optimization_checkpoint(first, state, learning_rate=0.1, tol=1e-8),
+    )
     ckpt = load_checkpoint(ckpt_path)
 
     resumed, _ = resume_optimization_from_checkpoint(
@@ -77,9 +80,7 @@ def test_optimize_state_resume_matches_single_run(tmp_path):
         pipeline=pipeline,
         static_data=static_data,
         target=target,
-        learning_rate=0.1,
         max_steps=20,
-        tol=1e-8,
     )
 
     assert jnp.allclose(resumed.final_loss, full.final_loss)
@@ -121,7 +122,18 @@ def test_variational_state_resume_matches_single_run(tmp_path):
     )
 
     ckpt_path = tmp_path / "vi.pkl"
-    save_checkpoint(ckpt_path, make_variational_checkpoint(first, state))
+    save_checkpoint(
+        ckpt_path,
+        make_variational_checkpoint(
+            first,
+            state,
+            learning_rate=5e-2,
+            tol=1e-8,
+            num_samples=4,
+            beta_kl=1e-4,
+            seed=11,
+        ),
+    )
     ckpt = load_checkpoint(ckpt_path)
 
     resumed, _ = resume_variational_from_checkpoint(
@@ -129,12 +141,7 @@ def test_variational_state_resume_matches_single_run(tmp_path):
         pipeline=pipeline,
         static_data=static_data,
         target=target,
-        learning_rate=5e-2,
         max_steps=20,
-        tol=1e-8,
-        num_samples=4,
-        beta_kl=1e-4,
-        seed=11,
     )
 
     assert jnp.allclose(resumed.final_objective, full.final_objective)

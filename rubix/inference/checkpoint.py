@@ -167,15 +167,55 @@ def resume_optimization_from_checkpoint(
     pipeline: Any,
     static_data: RubixData,
     target: jnp.ndarray,
-    learning_rate: float = 1e-3,
+    learning_rate: Optional[float] = None,
     max_steps: int = 500,
-    tol: float = 1e-6,
+    tol: Optional[float] = None,
     loss_fn: Optional[LossFn] = None,
     noise_key: Optional[jnp.ndarray] = None,
     transforms: Optional[TransformTree] = None,
     optimizer: Optional[optax.GradientTransformation] = None,
 ) -> tuple[OptimizationResult, OptimizationState]:
-    """Resume gradient optimization from an optimization checkpoint."""
+    """Resume gradient optimization from an optimization checkpoint.
+
+    Hyperparameters (``learning_rate``, ``tol``, ``transforms``) that are not
+    explicitly provided default to the values stored in the checkpoint by
+    :func:`make_optimization_checkpoint`, so the resumed run uses the same
+    configuration as the original without requiring the caller to re-specify
+    every hyperparameter.
+
+    Args:
+        checkpoint (Mapping[str, Any]): Checkpoint payload returned by
+            :func:`load_checkpoint`.
+        pipeline (Any): Pipeline-like object consumed by
+            :func:`rubix.inference.loss`.
+        static_data (RubixData): Baseline RubixData passed to the forward
+            model.
+        target (jnp.ndarray): Target datacube or statistic.
+        learning_rate (Optional[float], optional): Override for the learning
+            rate.  Defaults to ``None`` (use value stored in the checkpoint).
+        max_steps (int, optional): Maximum additional optimization steps.
+            Defaults to 500.
+        tol (Optional[float], optional): Override for the convergence
+            tolerance.  Defaults to ``None`` (use value stored in the
+            checkpoint).
+        loss_fn (Optional[LossFn], optional): Optional custom loss function.
+            Defaults to ``None`` (sum-of-squares).
+        noise_key (Optional[jnp.ndarray], optional): Optional key for
+            stochastic pipelines.  Defaults to ``None``.
+        transforms (Optional[TransformTree], optional): Override for the
+            transform tree.  Defaults to ``None`` (use value stored in the
+            checkpoint).
+        optimizer (Optional[optax.GradientTransformation], optional): Custom
+            Optax optimizer.  Defaults to ``None`` (Adam).
+
+    Raises:
+        ValueError: If the checkpoint kind is not ``'optimization'`` or the
+            checkpoint is missing valid result/state fields.
+
+    Returns:
+        tuple[OptimizationResult, OptimizationState]: Resumed result and
+            updated internal state.
+    """
     if checkpoint.get("kind") != "optimization":
         raise ValueError("checkpoint kind must be 'optimization'")
 
@@ -186,17 +226,28 @@ def resume_optimization_from_checkpoint(
     ):
         raise ValueError("optimization checkpoint is missing valid result/state")
 
+    stored_config: dict[str, Any] = checkpoint.get("config") or {}
+    resolved_learning_rate: float = (
+        learning_rate if learning_rate is not None else stored_config.get("learning_rate", 1e-3)
+    )
+    resolved_tol: float = (
+        tol if tol is not None else stored_config.get("tol", 1e-6)
+    )
+    resolved_transforms: Optional[TransformTree] = (
+        transforms if transforms is not None else stored_config.get("transforms")
+    )
+
     resumed = optimize_params(
         pipeline=pipeline,
         params_init=result.params,
         static_data=static_data,
         target=target,
-        learning_rate=learning_rate,
+        learning_rate=resolved_learning_rate,
         max_steps=max_steps,
-        tol=tol,
+        tol=resolved_tol,
         loss_fn=loss_fn,
         noise_key=noise_key,
-        transforms=transforms,
+        transforms=resolved_transforms,
         optimizer=optimizer,
         state_init=state,
         return_state=True,
@@ -209,19 +260,73 @@ def resume_variational_from_checkpoint(
     pipeline: Any,
     static_data: RubixData,
     target: jnp.ndarray,
-    learning_rate: float = 5e-3,
+    learning_rate: Optional[float] = None,
     max_steps: int = 500,
-    tol: float = 1e-6,
-    num_samples: int = 4,
-    beta_kl: float = 1e-3,
-    init_log_std: float = -2.0,
+    tol: Optional[float] = None,
+    num_samples: Optional[int] = None,
+    beta_kl: Optional[float] = None,
+    init_log_std: Optional[float] = None,
     loss_fn: Optional[LossFn] = None,
     noise_key: Optional[jnp.ndarray] = None,
     transforms: Optional[TransformTree] = None,
     optimizer: Optional[optax.GradientTransformation] = None,
-    seed: int = 0,
+    seed: Optional[int] = None,
 ) -> tuple[VariationalResult, VariationalState]:
-    """Resume variational inference from a variational checkpoint."""
+    """Resume variational inference from a variational checkpoint.
+
+    Hyperparameters (``learning_rate``, ``tol``, ``num_samples``, ``beta_kl``,
+    ``init_log_std``, ``seed``, ``transforms``) that are not explicitly
+    provided default to the values stored in the checkpoint by
+    :func:`make_variational_checkpoint`, so the resumed run uses the same
+    configuration as the original without requiring the caller to re-specify
+    every hyperparameter.
+
+    Args:
+        checkpoint (Mapping[str, Any]): Checkpoint payload returned by
+            :func:`load_checkpoint`.
+        pipeline (Any): Pipeline-like object consumed by
+            :func:`rubix.inference.loss`.
+        static_data (RubixData): Baseline RubixData passed to the forward
+            model.
+        target (jnp.ndarray): Target datacube or statistic.
+        learning_rate (Optional[float], optional): Override for the learning
+            rate.  Defaults to ``None`` (use value stored in the checkpoint).
+        max_steps (int, optional): Maximum additional VI steps.
+            Defaults to 500.
+        tol (Optional[float], optional): Override for the convergence
+            tolerance.  Defaults to ``None`` (use value stored in the
+            checkpoint).
+        num_samples (Optional[int], optional): Override for the number of MC
+            samples per step.  Defaults to ``None`` (use checkpoint value).
+        beta_kl (Optional[float], optional): Override for the KL weight.
+            Defaults to ``None`` (use checkpoint value).
+        init_log_std (Optional[float], optional): Override for the initial
+            posterior log-std.  Defaults to ``None`` (use checkpoint value).
+            This value is ignored when ``state_init`` is passed to the
+            underlying VI function (i.e. always during resume), but is kept
+            for API symmetry.
+        loss_fn (Optional[LossFn], optional): Optional custom reconstruction
+            loss.  Defaults to ``None`` (sum-of-squares).
+        noise_key (Optional[jnp.ndarray], optional): Optional key for
+            stochastic pipelines.  Defaults to ``None``.
+        transforms (Optional[TransformTree], optional): Override for the
+            transform tree.  Defaults to ``None`` (use checkpoint value).
+        optimizer (Optional[optax.GradientTransformation], optional): Custom
+            Optax optimizer.  Defaults to ``None`` (Adam).
+        seed (Optional[int], optional): Override for the random seed.
+            Defaults to ``None`` (use checkpoint value).  This value is
+            ignored when ``state_init`` is passed to the underlying VI
+            function (i.e. always during resume), but is kept for API
+            symmetry.
+
+    Raises:
+        ValueError: If the checkpoint kind is not ``'variational'`` or the
+            checkpoint is missing valid result/state fields.
+
+    Returns:
+        tuple[VariationalResult, VariationalState]: Resumed result and
+            updated internal state.
+    """
     if checkpoint.get("kind") != "variational":
         raise ValueError("checkpoint kind must be 'variational'")
 
@@ -232,22 +337,45 @@ def resume_variational_from_checkpoint(
     ):
         raise ValueError("variational checkpoint is missing valid result/state")
 
+    stored_config: dict[str, Any] = checkpoint.get("config") or {}
+    resolved_learning_rate: float = (
+        learning_rate if learning_rate is not None else stored_config.get("learning_rate", 5e-3)
+    )
+    resolved_tol: float = (
+        tol if tol is not None else stored_config.get("tol", 1e-6)
+    )
+    resolved_num_samples: int = (
+        num_samples if num_samples is not None else stored_config.get("num_samples", 4)
+    )
+    resolved_beta_kl: float = (
+        beta_kl if beta_kl is not None else stored_config.get("beta_kl", 1e-3)
+    )
+    resolved_init_log_std: float = (
+        init_log_std if init_log_std is not None else stored_config.get("init_log_std", -2.0)
+    )
+    resolved_seed: int = (
+        seed if seed is not None else stored_config.get("seed", 0)
+    )
+    resolved_transforms: Optional[TransformTree] = (
+        transforms if transforms is not None else stored_config.get("transforms")
+    )
+
     resumed = optimize_variational_posterior(
         pipeline=pipeline,
         params_init=result.posterior_mean_constrained_params,
         static_data=static_data,
         target=target,
-        learning_rate=learning_rate,
+        learning_rate=resolved_learning_rate,
         max_steps=max_steps,
-        tol=tol,
-        num_samples=num_samples,
-        beta_kl=beta_kl,
-        init_log_std=init_log_std,
+        tol=resolved_tol,
+        num_samples=resolved_num_samples,
+        beta_kl=resolved_beta_kl,
+        init_log_std=resolved_init_log_std,
         loss_fn=loss_fn,
         noise_key=noise_key,
-        transforms=transforms,
+        transforms=resolved_transforms,
         optimizer=optimizer,
-        seed=seed,
+        seed=resolved_seed,
         state_init=state,
         return_state=True,
     )
