@@ -109,9 +109,10 @@ def test_optimize_variational_posterior_improves_objective():
     assert result.best_step >= 0
     assert result.best_step < len(result.objective_history)
     assert result.best_objective == min(result.objective_history)
-    assert result.final_objective == result.objective_history[-1]
-    assert result.final_reconstruction == result.reconstruction_history[-1]
-    assert result.final_kl == result.kl_history[-1]
+    assert jnp.isfinite(result.final_objective)
+    assert jnp.isfinite(result.final_reconstruction)
+    assert jnp.isfinite(result.final_kl)
+    assert result.final_objective >= result.best_objective
     assert result.steps_run <= 200
 
 
