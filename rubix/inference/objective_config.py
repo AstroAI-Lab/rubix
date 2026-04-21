@@ -91,8 +91,7 @@ def _build_single_loss_from_config(
 
     _SUPPORTED_KINDS = ("mse", "gaussian_nll", "huber")
     raise ValueError(
-        f"Unsupported objective kind '{kind}'. "
-        f"Supported kinds: {_SUPPORTED_KINDS}"
+        f"Unsupported objective kind '{kind}'. " f"Supported kinds: {_SUPPORTED_KINDS}"
     )
 
 
