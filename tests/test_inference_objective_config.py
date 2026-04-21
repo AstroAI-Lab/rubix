@@ -64,6 +64,16 @@ def test_build_loss_from_user_config_absent_objective_returns_none():
     assert build_loss_from_user_config(cfg) is None
 
 
+def test_build_loss_from_config_rejects_weights_length_mismatch():
+    cfg = {
+        "kind": "combined",
+        "terms": [{"kind": "mse"}, {"kind": "huber"}],
+        "weights": [0.5],
+    }
+    with pytest.raises(ValueError, match="'weights' length"):
+        build_loss_from_config(cfg)
+
+
 def test_build_loss_from_user_config_resolves_objective():
     cfg = {
         "inference": {

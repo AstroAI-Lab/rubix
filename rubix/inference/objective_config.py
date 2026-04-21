@@ -89,9 +89,10 @@ def _build_single_loss_from_config(
 
         return _loss_fn
 
+    _SUPPORTED_KINDS = ("mse", "gaussian_nll", "huber")
     raise ValueError(
-        "Unsupported objective kind "
-        f"'{kind}'. Supported kinds: {'mse', 'gaussian_nll', 'huber'}"
+        f"Unsupported objective kind '{kind}'. "
+        f"Supported kinds: {_SUPPORTED_KINDS}"
     )
 
 
@@ -141,6 +142,11 @@ def build_loss_from_config(
         weights_raw = objective_config["weights"]
         if not isinstance(weights_raw, list):
             raise ValueError("combined objective 'weights' must be a list")
+        if len(weights_raw) != len(terms):
+            raise ValueError(
+                f"combined objective 'weights' length ({len(weights_raw)}) "
+                f"must match 'terms' length ({len(terms)})"
+            )
         weights = [float(w) for w in weights_raw]
     else:
         weights = [float(term.get("weight", 1.0)) for term in terms]
