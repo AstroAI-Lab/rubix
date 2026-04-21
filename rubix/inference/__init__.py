@@ -35,6 +35,13 @@ from .parameterization import (
     build_age_metallicity_transforms,
     inverse_transforms,
 )
+from .performance_guardrails import (
+    ObjectiveThresholds,
+    PerformanceCheckResult,
+    RuntimeThresholds,
+    check_ifu_optimization_guardrails,
+    check_vi_guardrails,
+)
 from .posterior_predictive import (
     compute_residual_products,
     sample_posterior_predictive_cubes,
@@ -66,6 +73,9 @@ __all__ = [
     "IFUCubeBenchmarkResult",
     "OptimizationResult",
     "OptimizationState",
+    "ObjectiveThresholds",
+    "PerformanceCheckResult",
+    "RuntimeThresholds",
     "VariationalResult",
     "VariationalState",
     "VIBenchmarkResult",
@@ -84,6 +94,8 @@ __all__ = [
     "benchmark_result_to_dict",
     "compare_gradients",
     "compute_residual_products",
+    "check_ifu_optimization_guardrails",
+    "check_vi_guardrails",
     "estimate_array_nbytes",
     "finite_difference_grad",
     "forward",

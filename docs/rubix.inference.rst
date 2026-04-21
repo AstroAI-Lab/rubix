@@ -84,6 +84,14 @@ rubix.inference.parameterization module
    :undoc-members:
    :show-inheritance:
 
+rubix.inference.performance_guardrails module
+---------------------------------------------
+
+.. automodule:: rubix.inference.performance_guardrails
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 rubix.inference.validation module
 ---------------------------------
 
