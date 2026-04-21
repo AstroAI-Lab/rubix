@@ -30,7 +30,7 @@ def save_checkpoint(path: CheckpointPath, payload: Mapping[str, Any]) -> None:
     checkpoint_path = Path(path)
     checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
     with checkpoint_path.open("wb") as f:
-        pickle.dump(dict(payload), f)
+        pickle.dump(dict(payload), f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def load_checkpoint(path: CheckpointPath) -> dict[str, Any]:
