@@ -12,6 +12,14 @@ rubix.inference.api module
    :undoc-members:
    :show-inheritance:
 
+rubix.inference.checkpoint module
+---------------------------------
+
+.. automodule:: rubix.inference.checkpoint
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 rubix.inference.losses module
 -----------------------------
 
@@ -44,6 +52,14 @@ rubix.inference.optimize module
    :undoc-members:
    :show-inheritance:
 
+rubix.inference.posterior_predictive module
+-------------------------------------------
+
+.. automodule:: rubix.inference.posterior_predictive
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 rubix.inference.objective_config module
 ---------------------------------------
 
@@ -68,6 +84,14 @@ rubix.inference.parameterization module
    :undoc-members:
    :show-inheritance:
 
+rubix.inference.performance_guardrails module
+---------------------------------------------
+
+.. automodule:: rubix.inference.performance_guardrails
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 rubix.inference.validation module
 ---------------------------------
 
@@ -88,6 +112,14 @@ rubix.inference.vi_benchmark module
 -----------------------------------
 
 .. automodule:: rubix.inference.vi_benchmark
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+rubix.inference.workflows module
+--------------------------------
+
+.. automodule:: rubix.inference.workflows
    :members:
    :undoc-members:
    :show-inheritance:
