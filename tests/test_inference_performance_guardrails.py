@@ -1,7 +1,8 @@
 from rubix.inference.benchmark import IFUCubeBenchmarkResult
 from rubix.inference.performance_guardrails import (
-    ObjectiveThresholds,
+    OptimizationObjectiveThresholds,
     RuntimeThresholds,
+    VIObjectiveThresholds,
     check_ifu_optimization_guardrails,
     check_vi_guardrails,
 )
@@ -48,7 +49,7 @@ def _make_vi_result(mean_runtime=1.0, final_obj=1e-3, best_obj=8e-4):
 def test_check_ifu_optimization_guardrails_passes_within_limits():
     result = _make_opt_result()
     runtime = RuntimeThresholds(max_mean_runtime_s=2.0, max_median_runtime_s=2.0)
-    objective = ObjectiveThresholds(max_final_loss=1e-3, max_best_loss=1e-3)
+    objective = OptimizationObjectiveThresholds(max_final_loss=1e-3, max_best_loss=1e-3)
 
     check = check_ifu_optimization_guardrails(result, runtime, objective)
     assert check.passed is True
@@ -57,7 +58,7 @@ def test_check_ifu_optimization_guardrails_passes_within_limits():
 def test_check_ifu_optimization_guardrails_fails_on_runtime_and_loss():
     result = _make_opt_result(mean_runtime=3.0, final_loss=1e-1, best_loss=1e-2)
     runtime = RuntimeThresholds(max_mean_runtime_s=2.0, max_median_runtime_s=2.0)
-    objective = ObjectiveThresholds(max_final_loss=1e-3, max_best_loss=1e-3)
+    objective = OptimizationObjectiveThresholds(max_final_loss=1e-3, max_best_loss=1e-3)
 
     check = check_ifu_optimization_guardrails(result, runtime, objective)
     assert check.passed is False
@@ -68,7 +69,7 @@ def test_check_ifu_optimization_guardrails_fails_on_runtime_and_loss():
 def test_check_vi_guardrails_passes_within_limits():
     result = _make_vi_result()
     runtime = RuntimeThresholds(max_mean_runtime_s=2.0, max_median_runtime_s=2.0)
-    objective = ObjectiveThresholds(max_final_objective=2e-3, max_best_objective=2e-3)
+    objective = VIObjectiveThresholds(max_final_objective=2e-3, max_best_objective=2e-3)
 
     check = check_vi_guardrails(result, runtime, objective)
     assert check.passed is True
@@ -77,7 +78,7 @@ def test_check_vi_guardrails_passes_within_limits():
 def test_check_vi_guardrails_fails_on_objective():
     result = _make_vi_result(final_obj=5e-2, best_obj=4e-2)
     runtime = RuntimeThresholds(max_mean_runtime_s=2.0, max_median_runtime_s=2.0)
-    objective = ObjectiveThresholds(max_final_objective=1e-3, max_best_objective=1e-3)
+    objective = VIObjectiveThresholds(max_final_objective=1e-3, max_best_objective=1e-3)
 
     check = check_vi_guardrails(result, runtime, objective)
     assert check.passed is False

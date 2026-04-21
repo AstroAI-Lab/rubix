@@ -36,9 +36,10 @@ from .parameterization import (
     inverse_transforms,
 )
 from .performance_guardrails import (
-    ObjectiveThresholds,
+    OptimizationObjectiveThresholds,
     PerformanceCheckResult,
     RuntimeThresholds,
+    VIObjectiveThresholds,
     check_ifu_optimization_guardrails,
     check_vi_guardrails,
 )
@@ -74,9 +75,10 @@ __all__ = [
     "IFUCubeBenchmarkResult",
     "OptimizationResult",
     "OptimizationState",
-    "ObjectiveThresholds",
+    "OptimizationObjectiveThresholds",
     "PerformanceCheckResult",
     "RuntimeThresholds",
+    "VIObjectiveThresholds",
     "VariationalResult",
     "VariationalState",
     "VIBenchmarkResult",

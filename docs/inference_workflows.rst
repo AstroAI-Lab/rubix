@@ -282,13 +282,13 @@ thresholds in benchmark runs.
 .. code-block:: python
 
    from rubix.inference import (
-       ObjectiveThresholds,
+       OptimizationObjectiveThresholds,
        RuntimeThresholds,
        check_ifu_optimization_guardrails,
    )
 
    runtime_limits = RuntimeThresholds(max_mean_runtime_s=2.0, max_median_runtime_s=2.0)
-   objective_limits = ObjectiveThresholds(max_final_loss=1e-3, max_best_loss=1e-3)
+   objective_limits = OptimizationObjectiveThresholds(max_final_loss=1e-3, max_best_loss=1e-3)
    check = check_ifu_optimization_guardrails(bench_result, runtime_limits, objective_limits)
    assert check.passed, check.message
 

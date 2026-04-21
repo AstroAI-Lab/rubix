@@ -14,11 +14,17 @@ class RuntimeThresholds:
 
 
 @dataclass(frozen=True)
-class ObjectiveThresholds:
-    """Thresholds for objective quality checks."""
+class OptimizationObjectiveThresholds:
+    """Thresholds for optimization loss quality checks."""
 
     max_final_loss: Optional[float] = None
     max_best_loss: Optional[float] = None
+
+
+@dataclass(frozen=True)
+class VIObjectiveThresholds:
+    """Thresholds for variational inference objective quality checks."""
+
     max_final_objective: Optional[float] = None
     max_best_objective: Optional[float] = None
 
@@ -57,14 +63,14 @@ def _check_runtime(
 def check_ifu_optimization_guardrails(
     result: IFUCubeBenchmarkResult,
     runtime_thresholds: RuntimeThresholds,
-    objective_thresholds: ObjectiveThresholds,
+    objective_thresholds: OptimizationObjectiveThresholds,
 ) -> PerformanceCheckResult:
     """Check optimization benchmark result against runtime/objective thresholds.
 
     Args:
         result (IFUCubeBenchmarkResult): Optimization benchmark result.
         runtime_thresholds (RuntimeThresholds): Runtime limits.
-        objective_thresholds (ObjectiveThresholds): Objective/loss limits.
+        objective_thresholds (OptimizationObjectiveThresholds): Loss limits.
 
     Returns:
         PerformanceCheckResult: Pass/fail status and explanatory message.
@@ -104,14 +110,14 @@ def check_ifu_optimization_guardrails(
 def check_vi_guardrails(
     result: VIBenchmarkResult,
     runtime_thresholds: RuntimeThresholds,
-    objective_thresholds: ObjectiveThresholds,
+    objective_thresholds: VIObjectiveThresholds,
 ) -> PerformanceCheckResult:
     """Check VI benchmark result against runtime/objective thresholds.
 
     Args:
         result (VIBenchmarkResult): VI benchmark result.
         runtime_thresholds (RuntimeThresholds): Runtime limits.
-        objective_thresholds (ObjectiveThresholds): Objective limits.
+        objective_thresholds (VIObjectiveThresholds): Objective limits.
 
     Returns:
         PerformanceCheckResult: Pass/fail status and explanatory message.
