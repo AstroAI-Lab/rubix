@@ -38,6 +38,24 @@ class VariationalResult:
     converged: bool = False
 
 
+@dataclass
+class VariationalState:
+    """Serializable variational optimization state for checkpoint/resume."""
+
+    variational_params: dict[str, dict[str, dict[str, Any]]]
+    opt_state: Any
+    best_mean: dict[str, dict[str, Any]]
+    best_objective: float
+    best_step: int
+    key: jnp.ndarray
+    objective_history: list[float]
+    reconstruction_history: list[float]
+    kl_history: list[float]
+    grad_norm_history: list[float]
+    update_norm_history: list[float]
+    steps_run: int
+
+
 def _tree_to_dict(tree: ParamsTree) -> dict[str, dict[str, Any]]:
     """Return a mutable dictionary copy from a nested parameter tree."""
     return {component: dict(fields) for component, fields in tree.items()}
@@ -120,12 +138,16 @@ def optimize_variational_posterior(
     transforms: Optional[TransformTree] = None,
     optimizer: Optional[optax.GradientTransformation] = None,
     seed: int = 0,
-) -> VariationalResult:
+    state_init: Optional[VariationalState] = None,
+    return_state: bool = False,
+) -> Any:
     """Optimize a mean-field variational posterior with reparameterization.
 
     Args:
         pipeline (Any): Pipeline-like object consumed by :func:`rubix.inference.loss`.
         params_init (ParamsTree): Initial constrained parameter point.
+            **Ignored when** ``state_init`` **is provided**; the optimizer
+            resumes from ``state_init.variational_params`` instead.
         static_data (RubixData): Baseline RubixData passed to the forward model.
         target (jnp.ndarray): Target datacube or statistic.
         learning_rate (float, optional): Step size for default Adam optimizer.
@@ -135,7 +157,9 @@ def optimize_variational_posterior(
             Defaults to 1e-6.
         num_samples (int, optional): Monte Carlo samples per step. Defaults to 4.
         beta_kl (float, optional): KL weight. Defaults to 1e-3.
-        init_log_std (float, optional): Initial posterior log-std. Defaults to -2.0.
+        init_log_std (float, optional): Initial posterior log-std.  **Ignored
+            when** ``state_init`` **is provided**; the posterior is resumed
+            from the persisted variational parameters.  Defaults to -2.0.
         loss_fn (Optional[LossFn], optional): Optional custom reconstruction loss.
             Defaults to ``None`` (sum-of-squares).
         noise_key (Optional[jnp.ndarray], optional): Optional key for stochastic
@@ -145,7 +169,16 @@ def optimize_variational_posterior(
             Defaults to ``None``.
         optimizer (Optional[optax.GradientTransformation], optional): Custom
             optimizer. Defaults to ``None`` (Adam).
-        seed (int, optional): Random seed for VI sampling. Defaults to 0.
+        seed (int, optional): Random seed for VI sampling.  **Ignored when**
+            ``state_init`` **is provided**; the PRNG key is resumed from
+            ``state_init.key``.  Defaults to 0.
+        state_init (Optional[VariationalState], optional): Optional resumable
+            variational state.  When provided, ``params_init``, ``init_log_std``,
+            and ``seed`` are all ignored and the run continues exactly from the
+            persisted variational parameters, optimizer state, and PRNG key.
+            Defaults to ``None``.
+        return_state (bool, optional): If ``True``, also return updated
+            :class:`VariationalState`. Defaults to ``False``.
 
     Raises:
         ValueError: If ``num_samples`` is not strictly positive.
@@ -159,34 +192,50 @@ def optimize_variational_posterior(
     if optimizer is None:
         optimizer = optax.adam(learning_rate)
 
-    if transforms is None:
-        unconstrained_init = _tree_to_dict(params_init)
-    else:
-        unconstrained_init = apply_transforms(
-            params=params_init,
-            transforms=transforms,
-            direction="inverse",
+    if state_init is None:
+        if transforms is None:
+            unconstrained_init = _tree_to_dict(params_init)
+        else:
+            unconstrained_init = apply_transforms(
+                params=params_init,
+                transforms=transforms,
+                direction="inverse",
+            )
+
+        mean, log_std = initialize_mean_field_params(
+            params_init=unconstrained_init,
+            init_log_std=init_log_std,
         )
+        variational_params = {"mean": mean, "log_std": log_std}
+        opt_state = optimizer.init(variational_params)
 
-    mean, log_std = initialize_mean_field_params(
-        params_init=unconstrained_init,
-        init_log_std=init_log_std,
-    )
-    variational_params = {"mean": mean, "log_std": log_std}
-    opt_state = optimizer.init(variational_params)
+        objective_history: list[float] = []
+        reconstruction_history: list[float] = []
+        kl_history: list[float] = []
+        grad_norm_history: list[float] = []
+        update_norm_history: list[float] = []
 
-    objective_history: list[float] = []
-    reconstruction_history: list[float] = []
-    kl_history: list[float] = []
-    grad_norm_history: list[float] = []
-    update_norm_history: list[float] = []
+        best_objective = jnp.inf
+        best_mean = mean
+        best_step = -1
+        steps_run = 0
+        key = jax.random.PRNGKey(seed)
+    else:
+        variational_params = state_init.variational_params
+        opt_state = state_init.opt_state
+        best_mean = state_init.best_mean
+        best_objective = jnp.asarray(state_init.best_objective)
+        best_step = int(state_init.best_step)
+        key = state_init.key
+        objective_history = list(state_init.objective_history)
+        reconstruction_history = list(state_init.reconstruction_history)
+        kl_history = list(state_init.kl_history)
+        grad_norm_history = list(state_init.grad_norm_history)
+        update_norm_history = list(state_init.update_norm_history)
+        steps_run = int(state_init.steps_run)
 
-    best_objective = jnp.inf
-    best_mean = mean
-    best_step = -1
     converged = False
-    steps_run = 0
-    key = jax.random.PRNGKey(seed)
+    initial_steps_run = steps_run
 
     def objective_fn(current_params, step_key):
         current_mean = current_params["mean"]
@@ -230,7 +279,7 @@ def optimize_variational_posterior(
         if value < best_objective:
             best_objective = value
             best_mean = current_mean
-            best_step = step
+            best_step = initial_steps_run + step
 
         updates, opt_state = optimizer.update(grads, opt_state, variational_params)
         variational_params = optax.apply_updates(variational_params, updates)
@@ -244,7 +293,7 @@ def optimize_variational_posterior(
         grad_norm_history.append(grad_norm)
         update_norm_history.append(update_norm)
 
-        steps_run = step + 1
+        steps_run = steps_run + 1
         if update_norm < tol:
             converged = True
             break
@@ -271,7 +320,13 @@ def optimize_variational_posterior(
         final_objective = float("nan")
         final_reconstruction = float("nan")
         final_kl = float("nan")
+        state_key = key
     else:
+        # Capture the training-loop key state before the final evaluation so
+        # that the VariationalState records the PRNG state at which the loop
+        # ended.  This ensures resumed runs continue with the same key
+        # sequence as a continuous run of the same total length would.
+        state_key = key
         key, final_eval_key = jax.random.split(key)
         final_value, (final_reconstruction_value, final_kl_value) = objective_fn(
             variational_params, final_eval_key
@@ -280,7 +335,7 @@ def optimize_variational_posterior(
         final_reconstruction = float(final_reconstruction_value)
         final_kl = float(final_kl_value)
 
-    return VariationalResult(
+    result = VariationalResult(
         posterior_mean_params=_tree_to_dict(final_mean),
         posterior_log_std_params=_tree_to_dict(final_log_std),
         posterior_mean_constrained_params=_tree_to_dict(posterior_mean_constrained),
@@ -301,6 +356,25 @@ def optimize_variational_posterior(
         steps_run=steps_run,
         converged=converged,
     )
+
+    state = VariationalState(
+        variational_params=_tree_to_dict(variational_params),
+        opt_state=opt_state,
+        best_mean=_tree_to_dict(best_mean),
+        best_objective=float(best_objective),
+        best_step=best_step,
+        key=state_key,
+        objective_history=objective_history,
+        reconstruction_history=reconstruction_history,
+        kl_history=kl_history,
+        grad_norm_history=grad_norm_history,
+        update_norm_history=update_norm_history,
+        steps_run=steps_run,
+    )
+
+    if return_state:
+        return result, state
+    return result
 
 
 def optimize_variational_ifu_cube(
@@ -324,7 +398,9 @@ def optimize_variational_ifu_cube(
     transforms: Optional[TransformTree] = None,
     optimizer: Optional[optax.GradientTransformation] = None,
     seed: int = 0,
-) -> VariationalResult:
+    state_init: Optional[VariationalState] = None,
+    return_state: bool = False,
+) -> Any:
     """Optimize a VI posterior against full IFU cubes with science losses.
 
     Args:
@@ -358,6 +434,10 @@ def optimize_variational_ifu_cube(
         optimizer (Optional[optax.GradientTransformation], optional): Optional
             optimizer override. Defaults to ``None``.
         seed (int, optional): Random seed for VI sampling. Defaults to 0.
+        state_init (Optional[VariationalState], optional): Optional resumable
+            state for exact continuation. Defaults to ``None``.
+        return_state (bool, optional): If ``True``, also return updated
+            :class:`VariationalState`. Defaults to ``False``.
 
     Raises:
         ValueError: If ``target`` is not 3D, if Huber settings are invalid, if
@@ -437,4 +517,6 @@ def optimize_variational_ifu_cube(
         transforms=transforms,
         optimizer=optimizer,
         seed=seed,
+        state_init=state_init,
+        return_state=return_state,
     )
