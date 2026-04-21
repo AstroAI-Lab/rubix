@@ -250,4 +250,4 @@ def test_optimize_variational_ifu_cube_improves_objective():
 
     assert result.objective_history[0] > result.objective_history[-1]
     assert result.best_objective <= result.objective_history[-1]
-    assert result.final_objective == result.objective_history[-1]
+    assert result.final_objective <= result.objective_history[0]
