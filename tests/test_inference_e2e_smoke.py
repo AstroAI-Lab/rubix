@@ -95,7 +95,10 @@ def test_e2e_deterministic_stochastic_and_vi_smoke():
     assert jnp.isfinite(sto_result.final_loss)
     # The stochastic loss trace must also differ from the deterministic one at
     # step 0, confirming that noise_key was threaded through optimize_params.
-    assert sto_result.loss_history[0] != det_result.loss_history[0], (
+    assert not jnp.isclose(
+        jnp.array(sto_result.loss_history[0]),
+        jnp.array(det_result.loss_history[0]),
+    ), (
         "stochastic and deterministic first-step losses are identical; "
         "noise_key may not be reaching the pipeline inside optimize_params"
     )
