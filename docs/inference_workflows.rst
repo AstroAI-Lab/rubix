@@ -181,6 +181,17 @@ To benchmark full-cube VI performance:
      --num-samples 4 \
      --use-mask --use-huber
 
+End-to-End Smoke Validation
+---------------------------
+
+Rubix includes a synthetic end-to-end smoke test that exercises deterministic
+optimization, stochastic optimization with explicit noise keys, and VI on a
+small IFU cube:
+
+.. code-block:: bash
+
+   pytest -q tests/test_inference_e2e_smoke.py
+
 
 Performance Notes
 -----------------
