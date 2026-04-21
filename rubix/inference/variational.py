@@ -9,6 +9,7 @@ from beartype.typing import Any
 from rubix.core.data import RubixData
 
 from .api import LossFn, loss
+from .losses import combine_loss_fns, huber_data_loss, masked_gaussian_nll
 from .parameterization import TransformTree, apply_transforms
 
 ParamsTree = Mapping[str, Mapping[str, Any]]
@@ -26,9 +27,15 @@ class VariationalResult:
     objective_history: list[float]
     reconstruction_history: list[float]
     kl_history: list[float]
+    grad_norm_history: list[float]
+    update_norm_history: list[float]
     best_objective: float
-    steps_run: int
-    converged: bool
+    best_step: int
+    final_objective: float
+    final_reconstruction: float
+    final_kl: float = float("nan")
+    steps_run: int = -1
+    converged: bool = False
 
 
 def _tree_to_dict(tree: ParamsTree) -> dict[str, dict[str, Any]]:
@@ -171,9 +178,12 @@ def optimize_variational_posterior(
     objective_history: list[float] = []
     reconstruction_history: list[float] = []
     kl_history: list[float] = []
+    grad_norm_history: list[float] = []
+    update_norm_history: list[float] = []
 
     best_objective = jnp.inf
     best_mean = mean
+    best_step = -1
     converged = False
     steps_run = 0
     key = jax.random.PRNGKey(seed)
@@ -220,16 +230,22 @@ def optimize_variational_posterior(
         if value < best_objective:
             best_objective = value
             best_mean = current_mean
+            best_step = step
 
         updates, opt_state = optimizer.update(grads, opt_state, variational_params)
         variational_params = optax.apply_updates(variational_params, updates)
 
+        grad_norm = float(optax.global_norm(grads))
+        update_norm = float(optax.global_norm(updates))
+
         objective_history.append(float(value))
         reconstruction_history.append(float(reconstruction_value))
         kl_history.append(float(kl_value))
+        grad_norm_history.append(grad_norm)
+        update_norm_history.append(update_norm)
 
         steps_run = step + 1
-        if float(optax.global_norm(updates)) < tol:
+        if update_norm < tol:
             converged = True
             break
 
@@ -251,6 +267,19 @@ def optimize_variational_posterior(
             direction="forward",
         )
 
+    if len(objective_history) == 0:
+        final_objective = float("nan")
+        final_reconstruction = float("nan")
+        final_kl = float("nan")
+    else:
+        key, final_eval_key = jax.random.split(key)
+        final_value, (final_reconstruction_value, final_kl_value) = objective_fn(
+            variational_params, final_eval_key
+        )
+        final_objective = float(final_value)
+        final_reconstruction = float(final_reconstruction_value)
+        final_kl = float(final_kl_value)
+
     return VariationalResult(
         posterior_mean_params=_tree_to_dict(final_mean),
         posterior_log_std_params=_tree_to_dict(final_log_std),
@@ -262,7 +291,152 @@ def optimize_variational_posterior(
         objective_history=objective_history,
         reconstruction_history=reconstruction_history,
         kl_history=kl_history,
+        grad_norm_history=grad_norm_history,
+        update_norm_history=update_norm_history,
         best_objective=float(best_objective),
+        best_step=best_step,
+        final_objective=final_objective,
+        final_reconstruction=final_reconstruction,
+        final_kl=final_kl,
         steps_run=steps_run,
         converged=converged,
+    )
+
+
+def optimize_variational_ifu_cube(
+    pipeline: Any,
+    params_init: ParamsTree,
+    static_data: RubixData,
+    target: jnp.ndarray,
+    sigma: Optional[jnp.ndarray] = None,
+    inv_variance: Optional[jnp.ndarray] = None,
+    mask: Optional[jnp.ndarray] = None,
+    normalize_loss: bool = True,
+    huber_delta: Optional[float] = None,
+    huber_weight: float = 0.0,
+    learning_rate: float = 5e-3,
+    max_steps: int = 500,
+    tol: float = 1e-6,
+    num_samples: int = 4,
+    beta_kl: float = 1e-3,
+    init_log_std: float = -2.0,
+    noise_key: Optional[jnp.ndarray] = None,
+    transforms: Optional[TransformTree] = None,
+    optimizer: Optional[optax.GradientTransformation] = None,
+    seed: int = 0,
+) -> VariationalResult:
+    """Optimize a VI posterior against full IFU cubes with science losses.
+
+    Args:
+        pipeline (Any): Pipeline-like object consumed by VI objective.
+        params_init (ParamsTree): Initial constrained parameter point.
+        static_data (RubixData): Baseline RubixData passed to the forward model.
+        target (jnp.ndarray): Target IFU datacube.
+        sigma (Optional[jnp.ndarray], optional): Per-voxel uncertainty cube.
+            Defaults to ``None``.
+        inv_variance (Optional[jnp.ndarray], optional): Per-voxel inverse
+            variance cube. Defaults to ``None``.
+        mask (Optional[jnp.ndarray], optional): Optional binary voxel mask.
+            Defaults to ``None``.
+        normalize_loss (bool, optional): Whether to normalize data term.
+            Defaults to ``True``.
+        huber_delta (Optional[float], optional): Optional Huber transition.
+            Defaults to ``None`` (disabled unless ``huber_weight > 0``).
+        huber_weight (float, optional): Weight of robust Huber data term.
+            Defaults to 0.0.
+        learning_rate (float, optional): Adam learning rate. Defaults to 5e-3.
+        max_steps (int, optional): Maximum optimization steps. Defaults to 500.
+        tol (float, optional): Convergence threshold. Defaults to 1e-6.
+        num_samples (int, optional): Monte Carlo samples per step. Defaults to 4.
+        beta_kl (float, optional): KL weight. Defaults to 1e-3.
+        init_log_std (float, optional): Initial posterior log-std.
+            Defaults to -2.0.
+        noise_key (Optional[jnp.ndarray], optional): Optional stochastic key.
+            Defaults to ``None``.
+        transforms (Optional[TransformTree], optional): Optional transform tree.
+            Defaults to ``None``.
+        optimizer (Optional[optax.GradientTransformation], optional): Optional
+            optimizer override. Defaults to ``None``.
+        seed (int, optional): Random seed for VI sampling. Defaults to 0.
+
+    Raises:
+        ValueError: If ``target`` is not 3D, if Huber settings are invalid, if
+            both ``sigma`` and ``inv_variance`` are provided, or if the shape of
+            ``sigma``, ``inv_variance``, or ``mask`` does not match ``target``.
+
+    Returns:
+        VariationalResult: Posterior statistics and optimization traces.
+    """
+    if target.ndim != 3:
+        raise ValueError("target must be a 3D IFU datacube")
+
+    if sigma is not None and inv_variance is not None:
+        raise ValueError(
+            "only one of sigma or inv_variance may be provided, not both"
+        )
+
+    if sigma is not None and sigma.shape != target.shape:
+        raise ValueError(
+            f"sigma shape {sigma.shape} does not match target shape {target.shape}"
+        )
+
+    if inv_variance is not None and inv_variance.shape != target.shape:
+        raise ValueError(
+            f"inv_variance shape {inv_variance.shape} does not match target shape "
+            f"{target.shape}"
+        )
+
+    if mask is not None and mask.shape != target.shape:
+        raise ValueError(
+            f"mask shape {mask.shape} does not match target shape {target.shape}"
+        )
+
+    if huber_weight < 0.0:
+        raise ValueError("huber_weight must be non-negative")
+
+    if huber_weight > 0.0 and huber_delta is None:
+        raise ValueError("huber_delta must be provided when huber_weight > 0")
+
+    if huber_weight > 0.0 and huber_delta <= 0.0:
+        raise ValueError("huber_delta must be > 0 when huber_weight > 0")
+
+    gaussian_loss: LossFn = lambda pred, truth: masked_gaussian_nll(
+        prediction=pred,
+        target=truth,
+        sigma=sigma,
+        inv_variance=inv_variance,
+        mask=mask,
+        normalize=normalize_loss,
+    )
+
+    if huber_weight > 0.0:
+        huber_loss: LossFn = lambda pred, truth: huber_data_loss(
+            prediction=pred,
+            target=truth,
+            delta=float(huber_delta),
+            mask=mask,
+            normalize=normalize_loss,
+        )
+        reconstruction_loss_fn = combine_loss_fns(
+            [gaussian_loss, huber_loss], weights=[1.0, huber_weight]
+        )
+    else:
+        reconstruction_loss_fn = gaussian_loss
+
+    return optimize_variational_posterior(
+        pipeline=pipeline,
+        params_init=params_init,
+        static_data=static_data,
+        target=target,
+        learning_rate=learning_rate,
+        max_steps=max_steps,
+        tol=tol,
+        num_samples=num_samples,
+        beta_kl=beta_kl,
+        init_log_std=init_log_std,
+        loss_fn=reconstruction_loss_fn,
+        noise_key=noise_key,
+        transforms=transforms,
+        optimizer=optimizer,
+        seed=seed,
     )
