@@ -50,8 +50,7 @@ def sample_posterior_predictive_cubes(
     base_key = jax.random.PRNGKey(seed)
     sample_keys = jax.random.split(base_key, num_samples)
 
-    cubes = []
-    for key in sample_keys:
+    def _single_sample(key):
         sampled_unconstrained = sample_diag_gaussian(
             mean=posterior_mean_params,
             log_std=posterior_log_std_params,
@@ -65,16 +64,14 @@ def sample_posterior_predictive_cubes(
                 transforms=transforms,
                 direction="forward",
             )
-        cubes.append(
-            forward(
-                pipeline=pipeline,
-                params=sampled_constrained,
-                static_data=static_data,
-                noise_key=noise_key,
-            )
+        return forward(
+            pipeline=pipeline,
+            params=sampled_constrained,
+            static_data=static_data,
+            noise_key=noise_key,
         )
 
-    return jnp.stack(cubes, axis=0)
+    return jax.lax.map(_single_sample, sample_keys)
 
 
 def summarize_predictive_cube_samples(samples: jnp.ndarray) -> dict[str, jnp.ndarray]:
