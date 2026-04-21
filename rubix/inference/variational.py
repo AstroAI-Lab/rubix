@@ -33,9 +33,9 @@ class VariationalResult:
     best_step: int
     final_objective: float
     final_reconstruction: float
-    final_kl: float
-    steps_run: int
-    converged: bool
+    final_kl: float = float("nan")
+    steps_run: int = -1
+    converged: bool = False
 
 
 def _tree_to_dict(tree: ParamsTree) -> dict[str, dict[str, Any]]:
