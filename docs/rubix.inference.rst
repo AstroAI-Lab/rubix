@@ -116,6 +116,14 @@ rubix.inference.vi_benchmark module
    :undoc-members:
    :show-inheritance:
 
+rubix.inference.workflows module
+--------------------------------
+
+.. automodule:: rubix.inference.workflows
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

@@ -304,6 +304,22 @@ For large particle counts, configure optional IFU accumulation controls:
 
 These settings are used by the particlewise IFU builders in ``rubix.core.ifu``.
 
+
+Synthetic Science Recipe
+------------------------
+
+Run an end-to-end synthetic workflow (optimize -> VI -> posterior predictive ->
+residual metrics) and persist science-ready outputs:
+
+.. code-block:: bash
+
+   python scripts/run_synthetic_science_recipe.py \
+     --output-dir outputs/science_recipe \
+     --nx 8 --ny 8 --nw 64 \
+     --optimize-steps 200 \
+     --vi-steps 200 \
+     --num-posterior-draws 16
+
 Benchmarking Full-IFU Optimization
 ----------------------------------
 
