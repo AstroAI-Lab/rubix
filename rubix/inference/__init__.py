@@ -63,6 +63,7 @@ from .vi_benchmark import (
     benchmark_variational_inference,
     vi_benchmark_result_to_dict,
 )
+from .workflows import run_synthetic_science_recipe, save_science_recipe_outputs
 
 __all__ = [
     "IdentityTransform",
@@ -122,4 +123,6 @@ __all__ = [
     "summarize_predictive_cube_samples",
     "save_checkpoint",
     "value_and_grad",
+    "run_synthetic_science_recipe",
+    "save_science_recipe_outputs",
 ]
