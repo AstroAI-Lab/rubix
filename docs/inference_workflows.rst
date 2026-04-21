@@ -247,6 +247,52 @@ Both optimization and VI now support resumable state plus checkpoint helpers.
    )
 
 
+Posterior Predictive Outputs
+----------------------------
+
+Generate posterior predictive cubes and science-ready residual summaries:
+
+.. code-block:: python
+
+   from rubix.inference import (
+       compute_residual_products,
+       sample_posterior_predictive_cubes,
+       summarize_masked_metrics,
+       summarize_predictive_cube_samples,
+   )
+
+   samples = sample_posterior_predictive_cubes(
+       pipeline=pipe_det,
+       posterior_mean_params=vi.posterior_mean_params,
+       posterior_log_std_params=vi.posterior_log_std_params,
+       static_data=static_data,
+       num_samples=16,
+   )
+   summary = summarize_predictive_cube_samples(samples)
+   residual_maps = compute_residual_products(summary["mean"], target_cube)
+   metrics = summarize_masked_metrics(summary["mean"], target_cube, mask=valid_voxel_mask)
+
+
+Performance Guardrails
+----------------------
+
+Use guardrails to fail fast when runtime/objective regressions exceed expected
+thresholds in benchmark runs.
+
+.. code-block:: python
+
+   from rubix.inference import (
+       OptimizationObjectiveThresholds,
+       RuntimeThresholds,
+       check_ifu_optimization_guardrails,
+   )
+
+   runtime_limits = RuntimeThresholds(max_mean_runtime_s=2.0, max_median_runtime_s=2.0)
+   objective_limits = OptimizationObjectiveThresholds(max_final_loss=1e-3, max_best_loss=1e-3)
+   check = check_ifu_optimization_guardrails(bench_result, runtime_limits, objective_limits)
+   assert check.passed, check.message
+
+
 Performance Notes
 -----------------
 
@@ -257,6 +303,22 @@ For large particle counts, configure optional IFU accumulation controls:
   particle step function for memory/computation tradeoffs
 
 These settings are used by the particlewise IFU builders in ``rubix.core.ifu``.
+
+
+Synthetic Science Recipe
+------------------------
+
+Run an end-to-end synthetic workflow (optimize -> VI -> posterior predictive ->
+residual metrics) and persist science-ready outputs:
+
+.. code-block:: bash
+
+   python scripts/run_synthetic_science_recipe.py \
+     --output-dir outputs/science_recipe \
+     --nx 8 --ny 8 --nw 64 \
+     --optimize-steps 200 \
+     --vi-steps 200 \
+     --num-posterior-draws 16
 
 Benchmarking Full-IFU Optimization
 ----------------------------------
