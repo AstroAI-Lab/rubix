@@ -35,6 +35,14 @@ from .parameterization import (
     build_age_metallicity_transforms,
     inverse_transforms,
 )
+from .performance_guardrails import (
+    OptimizationObjectiveThresholds,
+    PerformanceCheckResult,
+    RuntimeThresholds,
+    VIObjectiveThresholds,
+    check_ifu_optimization_guardrails,
+    check_vi_guardrails,
+)
 from .posterior_predictive import (
     compute_residual_products,
     sample_posterior_predictive_cubes,
@@ -56,6 +64,7 @@ from .vi_benchmark import (
     benchmark_variational_inference,
     vi_benchmark_result_to_dict,
 )
+from .workflows import run_synthetic_science_recipe, save_science_recipe_outputs
 
 __all__ = [
     "IdentityTransform",
@@ -66,6 +75,10 @@ __all__ = [
     "IFUCubeBenchmarkResult",
     "OptimizationResult",
     "OptimizationState",
+    "OptimizationObjectiveThresholds",
+    "PerformanceCheckResult",
+    "RuntimeThresholds",
+    "VIObjectiveThresholds",
     "VariationalResult",
     "VariationalState",
     "VIBenchmarkResult",
@@ -84,6 +97,8 @@ __all__ = [
     "benchmark_result_to_dict",
     "compare_gradients",
     "compute_residual_products",
+    "check_ifu_optimization_guardrails",
+    "check_vi_guardrails",
     "estimate_array_nbytes",
     "finite_difference_grad",
     "forward",
@@ -110,4 +125,6 @@ __all__ = [
     "summarize_predictive_cube_samples",
     "save_checkpoint",
     "value_and_grad",
+    "run_synthetic_science_recipe",
+    "save_science_recipe_outputs",
 ]
