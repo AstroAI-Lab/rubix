@@ -76,6 +76,14 @@ rubix.inference.variational module
    :undoc-members:
    :show-inheritance:
 
+rubix.inference.vi_benchmark module
+-----------------------------------
+
+.. automodule:: rubix.inference.vi_benchmark
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 
