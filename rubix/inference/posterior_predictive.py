@@ -147,9 +147,11 @@ def compute_residual_products(
     abs_residual = jnp.abs(residual)
 
     if inv_variance is not None:
-        chi2 = residual**2 * inv_variance
+        chi2 = residual**2 * inv_variance.astype(residual.dtype)
     elif sigma is not None:
-        chi2 = residual**2 / jnp.maximum(sigma**2, jnp.asarray(1e-12, sigma.dtype))
+        eps_arr = jnp.asarray(1e-12, dtype=residual.dtype)
+        sigma_safe = jnp.maximum(sigma.astype(residual.dtype), eps_arr)
+        chi2 = residual**2 / (sigma_safe**2)
     else:
         chi2 = residual**2
 
