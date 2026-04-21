@@ -69,17 +69,17 @@ def test_e2e_deterministic_stochastic_and_vi_smoke():
     noise_key = jax.random.PRNGKey(7)
     pred_det = forward(pipeline, params_init, static_data, noise_key=None)
     pred_sto = forward(pipeline, params_init, static_data, noise_key=noise_key)
-    assert not jnp.allclose(pred_det, pred_sto), (
-        "noise_key had no effect on forward output; plumbing may be broken"
-    )
+    assert not jnp.allclose(
+        pred_det, pred_sto
+    ), "noise_key had no effect on forward output; plumbing may be broken"
 
     # Two distinct keys must also produce different noisy predictions.
     pred_sto2 = forward(
         pipeline, params_init, static_data, noise_key=jax.random.PRNGKey(42)
     )
-    assert not jnp.allclose(pred_sto, pred_sto2), (
-        "different noise_keys produced identical outputs; PRNG splitting may be broken"
-    )
+    assert not jnp.allclose(
+        pred_sto, pred_sto2
+    ), "different noise_keys produced identical outputs; PRNG splitting may be broken"
 
     # Stochastic run with explicit noise key should remain numerically stable.
     sto_result = optimize_params(
