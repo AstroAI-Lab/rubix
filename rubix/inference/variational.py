@@ -374,6 +374,8 @@ def optimize_variational_ifu_cube(
     if huber_weight > 0.0 and huber_delta is None:
         raise ValueError("huber_delta must be provided when huber_weight > 0")
 
+    if huber_weight > 0.0 and huber_delta <= 0.0:
+        raise ValueError("huber_delta must be > 0 when huber_weight > 0")
     gaussian_loss: LossFn = lambda pred, truth: masked_gaussian_nll(
         prediction=pred,
         target=truth,
