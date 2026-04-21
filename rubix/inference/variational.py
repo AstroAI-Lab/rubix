@@ -38,6 +38,24 @@ class VariationalResult:
     converged: bool = False
 
 
+@dataclass
+class VariationalState:
+    """Serializable variational optimization state for checkpoint/resume."""
+
+    variational_params: dict[str, dict[str, dict[str, Any]]]
+    opt_state: Any
+    best_mean: dict[str, dict[str, Any]]
+    best_objective: float
+    best_step: int
+    key: jnp.ndarray
+    objective_history: list[float]
+    reconstruction_history: list[float]
+    kl_history: list[float]
+    grad_norm_history: list[float]
+    update_norm_history: list[float]
+    steps_run: int
+
+
 def _tree_to_dict(tree: ParamsTree) -> dict[str, dict[str, Any]]:
     """Return a mutable dictionary copy from a nested parameter tree."""
     return {component: dict(fields) for component, fields in tree.items()}
@@ -120,7 +138,9 @@ def optimize_variational_posterior(
     transforms: Optional[TransformTree] = None,
     optimizer: Optional[optax.GradientTransformation] = None,
     seed: int = 0,
-) -> VariationalResult:
+    state_init: Optional[VariationalState] = None,
+    return_state: bool = False,
+) -> Any:
     """Optimize a mean-field variational posterior with reparameterization.
 
     Args:
@@ -146,6 +166,10 @@ def optimize_variational_posterior(
         optimizer (Optional[optax.GradientTransformation], optional): Custom
             optimizer. Defaults to ``None`` (Adam).
         seed (int, optional): Random seed for VI sampling. Defaults to 0.
+        state_init (Optional[VariationalState], optional): Optional resumable
+            variational state. Defaults to ``None``.
+        return_state (bool, optional): If ``True``, also return updated
+            :class:`VariationalState`. Defaults to ``False``.
 
     Raises:
         ValueError: If ``num_samples`` is not strictly positive.
@@ -159,34 +183,49 @@ def optimize_variational_posterior(
     if optimizer is None:
         optimizer = optax.adam(learning_rate)
 
-    if transforms is None:
-        unconstrained_init = _tree_to_dict(params_init)
-    else:
-        unconstrained_init = apply_transforms(
-            params=params_init,
-            transforms=transforms,
-            direction="inverse",
+    if state_init is None:
+        if transforms is None:
+            unconstrained_init = _tree_to_dict(params_init)
+        else:
+            unconstrained_init = apply_transforms(
+                params=params_init,
+                transforms=transforms,
+                direction="inverse",
+            )
+
+        mean, log_std = initialize_mean_field_params(
+            params_init=unconstrained_init,
+            init_log_std=init_log_std,
         )
+        variational_params = {"mean": mean, "log_std": log_std}
+        opt_state = optimizer.init(variational_params)
 
-    mean, log_std = initialize_mean_field_params(
-        params_init=unconstrained_init,
-        init_log_std=init_log_std,
-    )
-    variational_params = {"mean": mean, "log_std": log_std}
-    opt_state = optimizer.init(variational_params)
+        objective_history: list[float] = []
+        reconstruction_history: list[float] = []
+        kl_history: list[float] = []
+        grad_norm_history: list[float] = []
+        update_norm_history: list[float] = []
 
-    objective_history: list[float] = []
-    reconstruction_history: list[float] = []
-    kl_history: list[float] = []
-    grad_norm_history: list[float] = []
-    update_norm_history: list[float] = []
+        best_objective = jnp.inf
+        best_mean = mean
+        best_step = -1
+        steps_run = 0
+        key = jax.random.PRNGKey(seed)
+    else:
+        variational_params = state_init.variational_params
+        opt_state = state_init.opt_state
+        best_mean = state_init.best_mean
+        best_objective = jnp.asarray(state_init.best_objective)
+        best_step = int(state_init.best_step)
+        key = state_init.key
+        objective_history = list(state_init.objective_history)
+        reconstruction_history = list(state_init.reconstruction_history)
+        kl_history = list(state_init.kl_history)
+        grad_norm_history = list(state_init.grad_norm_history)
+        update_norm_history = list(state_init.update_norm_history)
+        steps_run = int(state_init.steps_run)
 
-    best_objective = jnp.inf
-    best_mean = mean
-    best_step = -1
     converged = False
-    steps_run = 0
-    key = jax.random.PRNGKey(seed)
 
     def objective_fn(current_params, step_key):
         current_mean = current_params["mean"]
@@ -230,7 +269,7 @@ def optimize_variational_posterior(
         if value < best_objective:
             best_objective = value
             best_mean = current_mean
-            best_step = step
+            best_step = steps_run + step
 
         updates, opt_state = optimizer.update(grads, opt_state, variational_params)
         variational_params = optax.apply_updates(variational_params, updates)
@@ -244,7 +283,7 @@ def optimize_variational_posterior(
         grad_norm_history.append(grad_norm)
         update_norm_history.append(update_norm)
 
-        steps_run = step + 1
+        steps_run = steps_run + 1
         if update_norm < tol:
             converged = True
             break
@@ -280,7 +319,7 @@ def optimize_variational_posterior(
         final_reconstruction = float(final_reconstruction_value)
         final_kl = float(final_kl_value)
 
-    return VariationalResult(
+    result = VariationalResult(
         posterior_mean_params=_tree_to_dict(final_mean),
         posterior_log_std_params=_tree_to_dict(final_log_std),
         posterior_mean_constrained_params=_tree_to_dict(posterior_mean_constrained),
@@ -301,6 +340,25 @@ def optimize_variational_posterior(
         steps_run=steps_run,
         converged=converged,
     )
+
+    state = VariationalState(
+        variational_params=_tree_to_dict(variational_params),
+        opt_state=opt_state,
+        best_mean=_tree_to_dict(best_mean),
+        best_objective=float(best_objective),
+        best_step=best_step,
+        key=key,
+        objective_history=objective_history,
+        reconstruction_history=reconstruction_history,
+        kl_history=kl_history,
+        grad_norm_history=grad_norm_history,
+        update_norm_history=update_norm_history,
+        steps_run=steps_run,
+    )
+
+    if return_state:
+        return result, state
+    return result
 
 
 def optimize_variational_ifu_cube(
@@ -324,7 +382,9 @@ def optimize_variational_ifu_cube(
     transforms: Optional[TransformTree] = None,
     optimizer: Optional[optax.GradientTransformation] = None,
     seed: int = 0,
-) -> VariationalResult:
+    state_init: Optional[VariationalState] = None,
+    return_state: bool = False,
+) -> Any:
     """Optimize a VI posterior against full IFU cubes with science losses.
 
     Args:
@@ -358,6 +418,10 @@ def optimize_variational_ifu_cube(
         optimizer (Optional[optax.GradientTransformation], optional): Optional
             optimizer override. Defaults to ``None``.
         seed (int, optional): Random seed for VI sampling. Defaults to 0.
+        state_init (Optional[VariationalState], optional): Optional resumable
+            state for exact continuation. Defaults to ``None``.
+        return_state (bool, optional): If ``True``, also return updated
+            :class:`VariationalState`. Defaults to ``False``.
 
     Raises:
         ValueError: If ``target`` is not 3D, if Huber settings are invalid, if
@@ -371,9 +435,7 @@ def optimize_variational_ifu_cube(
         raise ValueError("target must be a 3D IFU datacube")
 
     if sigma is not None and inv_variance is not None:
-        raise ValueError(
-            "only one of sigma or inv_variance may be provided, not both"
-        )
+        raise ValueError("only one of sigma or inv_variance may be provided, not both")
 
     if sigma is not None and sigma.shape != target.shape:
         raise ValueError(
@@ -439,4 +501,6 @@ def optimize_variational_ifu_cube(
         transforms=transforms,
         optimizer=optimizer,
         seed=seed,
+        state_init=state_init,
+        return_state=return_state,
     )

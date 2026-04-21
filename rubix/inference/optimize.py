@@ -48,6 +48,16 @@ class OptimizationResult:
     converged: bool
 
 
+@dataclass
+class OptimizationState:
+    """Serializable optimization state for checkpointing/resume."""
+
+    trainable_params: dict[str, dict[str, Any]]
+    opt_state: Any
+    best_trainable_params: dict[str, dict[str, Any]]
+    best_loss: float
+
+
 def _tree_to_dict(tree: ParamsTree) -> dict[str, dict[str, Any]]:
     """Return a mutable dictionary copy from a nested parameter tree."""
     return {component: dict(fields) for component, fields in tree.items()}
@@ -65,7 +75,9 @@ def optimize_params(
     noise_key: Optional[jnp.ndarray] = None,
     transforms: Optional[TransformTree] = None,
     optimizer: Optional[optax.GradientTransformation] = None,
-) -> OptimizationResult:
+    state_init: Optional[OptimizationState] = None,
+    return_state: bool = False,
+) -> Any:
     """Run gradient-based parameter optimization with Optax.
 
     Args:
@@ -87,6 +99,10 @@ def optimize_params(
             Defaults to ``None``.
         optimizer (Optional[optax.GradientTransformation], optional): Custom
             Optax optimizer. Defaults to ``None`` (Adam with ``learning_rate``).
+        state_init (Optional[OptimizationState], optional): Optional internal
+            state for exact resume. Defaults to ``None``.
+        return_state (bool, optional): If ``True``, also return updated
+            :class:`OptimizationState`. Defaults to ``False``.
 
     Returns:
         OptimizationResult: Final/best params, optimization traces, and the
@@ -95,16 +111,23 @@ def optimize_params(
     if optimizer is None:
         optimizer = optax.adam(learning_rate)
 
-    if transforms is None:
-        trainable_params = _tree_to_dict(params_init)
+    if state_init is None:
+        if transforms is None:
+            trainable_params = _tree_to_dict(params_init)
+        else:
+            trainable_params = apply_transforms(
+                params=params_init,
+                transforms=transforms,
+                direction="inverse",
+            )
+        opt_state = optimizer.init(trainable_params)
+        best_trainable_params = trainable_params
+        best_loss_init = jnp.array(jnp.inf)
     else:
-        trainable_params = apply_transforms(
-            params=params_init,
-            transforms=transforms,
-            direction="inverse",
-        )
-
-    opt_state = optimizer.init(trainable_params)
+        trainable_params = state_init.trainable_params
+        opt_state = state_init.opt_state
+        best_trainable_params = state_init.best_trainable_params
+        best_loss_init = jnp.asarray(state_init.best_loss)
 
     def train_loss(train_params):
         if transforms is None:
@@ -172,15 +195,23 @@ def optimize_params(
     init_carry = (
         trainable_params,
         opt_state,
-        trainable_params,
-        jnp.array(jnp.inf),
+        best_trainable_params,
+        best_loss_init,
         jnp.array(False),
     )
-    (final_params, _, final_best_params, best_loss_val, converged_flag), (
+    (
+        final_params,
+        final_opt_state,
+        final_best_params,
+        best_loss_val,
+        converged_flag,
+    ), (
         loss_arr,
         grad_norm_arr,
         update_norm_arr,
-    ) = jax.lax.scan(scan_step, init_carry, None, length=max_steps)
+    ) = jax.lax.scan(
+        scan_step, init_carry, None, length=max_steps
+    )
 
     # Detect convergence post-hoc; no device->host sync until here.
     # Because the scan freezes once `update_norm < tol`, the first True marks
@@ -216,7 +247,7 @@ def optimize_params(
             )
         )
 
-    return OptimizationResult(
+    result = OptimizationResult(
         params=result_params,
         best_params=result_best_params,
         loss_history=loss_history,
@@ -226,6 +257,17 @@ def optimize_params(
         steps_run=steps_run,
         converged=converged,
     )
+
+    state = OptimizationState(
+        trainable_params=_tree_to_dict(final_params),
+        opt_state=final_opt_state,
+        best_trainable_params=_tree_to_dict(final_best_params),
+        best_loss=float(best_loss_val),
+    )
+
+    if return_state:
+        return result, state
+    return result
 
 
 def optimize_ifu_cube(
@@ -242,7 +284,9 @@ def optimize_ifu_cube(
     noise_key: Optional[jnp.ndarray] = None,
     transforms: Optional[TransformTree] = None,
     optimizer: Optional[optax.GradientTransformation] = None,
-) -> OptimizationResult:
+    state_init: Optional[OptimizationState] = None,
+    return_state: bool = False,
+) -> Any:
     """Optimize parameters against a full IFU cube with optional weighting.
 
     Args:
@@ -267,12 +311,14 @@ def optimize_ifu_cube(
             for constrained optimization. Defaults to ``None``.
         optimizer (Optional[optax.GradientTransformation], optional): Custom
             Optax optimizer. Defaults to ``None`` (Adam with ``learning_rate``).
+        state_init (Optional[OptimizationState], optional): Optional internal
+            state for exact resume. Defaults to ``None``.
+        return_state (bool, optional): If ``True``, also return updated
+            :class:`OptimizationState`. Defaults to ``False``.
 
     Raises:
-        ValueError: If ``target`` is not a 3D IFU datacube.
-        ValueError: If ``weights`` contains non-finite values.
-        ValueError: If ``weights`` contains negative values.
-        ValueError: If ``mask`` contains negative values.
+        ValueError: If ``target`` is not 3D, or if ``weights``/``mask`` have
+            invalid values.
 
     Returns:
         OptimizationResult: Standard optimization traces and best/final params.
@@ -308,4 +354,6 @@ def optimize_ifu_cube(
         noise_key=noise_key,
         transforms=transforms,
         optimizer=optimizer,
+        state_init=state_init,
+        return_state=return_state,
     )

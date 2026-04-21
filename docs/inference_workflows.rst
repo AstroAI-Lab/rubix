@@ -212,6 +212,40 @@ small IFU cube:
 
    pytest -q tests/test_inference_e2e_smoke.py
 
+Checkpointing And Resume
+------------------------
+
+Both optimization and VI now support resumable state plus checkpoint helpers.
+
+.. code-block:: python
+
+   from rubix.inference import (
+       load_checkpoint,
+       make_optimization_checkpoint,
+       optimize_params,
+       resume_optimization_from_checkpoint,
+       save_checkpoint,
+   )
+
+   result, state = optimize_params(
+       pipeline=pipe_det,
+       params_init=params_init,
+       static_data=static_data,
+       target=target_cube,
+       max_steps=200,
+       return_state=True,
+   )
+   save_checkpoint(\"checkpoints/opt.pkl\", make_optimization_checkpoint(result, state))
+
+   ckpt = load_checkpoint(\"checkpoints/opt.pkl\")
+   resumed_result, resumed_state = resume_optimization_from_checkpoint(
+       ckpt,
+       pipeline=pipe_det,
+       static_data=static_data,
+       target=target_cube,
+       max_steps=200,
+   )
+
 
 Performance Notes
 -----------------

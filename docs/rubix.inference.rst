@@ -12,6 +12,14 @@ rubix.inference.api module
    :undoc-members:
    :show-inheritance:
 
+rubix.inference.checkpoint module
+---------------------------------
+
+.. automodule:: rubix.inference.checkpoint
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 rubix.inference.losses module
 -----------------------------
 
