@@ -8,10 +8,24 @@ from .benchmark import (
     benchmark_result_to_dict,
     estimate_array_nbytes,
 )
+from .checkpoint import (
+    load_checkpoint,
+    make_optimization_checkpoint,
+    make_variational_checkpoint,
+    resume_optimization_from_checkpoint,
+    resume_variational_from_checkpoint,
+    save_checkpoint,
+)
 from .losses import combine_loss_fns, huber_data_loss, masked_gaussian_nll
 from .modes import get_pipeline_name_for_mode, make_inference_pipeline
+from .objective_config import build_loss_from_config, build_loss_from_user_config
 from .objectives import build_ifu_cube_loss, masked_weighted_mse
-from .optimize import OptimizationResult, optimize_ifu_cube, optimize_params
+from .optimize import (
+    OptimizationResult,
+    OptimizationState,
+    optimize_ifu_cube,
+    optimize_params,
+)
 from .parameterization import (
     IdentityTransform,
     ParameterTransform,
@@ -21,14 +35,36 @@ from .parameterization import (
     build_age_metallicity_transforms,
     inverse_transforms,
 )
+from .performance_guardrails import (
+    OptimizationObjectiveThresholds,
+    PerformanceCheckResult,
+    RuntimeThresholds,
+    VIObjectiveThresholds,
+    check_ifu_optimization_guardrails,
+    check_vi_guardrails,
+)
+from .posterior_predictive import (
+    compute_residual_products,
+    sample_posterior_predictive_cubes,
+    summarize_masked_metrics,
+    summarize_predictive_cube_samples,
+)
 from .validation import GradientComparison, compare_gradients, finite_difference_grad
 from .variational import (
     VariationalResult,
+    VariationalState,
     initialize_mean_field_params,
     kl_diag_gaussian_to_standard_normal,
+    optimize_variational_ifu_cube,
     optimize_variational_posterior,
     sample_diag_gaussian,
 )
+from .vi_benchmark import (
+    VIBenchmarkResult,
+    benchmark_variational_inference,
+    vi_benchmark_result_to_dict,
+)
+from .workflows import run_synthetic_science_recipe, save_science_recipe_outputs
 
 __all__ = [
     "IdentityTransform",
@@ -38,15 +74,31 @@ __all__ = [
     "GradientComparison",
     "IFUCubeBenchmarkResult",
     "OptimizationResult",
+    "OptimizationState",
+    "OptimizationObjectiveThresholds",
+    "PerformanceCheckResult",
+    "RuntimeThresholds",
+    "VIObjectiveThresholds",
     "VariationalResult",
+    "VariationalState",
+    "VIBenchmarkResult",
     "apply_params",
     "apply_transforms",
+    "load_checkpoint",
+    "make_optimization_checkpoint",
+    "make_variational_checkpoint",
     "build_age_metallicity_transforms",
+    "build_ifu_cube_loss",
+    "build_loss_from_config",
+    "build_loss_from_user_config",
     "combine_loss_fns",
     "benchmark_callable",
     "benchmark_ifu_cube_optimization",
     "benchmark_result_to_dict",
     "compare_gradients",
+    "compute_residual_products",
+    "check_ifu_optimization_guardrails",
+    "check_vi_guardrails",
     "estimate_array_nbytes",
     "finite_difference_grad",
     "forward",
@@ -56,16 +108,23 @@ __all__ = [
     "loss",
     "make_inference_pipeline",
     "masked_gaussian_nll",
-    "build_ifu_cube_loss",
-    "inverse_transforms",
-    "loss",
-    "make_inference_pipeline",
     "masked_weighted_mse",
     "initialize_mean_field_params",
     "kl_diag_gaussian_to_standard_normal",
     "optimize_ifu_cube",
+    "benchmark_variational_inference",
+    "vi_benchmark_result_to_dict",
+    "optimize_variational_ifu_cube",
     "optimize_variational_posterior",
     "optimize_params",
+    "resume_optimization_from_checkpoint",
+    "resume_variational_from_checkpoint",
+    "sample_posterior_predictive_cubes",
     "sample_diag_gaussian",
+    "summarize_masked_metrics",
+    "summarize_predictive_cube_samples",
+    "save_checkpoint",
     "value_and_grad",
+    "run_synthetic_science_recipe",
+    "save_science_recipe_outputs",
 ]

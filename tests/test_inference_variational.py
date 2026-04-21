@@ -6,6 +6,7 @@ from rubix.inference import (
     build_age_metallicity_transforms,
     initialize_mean_field_params,
     kl_diag_gaussian_to_standard_normal,
+    optimize_variational_ifu_cube,
     optimize_variational_posterior,
     sample_diag_gaussian,
 )
@@ -103,6 +104,15 @@ def test_optimize_variational_posterior_improves_objective():
     assert result.objective_history[0] > result.objective_history[-1]
     assert len(result.reconstruction_history) == len(result.objective_history)
     assert len(result.kl_history) == len(result.objective_history)
+    assert len(result.grad_norm_history) == len(result.objective_history)
+    assert len(result.update_norm_history) == len(result.objective_history)
+    assert result.best_step >= 0
+    assert result.best_step < len(result.objective_history)
+    assert result.best_objective == min(result.objective_history)
+    assert jnp.isfinite(result.final_objective)
+    assert jnp.isfinite(result.final_reconstruction)
+    assert jnp.isfinite(result.final_kl)
+    assert result.final_objective >= result.best_objective
     assert result.steps_run <= 200
 
 
@@ -159,3 +169,153 @@ def test_optimize_variational_rejects_non_positive_num_samples():
             target=jnp.array([[[5.0]]]),
             num_samples=0,
         )
+
+
+def test_optimize_variational_ifu_cube_rejects_non_3d_target():
+    with pytest.raises(ValueError, match="target must be a 3D IFU datacube"):
+        optimize_variational_ifu_cube(
+            pipeline=DummyPipeline(),
+            params_init={
+                "stars": {
+                    "age": jnp.array([0.5]),
+                    "metallicity": jnp.array([0.001]),
+                }
+            },
+            static_data=_make_rubix_data(),
+            target=jnp.ones((2, 2)),
+        )
+
+
+def test_optimize_variational_ifu_cube_rejects_both_sigma_and_inv_variance():
+    with pytest.raises(
+        ValueError,
+        match="only one of sigma or inv_variance may be provided, not both",
+    ):
+        optimize_variational_ifu_cube(
+            pipeline=DummyPipeline(),
+            params_init={
+                "stars": {
+                    "age": jnp.array([0.5]),
+                    "metallicity": jnp.array([0.001]),
+                }
+            },
+            static_data=_make_rubix_data(),
+            target=jnp.ones((1, 1, 1)),
+            sigma=jnp.ones((1, 1, 1)),
+            inv_variance=jnp.ones((1, 1, 1)),
+        )
+
+
+def test_optimize_variational_ifu_cube_rejects_sigma_shape_mismatch():
+    with pytest.raises(ValueError, match="sigma shape"):
+        optimize_variational_ifu_cube(
+            pipeline=DummyPipeline(),
+            params_init={
+                "stars": {
+                    "age": jnp.array([0.5]),
+                    "metallicity": jnp.array([0.001]),
+                }
+            },
+            static_data=_make_rubix_data(),
+            target=jnp.ones((1, 2, 3)),
+            sigma=jnp.ones((1, 2, 4)),
+        )
+
+
+def test_optimize_variational_ifu_cube_rejects_inv_variance_shape_mismatch():
+    with pytest.raises(ValueError, match="inv_variance shape"):
+        optimize_variational_ifu_cube(
+            pipeline=DummyPipeline(),
+            params_init={
+                "stars": {
+                    "age": jnp.array([0.5]),
+                    "metallicity": jnp.array([0.001]),
+                }
+            },
+            static_data=_make_rubix_data(),
+            target=jnp.ones((1, 2, 3)),
+            inv_variance=jnp.ones((2, 2, 3)),
+        )
+
+
+def test_optimize_variational_ifu_cube_rejects_mask_shape_mismatch():
+    with pytest.raises(ValueError, match="mask shape"):
+        optimize_variational_ifu_cube(
+            pipeline=DummyPipeline(),
+            params_init={
+                "stars": {
+                    "age": jnp.array([0.5]),
+                    "metallicity": jnp.array([0.001]),
+                }
+            },
+            static_data=_make_rubix_data(),
+            target=jnp.ones((1, 2, 3)),
+            mask=jnp.ones((1, 3, 3)),
+        )
+
+
+def test_optimize_variational_ifu_cube_rejects_invalid_huber_settings():
+    with pytest.raises(ValueError, match="huber_weight must be non-negative"):
+        optimize_variational_ifu_cube(
+            pipeline=DummyPipeline(),
+            params_init={
+                "stars": {
+                    "age": jnp.array([0.5]),
+                    "metallicity": jnp.array([0.001]),
+                }
+            },
+            static_data=_make_rubix_data(),
+            target=jnp.ones((1, 1, 1)),
+            huber_weight=-0.1,
+        )
+
+    with pytest.raises(
+        ValueError, match="huber_delta must be provided when huber_weight > 0"
+    ):
+        optimize_variational_ifu_cube(
+            pipeline=DummyPipeline(),
+            params_init={
+                "stars": {
+                    "age": jnp.array([0.5]),
+                    "metallicity": jnp.array([0.001]),
+                }
+            },
+            static_data=_make_rubix_data(),
+            target=jnp.ones((1, 1, 1)),
+            huber_weight=0.2,
+        )
+
+
+def test_optimize_variational_ifu_cube_improves_objective():
+    pipeline = DummyPipeline()
+    static_data = _make_rubix_data()
+    params_init = {
+        "stars": {
+            "age": jnp.array([0.5]),
+            "metallicity": jnp.array([0.001]),
+        }
+    }
+    target = jnp.array([[[5.0]]])
+    sigma = jnp.ones_like(target) * 0.5
+    mask = jnp.ones_like(target)
+
+    result = optimize_variational_ifu_cube(
+        pipeline=pipeline,
+        params_init=params_init,
+        static_data=static_data,
+        target=target,
+        sigma=sigma,
+        mask=mask,
+        huber_delta=0.2,
+        huber_weight=0.1,
+        learning_rate=5e-2,
+        max_steps=120,
+        tol=1e-9,
+        num_samples=4,
+        beta_kl=1e-4,
+        seed=21,
+    )
+
+    assert result.objective_history[0] > result.objective_history[-1]
+    assert result.best_objective <= result.objective_history[-1]
+    assert result.final_objective <= result.objective_history[0]
