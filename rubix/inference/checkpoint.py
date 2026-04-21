@@ -20,6 +20,15 @@ from .variational import (
 CheckpointPath = Union[str, Path]
 
 
+def _resolve_config_value(
+    override: Any, stored_config: dict[str, Any], key: str, default: Any
+) -> Any:
+    """Return *override* if not ``None``, else the stored config value, else *default*."""
+    if override is not None:
+        return override
+    return stored_config.get(key, default)
+
+
 def save_checkpoint(path: CheckpointPath, payload: Mapping[str, Any]) -> None:
     """Save a checkpoint payload to disk via pickle.
 
@@ -227,14 +236,12 @@ def resume_optimization_from_checkpoint(
         raise ValueError("optimization checkpoint is missing valid result/state")
 
     stored_config: dict[str, Any] = checkpoint.get("config") or {}
-    resolved_learning_rate: float = (
-        learning_rate if learning_rate is not None else stored_config.get("learning_rate", 1e-3)
+    resolved_learning_rate: float = _resolve_config_value(
+        learning_rate, stored_config, "learning_rate", 1e-3
     )
-    resolved_tol: float = (
-        tol if tol is not None else stored_config.get("tol", 1e-6)
-    )
-    resolved_transforms: Optional[TransformTree] = (
-        transforms if transforms is not None else stored_config.get("transforms")
+    resolved_tol: float = _resolve_config_value(tol, stored_config, "tol", 1e-6)
+    resolved_transforms: Optional[TransformTree] = _resolve_config_value(
+        transforms, stored_config, "transforms", None
     )
 
     resumed = optimize_params(
@@ -338,26 +345,22 @@ def resume_variational_from_checkpoint(
         raise ValueError("variational checkpoint is missing valid result/state")
 
     stored_config: dict[str, Any] = checkpoint.get("config") or {}
-    resolved_learning_rate: float = (
-        learning_rate if learning_rate is not None else stored_config.get("learning_rate", 5e-3)
+    resolved_learning_rate: float = _resolve_config_value(
+        learning_rate, stored_config, "learning_rate", 5e-3
     )
-    resolved_tol: float = (
-        tol if tol is not None else stored_config.get("tol", 1e-6)
+    resolved_tol: float = _resolve_config_value(tol, stored_config, "tol", 1e-6)
+    resolved_num_samples: int = _resolve_config_value(
+        num_samples, stored_config, "num_samples", 4
     )
-    resolved_num_samples: int = (
-        num_samples if num_samples is not None else stored_config.get("num_samples", 4)
+    resolved_beta_kl: float = _resolve_config_value(
+        beta_kl, stored_config, "beta_kl", 1e-3
     )
-    resolved_beta_kl: float = (
-        beta_kl if beta_kl is not None else stored_config.get("beta_kl", 1e-3)
+    resolved_init_log_std: float = _resolve_config_value(
+        init_log_std, stored_config, "init_log_std", -2.0
     )
-    resolved_init_log_std: float = (
-        init_log_std if init_log_std is not None else stored_config.get("init_log_std", -2.0)
-    )
-    resolved_seed: int = (
-        seed if seed is not None else stored_config.get("seed", 0)
-    )
-    resolved_transforms: Optional[TransformTree] = (
-        transforms if transforms is not None else stored_config.get("transforms")
+    resolved_seed: int = _resolve_config_value(seed, stored_config, "seed", 0)
+    resolved_transforms: Optional[TransformTree] = _resolve_config_value(
+        transforms, stored_config, "transforms", None
     )
 
     resumed = optimize_variational_posterior(

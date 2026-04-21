@@ -235,7 +235,7 @@ def optimize_variational_posterior(
         steps_run = int(state_init.steps_run)
 
     converged = False
-    step_offset = steps_run
+    initial_steps_run = steps_run
 
     def objective_fn(current_params, step_key):
         current_mean = current_params["mean"]
@@ -279,7 +279,7 @@ def optimize_variational_posterior(
         if value < best_objective:
             best_objective = value
             best_mean = current_mean
-            best_step = step_offset + step
+            best_step = initial_steps_run + step
 
         updates, opt_state = optimizer.update(grads, opt_state, variational_params)
         variational_params = optax.apply_updates(variational_params, updates)
