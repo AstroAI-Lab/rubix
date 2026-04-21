@@ -145,8 +145,7 @@ def benchmark_variational_inference(
             optimizer=optimizer,
             seed=seed,
         )
-        _block_tree(last_result.posterior_mean_params)
-        _block_tree(last_result.posterior_log_std_params)
+        _block_tree(last_result)
         return last_result
 
     if warmup:
