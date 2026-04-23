@@ -20,6 +20,14 @@ rubix.inference.checkpoint module
    :undoc-members:
    :show-inheritance:
 
+rubix.inference.experiment module
+---------------------------------
+
+.. automodule:: rubix.inference.experiment
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 rubix.inference.losses module
 -----------------------------
 

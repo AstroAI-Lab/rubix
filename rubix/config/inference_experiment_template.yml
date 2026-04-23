@@ -1,0 +1,60 @@
+run:
+  rubix_config_path: rubix/config/rubix_config.yml
+  mode: deterministic
+  seed: 0
+  noise_seed: 0
+  output_dir: outputs/ifu_science
+  checkpoint_dir: outputs/ifu_science/checkpoints
+  params_init_overrides:
+    stars:
+      age: [1.0]
+      metallicity: [0.01]
+  objective:
+    kind: combined
+    terms:
+      - kind: gaussian_nll
+        inv_variance_key: inv_variance
+        mask_key: mask
+      - kind: huber
+        delta: 0.2
+        mask_key: mask
+        weight: 0.05
+
+data:
+  target_path: data/target_cube.npy
+  target_key:
+  mask_path: data/mask_cube.npy
+  mask_key:
+  weights_path:
+  weights_key:
+  sigma_path:
+  sigma_key:
+  inv_variance_path: data/inv_variance_cube.npy
+  inv_variance_key:
+
+optimization:
+  enabled: true
+  learning_rate: 0.001
+  max_steps: 500
+  tol: 1.0e-6
+  normalize_loss: true
+  checkpoint_interval_steps: 100
+  resume_checkpoint:
+
+variational:
+  enabled: true
+  learning_rate: 0.005
+  max_steps: 500
+  tol: 1.0e-6
+  num_samples: 4
+  beta_kl: 0.001
+  init_log_std: -2.0
+  normalize_loss: true
+  huber_delta: 0.2
+  huber_weight: 0.0
+  checkpoint_interval_steps: 100
+  resume_checkpoint:
+
+predictive:
+  enabled: true
+  num_draws: 16
