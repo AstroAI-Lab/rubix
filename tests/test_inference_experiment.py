@@ -434,9 +434,9 @@ def test_run_ifu_experiment_smoke_only_computes_metrics(tmp_path):
     assert outputs["residual_products"] is not None
 
     save_ifu_experiment_outputs(outputs, str(tmp_path / "saved_smoke"))
-    science_products = np.load(tmp_path / "saved_smoke" / "science_products.npz")
-    assert "residual_cube" in science_products.files
-    assert "chi2_cube" in science_products.files
+    with np.load(tmp_path / "saved_smoke" / "science_products.npz") as science_products:
+        assert "residual_cube" in science_products.files
+        assert "chi2_cube" in science_products.files
 
 
 def test_generate_ifu_experiment_report_requires_summary(tmp_path):
