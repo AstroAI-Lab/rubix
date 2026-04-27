@@ -1,0 +1,30 @@
+profiles:
+  small_cube_default:
+    benchmark:
+      nx: 8
+      ny: 8
+      nw: 64
+      max_steps: 120
+      repeats: 2
+    optimization:
+      runtime:
+        max_mean_runtime_s: 3.0
+        max_median_runtime_s: 3.0
+      objective:
+        max_final_loss: 1.0e-3
+        max_best_loss: 1.0e-3
+
+  ci_fast:
+    benchmark:
+      nx: 6
+      ny: 6
+      nw: 32
+      max_steps: 80
+      repeats: 2
+    optimization:
+      runtime:
+        max_mean_runtime_s: 2.5
+        max_median_runtime_s: 2.5
+      objective:
+        max_final_loss: 2.0e-3
+        max_best_loss: 2.0e-3

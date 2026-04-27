@@ -407,8 +407,10 @@ For CI-style threshold checks on a representative synthetic IFU size:
 .. code-block:: bash
 
    python bench/check_inference_guardrails.py \
-     --nx 8 --ny 8 --nw 64 \
-     --max-steps 120 \
-     --max-mean-runtime-s 3.0 \
-     --max-final-loss 1e-3 \
+     --threshold-config rubix/config/guardrail_thresholds.yml \
+     --profile small_cube_default \
      --output-json outputs/guardrails/opt_guardrail.json
+
+Thresholds and benchmark sizes are versioned in
+``rubix/config/guardrail_thresholds.yml``. CLI flags can still override profile
+values for ad-hoc checks.

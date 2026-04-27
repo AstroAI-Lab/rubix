@@ -49,6 +49,7 @@ from .performance_guardrails import (
     VIObjectiveThresholds,
     check_ifu_optimization_guardrails,
     check_vi_guardrails,
+    load_guardrail_threshold_profile,
 )
 from .posterior_predictive import (
     compute_residual_products,
@@ -108,6 +109,7 @@ __all__ = [
     "compute_residual_products",
     "check_ifu_optimization_guardrails",
     "check_vi_guardrails",
+    "load_guardrail_threshold_profile",
     "estimate_array_nbytes",
     "finite_difference_grad",
     "forward",
