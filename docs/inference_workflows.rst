@@ -336,8 +336,10 @@ The template supports:
 
 - deterministic or stochastic mode selection
 - runtime objective selection via ``run.objective``
-- chunked optimization/VI with stage checkpoints
+- standard checkpoint cadence and optional auto-resume from latest stage checkpoint
 - posterior predictive output products and masked science metrics
+- run metadata in ``summary.json`` (timestamps, duration, git SHA, config hash)
+- failure artifact export in ``failure_report.json`` when a stage fails
 
 
 Real Data Runbook
@@ -372,7 +374,8 @@ Real Data Runbook
         --config rubix/config/inference_experiment_realdata_scaffold.yml
 
 6. If interrupted, resume from latest stage checkpoint by setting
-   ``optimization.resume_checkpoint`` or ``variational.resume_checkpoint``.
+   ``optimization.resume_checkpoint`` or ``variational.resume_checkpoint`` to
+   ``latest`` (or set ``run.auto_resume_latest: true``).
 7. Inspect outputs in ``run.output_dir``:
    ``summary.json``, ``predictive_summary.npz``, ``residual_products.npz``.
 

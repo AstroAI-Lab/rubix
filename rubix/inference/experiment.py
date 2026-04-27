@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import subprocess
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Mapping, Optional, Union
 
@@ -168,6 +172,74 @@ def _is_finite_scalar(value: float) -> bool:
     return bool(np.isfinite(value))
 
 
+def _utc_now_iso() -> str:
+    """Return current UTC timestamp in ISO-8601 format."""
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def _stable_config_hash(config: Mapping[str, Any]) -> str:
+    """Return stable SHA256 hash for a normalized experiment config."""
+    json_text = json.dumps(_to_jsonable(dict(config)), sort_keys=True)
+    return hashlib.sha256(json_text.encode("utf-8")).hexdigest()
+
+
+def _get_git_commit_sha() -> Optional[str]:
+    """Return current git commit SHA if available, else ``None``."""
+    try:
+        output = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+    except Exception:  # pragma: no cover - environment-dependent
+        return None
+    value = output.strip()
+    return value if value else None
+
+
+def _default_checkpoint_interval(max_steps: int) -> int:
+    """Return standard checkpoint cadence for a stage."""
+    return max(1, min(200, max_steps // 5 if max_steps >= 5 else max_steps))
+
+
+def _resolve_resume_checkpoint_path(
+    resume_checkpoint: Optional[str],
+    checkpoint_dir: Optional[str],
+    stage: str,
+) -> Optional[str]:
+    """Resolve explicit or ``latest`` stage checkpoint path.
+
+    Args:
+        resume_checkpoint (Optional[str]): Configured checkpoint path or
+            ``'latest'`` sentinel.
+        checkpoint_dir (Optional[str]): Stage checkpoint directory.
+        stage (str): Stage name.
+
+    Raises:
+        ValueError: If ``resume_checkpoint`` is ``'latest'`` but
+            ``checkpoint_dir`` is unavailable.
+
+    Returns:
+        Optional[str]: Resolved checkpoint path if available.
+    """
+    if not isinstance(resume_checkpoint, str) or len(resume_checkpoint) == 0:
+        return None
+
+    if resume_checkpoint != "latest":
+        return resume_checkpoint
+
+    if checkpoint_dir is None:
+        raise ValueError(
+            f"{stage}.resume_checkpoint is 'latest' but run.checkpoint_dir is not set"
+        )
+
+    pattern = f"{stage}_chunk_*.pkl"
+    candidates = sorted(Path(checkpoint_dir).glob(pattern))
+    if len(candidates) == 0:
+        return None
+    return str(candidates[-1])
+
+
 def normalize_experiment_config(config: Mapping[str, Any]) -> dict[str, Any]:
     """Validate and normalize a production IFU experiment config mapping.
 
@@ -207,6 +279,9 @@ def normalize_experiment_config(config: Mapping[str, Any]) -> dict[str, Any]:
             "rubix_config_path": rubix_config_path,
             "mode": mode,
             "smoke_only": bool(run_cfg.get("smoke_only", False)),
+            "auto_resume_latest": bool(run_cfg.get("auto_resume_latest", False)),
+            "fail_on_stage_failure": bool(run_cfg.get("fail_on_stage_failure", False)),
+            "checkpoint_policy": str(run_cfg.get("checkpoint_policy", "standard")),
             "seed": int(run_cfg.get("seed", 0)),
             "output_dir": run_cfg.get("output_dir", "outputs/ifu_science"),
             "checkpoint_dir": run_cfg.get("checkpoint_dir"),
@@ -264,6 +339,13 @@ def normalize_experiment_config(config: Mapping[str, Any]) -> dict[str, Any]:
                     f"{stage_name}.checkpoint_interval_steps must be positive if provided"
                 )
             normalized[stage_name]["checkpoint_interval_steps"] = interval_int
+        elif normalized["run"]["checkpoint_policy"] == "standard":
+            normalized[stage_name]["checkpoint_interval_steps"] = (
+                _default_checkpoint_interval(int(normalized[stage_name]["max_steps"]))
+            )
+
+    if normalized["run"]["checkpoint_policy"] not in {"standard", "manual"}:
+        raise ValueError("run.checkpoint_policy must be 'standard' or 'manual'")
 
     return normalized
 
@@ -479,6 +561,7 @@ def _run_optimization_stage(
     objective_loss_fn: Optional[Callable[[jnp.ndarray, jnp.ndarray], jnp.ndarray]],
     stage_cfg: Mapping[str, Any],
     checkpoint_dir: Optional[str],
+    auto_resume_latest: bool = False,
 ) -> tuple[Optional[OptimizationResult], Optional[OptimizationState], dict[str, Any]]:
     """Run optimization stage with optional checkpoint cadence and resume.
 
@@ -494,6 +577,9 @@ def _run_optimization_stage(
             Optional custom objective callable.
         stage_cfg (Mapping[str, Any]): Normalized optimization config.
         checkpoint_dir (Optional[str]): Optional checkpoint output directory.
+        auto_resume_latest (bool, optional): If ``True`` and no explicit
+            resume checkpoint is provided, attempt to resume from the latest
+            stage checkpoint in ``checkpoint_dir``. Defaults to ``False``.
 
     Raises:
         ValueError: If ``resume_checkpoint`` exists but is not an optimization
@@ -506,6 +592,7 @@ def _run_optimization_stage(
     if not stage_cfg["enabled"]:
         return None, None, {"status": "skipped", "reason": "disabled"}
 
+    stage_t0 = time.perf_counter()
     remaining = int(stage_cfg["max_steps"])
     interval = stage_cfg["checkpoint_interval_steps"]
     if interval is None:
@@ -520,9 +607,16 @@ def _run_optimization_stage(
     chunk_idx = 0
     steps_completed = 0
 
-    resume_checkpoint = stage_cfg.get("resume_checkpoint")
-    if isinstance(resume_checkpoint, str) and len(resume_checkpoint) > 0:
-        payload = load_checkpoint(resume_checkpoint)
+    resume_value = stage_cfg.get("resume_checkpoint")
+    if auto_resume_latest and not resume_value and checkpoint_dir is not None:
+        resume_value = "latest"
+    resolved_resume = _resolve_resume_checkpoint_path(
+        resume_checkpoint=resume_value,
+        checkpoint_dir=checkpoint_dir,
+        stage="optimization",
+    )
+    if resolved_resume is not None:
+        payload = load_checkpoint(resolved_resume)
         if payload.get("kind") != "optimization":
             raise ValueError(
                 "optimization.resume_checkpoint must reference optimization"
@@ -615,6 +709,8 @@ def _run_optimization_stage(
             "converged": bool(latest_result.converged),
             "steps_completed": steps_completed,
             "final_loss": float(latest_result.final_loss),
+            "duration_s": float(time.perf_counter() - stage_t0),
+            "resume_checkpoint_used": resolved_resume,
         },
     )
 
@@ -632,6 +728,7 @@ def _run_variational_stage(
     stage_cfg: Mapping[str, Any],
     checkpoint_dir: Optional[str],
     seed: int,
+    auto_resume_latest: bool = False,
 ) -> tuple[Optional[VariationalResult], Optional[VariationalState], dict[str, Any]]:
     """Run VI stage with optional checkpoint cadence and resume.
 
@@ -649,6 +746,9 @@ def _run_variational_stage(
         stage_cfg (Mapping[str, Any]): Normalized variational config.
         checkpoint_dir (Optional[str]): Optional checkpoint output directory.
         seed (int): Random seed.
+        auto_resume_latest (bool, optional): If ``True`` and no explicit
+            resume checkpoint is provided, attempt to resume from the latest
+            stage checkpoint in ``checkpoint_dir``. Defaults to ``False``.
 
     Raises:
         ValueError: If ``resume_checkpoint`` exists but is not a variational
@@ -661,6 +761,7 @@ def _run_variational_stage(
     if not stage_cfg["enabled"]:
         return None, None, {"status": "skipped", "reason": "disabled"}
 
+    stage_t0 = time.perf_counter()
     remaining = int(stage_cfg["max_steps"])
     interval = stage_cfg["checkpoint_interval_steps"]
     if interval is None:
@@ -675,9 +776,16 @@ def _run_variational_stage(
     chunk_idx = 0
     steps_completed = 0
 
-    resume_checkpoint = stage_cfg.get("resume_checkpoint")
-    if isinstance(resume_checkpoint, str) and len(resume_checkpoint) > 0:
-        payload = load_checkpoint(resume_checkpoint)
+    resume_value = stage_cfg.get("resume_checkpoint")
+    if auto_resume_latest and not resume_value and checkpoint_dir is not None:
+        resume_value = "latest"
+    resolved_resume = _resolve_resume_checkpoint_path(
+        resume_checkpoint=resume_value,
+        checkpoint_dir=checkpoint_dir,
+        stage="variational",
+    )
+    if resolved_resume is not None:
+        payload = load_checkpoint(resolved_resume)
         if payload.get("kind") != "variational":
             raise ValueError("variational.resume_checkpoint must reference variational")
         latest_result = payload["result"]
@@ -782,6 +890,8 @@ def _run_variational_stage(
             "converged": bool(latest_result.converged),
             "steps_completed": steps_completed,
             "final_objective": float(latest_result.final_objective),
+            "duration_s": float(time.perf_counter() - stage_t0),
+            "resume_checkpoint_used": resolved_resume,
         },
     )
 
@@ -803,10 +913,18 @@ def run_ifu_experiment(
             instantiate and prepare a Rubix pipeline. Defaults to
             :func:`make_inference_pipeline`.
 
+    Raises:
+        ValueError: If incompatible smoke-only uncertainty settings are
+            provided (both ``sigma`` and ``inv_variance``).
+        RuntimeError: If stage failures occur and
+            ``run.fail_on_stage_failure`` is enabled.
+
     Returns:
         dict[str, Any]: Structured outputs including stage summaries, optional
         predictive outputs, residual maps, and scalar metrics.
     """
+    run_started_at = _utc_now_iso()
+    run_t0 = time.perf_counter()
     raw_cfg = read_yaml(config) if isinstance(config, str) else dict(config)
     cfg = normalize_experiment_config(raw_cfg)
 
@@ -854,6 +972,7 @@ def run_ifu_experiment(
         Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
 
     smoke_only = bool(run_cfg["smoke_only"])
+    auto_resume_latest = bool(run_cfg["auto_resume_latest"])
 
     if smoke_only:
         opt_result = None
@@ -872,6 +991,7 @@ def run_ifu_experiment(
             objective_loss_fn=objective_loss_fn,
             stage_cfg=cfg["optimization"],
             checkpoint_dir=checkpoint_dir,
+            auto_resume_latest=auto_resume_latest,
         )
 
         vi_params_init = params_init
@@ -891,14 +1011,32 @@ def run_ifu_experiment(
             stage_cfg=cfg["variational"],
             checkpoint_dir=checkpoint_dir,
             seed=int(run_cfg["seed"]),
+            auto_resume_latest=auto_resume_latest,
         )
+
+    failed_stages = {
+        name: stage
+        for name, stage in {
+            "optimization": opt_status,
+            "variational": vi_status,
+        }.items()
+        if stage.get("status") == "failed"
+    }
 
     outputs: dict[str, Any] = {
         "config": cfg,
+        "run_metadata": {
+            "started_at_utc": run_started_at,
+            "finished_at_utc": None,
+            "run_duration_s": None,
+            "git_commit_sha": _get_git_commit_sha(),
+            "config_hash_sha256": _stable_config_hash(cfg),
+        },
         "stages": {
             "optimization": opt_status,
             "variational": vi_status,
         },
+        "failure_artifacts": None,
         "optimization": None,
         "variational": None,
         "predictive_summary": None,
@@ -980,6 +1118,23 @@ def run_ifu_experiment(
         outputs["residual_products"] = residual_products
         outputs["metrics"] = metrics
 
+    if len(failed_stages) > 0:
+        outputs["failure_artifacts"] = {
+            "failed_stages": failed_stages,
+            "guidance": (
+                "Inspect stage status reasons and resume from checkpoints after "
+                "adjusting learning rate / objective settings."
+            ),
+        }
+
+    outputs["run_metadata"]["finished_at_utc"] = _utc_now_iso()
+    outputs["run_metadata"]["run_duration_s"] = float(time.perf_counter() - run_t0)
+
+    if len(failed_stages) > 0 and bool(run_cfg["fail_on_stage_failure"]):
+        raise RuntimeError(
+            f"IFU experiment failed stages: {sorted(failed_stages.keys())}"
+        )
+
     return outputs
 
 
@@ -996,6 +1151,7 @@ def save_ifu_experiment_outputs(outputs: Mapping[str, Any], output_dir: str) -> 
 
     summary = {
         "config": outputs.get("config"),
+        "run_metadata": outputs.get("run_metadata"),
         "stages": outputs.get("stages"),
         "optimization": outputs.get("optimization"),
         "variational": outputs.get("variational"),
@@ -1018,4 +1174,11 @@ def save_ifu_experiment_outputs(outputs: Mapping[str, Any], output_dir: str) -> 
         np.savez(
             out_dir / "residual_products.npz",
             **{k: np.asarray(v) for k, v in residual_products.items()},
+        )
+
+    failure_artifacts = outputs.get("failure_artifacts")
+    if isinstance(failure_artifacts, Mapping):
+        (out_dir / "failure_report.json").write_text(
+            json.dumps(_to_jsonable(dict(failure_artifacts)), indent=2),
+            encoding="utf-8",
         )
