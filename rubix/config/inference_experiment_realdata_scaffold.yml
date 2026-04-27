@@ -2,7 +2,7 @@ run:
   rubix_config_path: path/to/your/rubix_user_config.yml
   mode: deterministic
   smoke_only: true
-  auto_resume_latest: true
+  auto_resume_latest: false
   fail_on_stage_failure: false
   checkpoint_policy: standard
   seed: 0
