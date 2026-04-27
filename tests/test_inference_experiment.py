@@ -47,6 +47,13 @@ class PreparedSyntheticPipeline:
         return scale * self.template
 
 
+class PreparedNaNPipeline(PreparedSyntheticPipeline):
+    """Synthetic pipeline that returns NaNs to force stage failure artifacts."""
+
+    def run_sharded(self, rubixdata: RubixData) -> jnp.ndarray:
+        return jnp.full_like(self.template, jnp.nan)
+
+
 def _write_config(tmp_path: Path, target_path: str, checkpoint_dir: str) -> Path:
     cfg = {
         "run": {
@@ -102,6 +109,9 @@ def test_normalize_experiment_config_applies_defaults():
     assert normalized["optimization"]["enabled"] is True
     assert normalized["variational"]["enabled"] is True
     assert normalized["predictive"]["num_draws"] == 16
+    assert normalized["optimization"]["checkpoint_interval_steps"] == 80
+    assert normalized["variational"]["checkpoint_interval_steps"] == 80
+    assert normalized["run"]["checkpoint_policy"] == "standard"
 
 
 def test_run_ifu_experiment_and_save_outputs(tmp_path):
@@ -126,6 +136,10 @@ def test_run_ifu_experiment_and_save_outputs(tmp_path):
 
     assert outputs["stages"]["optimization"]["status"] == "completed"
     assert outputs["stages"]["variational"]["status"] == "completed"
+    assert outputs["run_metadata"]["config_hash_sha256"] is not None
+    assert outputs["run_metadata"]["started_at_utc"] is not None
+    assert outputs["run_metadata"]["finished_at_utc"] is not None
+    assert outputs["run_metadata"]["run_duration_s"] is not None
     assert outputs["metrics"]["mse"] >= 0.0
     assert outputs["predictive_summary"]["mean"].shape == (2, 2, 4)
 
@@ -144,6 +158,42 @@ def test_run_ifu_experiment_and_save_outputs(tmp_path):
     assert "artifacts" in report
     assert "science_products" in report["artifacts"]
     assert "posterior_mean_cube" in report["artifacts"]["science_products"]
+
+
+def test_run_ifu_experiment_generates_failure_artifacts(tmp_path):
+    cube = np.ones((2, 2, 4), dtype=np.float32)
+    target_path = tmp_path / "target.npy"
+    np.save(target_path, cube)
+    np.save(tmp_path / "mask.npy", np.ones_like(cube))
+    np.save(tmp_path / "ivar.npy", np.ones_like(cube))
+    (tmp_path / "rubix_user.yml").write_text("pipeline:\n  name: calc_gradient\n")
+
+    cfg = {
+        "run": {
+            "rubix_config_path": str(tmp_path / "rubix_user.yml"),
+            "mode": "deterministic",
+            "checkpoint_dir": str(tmp_path / "ckpt"),
+        },
+        "data": {
+            "target_path": str(target_path),
+            "mask_path": str(tmp_path / "mask.npy"),
+            "inv_variance_path": str(tmp_path / "ivar.npy"),
+        },
+        "optimization": {"enabled": True, "max_steps": 3, "learning_rate": 0.1},
+        "variational": {"enabled": False},
+        "predictive": {"enabled": False},
+    }
+
+    def pipeline_factory(_cfg, _mode):
+        return PreparedNaNPipeline(jnp.asarray(cube))
+
+    outputs = run_ifu_experiment(cfg, pipeline_factory=pipeline_factory)
+    assert outputs["stages"]["optimization"]["status"] == "failed"
+    assert outputs["failure_artifacts"] is not None
+    assert "optimization" in outputs["failure_artifacts"]["failed_stages"]
+
+    save_ifu_experiment_outputs(outputs, str(tmp_path / "saved"))
+    assert (tmp_path / "saved" / "failure_report.json").exists()
 
 
 def test_normalize_experiment_config_rejects_invalid_checkpoint_interval():
