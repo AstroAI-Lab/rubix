@@ -377,6 +377,21 @@ def validate_ifu_experiment_inputs(
     except Exception as exc:
         report["errors"].append(f"params_error: {exc}")
 
+    objective_cfg = cfg["run"].get("objective")
+    if isinstance(objective_cfg, Mapping):
+        try:
+            build_loss_from_config(
+                objective_config=objective_cfg,
+                tensors={
+                    "mask": mask,
+                    "weights": weights,
+                    "sigma": sigma,
+                    "inv_variance": inv_variance,
+                },
+            )
+        except Exception as exc:
+            report["errors"].append(f"objective_error: {exc}")
+
     report["ok"] = len(report["errors"]) == 0
     return report
 
