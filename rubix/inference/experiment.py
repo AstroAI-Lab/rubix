@@ -1051,7 +1051,7 @@ def save_ifu_experiment_outputs(outputs: Mapping[str, Any], output_dir: str) -> 
                 science_products[new_key] = np.asarray(residual_products[old_key])
 
     if len(science_products) > 0:
-        np.savez(out_dir / "science_products.npz", **science_products)
+        np.savez_compressed(out_dir / "science_products.npz", **science_products)
 
     metrics = outputs.get("metrics")
     if isinstance(metrics, Mapping):
