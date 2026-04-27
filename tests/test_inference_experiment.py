@@ -291,7 +291,8 @@ def test_validate_ifu_experiment_inputs_detects_missing_tensor_key(tmp_path):
     np.save(tmp_path / "ivar.npy", np.ones_like(cube))
     (tmp_path / "rubix_user.yml").write_text("pipeline:\n  name: calc_gradient\n")
 
-    # The mask_key references "nonexistent_key" which is not in the tensors mapping
+    # mask is loaded (so tensors["mask"] is present), but mask_key references a
+    # key that does not exist in the tensors mapping → objective_error expected
     cfg = {
         "run": {
             "rubix_config_path": str(tmp_path / "rubix_user.yml"),
@@ -300,6 +301,7 @@ def test_validate_ifu_experiment_inputs_detects_missing_tensor_key(tmp_path):
         },
         "data": {
             "target_path": str(target_path),
+            "mask_path": str(tmp_path / "mask.npy"),
             "inv_variance_path": str(tmp_path / "ivar.npy"),
         },
         "optimization": {"enabled": False},
