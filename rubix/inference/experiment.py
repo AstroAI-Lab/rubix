@@ -281,7 +281,9 @@ def normalize_experiment_config(config: Mapping[str, Any]) -> dict[str, Any]:
             "smoke_only": bool(run_cfg.get("smoke_only", False)),
             "auto_resume_latest": bool(run_cfg.get("auto_resume_latest", False)),
             "fail_on_stage_failure": bool(run_cfg.get("fail_on_stage_failure", False)),
-            "checkpoint_policy": str(run_cfg.get("checkpoint_policy", "standard")),
+            "checkpoint_policy": (
+                lambda v: v.strip().lower() if isinstance(v, str) and v.strip() else "standard"
+            )(run_cfg.get("checkpoint_policy")),
             "seed": int(run_cfg.get("seed", 0)),
             "output_dir": run_cfg.get("output_dir", "outputs/ifu_science"),
             "checkpoint_dir": run_cfg.get("checkpoint_dir"),
@@ -722,6 +724,8 @@ def _run_optimization_stage(
                     "status": "failed",
                     "reason": "non_finite_final_loss",
                     "steps_completed": steps_completed,
+                    "duration_s": float(time.perf_counter() - stage_t0),
+                    "resume_checkpoint_used": resolved_resume,
                 },
             )
 
@@ -912,6 +916,8 @@ def _run_variational_stage(
                     "status": "failed",
                     "reason": "non_finite_final_objective",
                     "steps_completed": steps_completed,
+                    "duration_s": float(time.perf_counter() - stage_t0),
+                    "resume_checkpoint_used": resolved_resume,
                 },
             )
 

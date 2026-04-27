@@ -42,7 +42,7 @@ optimization:
   max_steps: 500
   tol: 1.0e-6
   normalize_loss: true
-  checkpoint_interval_steps: 100
+  checkpoint_interval_steps:  # null → uses policy-derived default; set a positive integer to override
   resume_checkpoint:  # explicit path or "latest"
 
 variational:
@@ -56,7 +56,7 @@ variational:
   normalize_loss: true
   huber_delta: 0.2
   huber_weight: 0.0
-  checkpoint_interval_steps: 100
+  checkpoint_interval_steps:  # null → uses policy-derived default; set a positive integer to override
   resume_checkpoint:  # explicit path or "latest"
 
 predictive:
