@@ -350,7 +350,7 @@ def test_validate_ifu_experiment_inputs_valid_objective_passes(tmp_path):
     assert report["errors"] == []
 
 
-def test_run_ifu_experiment_smoke_only_raises_on_both_sigma_and_inv_variance(tmp_path):
+def test_smoke_only_rejects_both_sigma_and_inv_variance(tmp_path):
     cube = np.ones((2, 2, 4), dtype=np.float32)
     target_path = tmp_path / "target.npy"
     np.save(target_path, cube)
@@ -386,6 +386,8 @@ def test_run_ifu_experiment_smoke_only_raises_on_both_sigma_and_inv_variance(tmp
     else:
         raise AssertionError("Expected ValueError when both sigma and inv_variance provided in smoke_only mode")
 
+
+def test_run_ifu_experiment_smoke_only_computes_metrics(tmp_path):
     cube = np.ones((2, 2, 4), dtype=np.float32)
     target = 1.5 * cube
     target_path = tmp_path / "target.npy"
