@@ -2,6 +2,9 @@ run:
   rubix_config_path: rubix/config/rubix_config.yml
   mode: deterministic
   smoke_only: false
+  auto_resume_latest: false
+  fail_on_stage_failure: false
+  checkpoint_policy: standard
   seed: 0
   noise_seed: 0
   output_dir: outputs/ifu_science
@@ -39,8 +42,8 @@ optimization:
   max_steps: 500
   tol: 1.0e-6
   normalize_loss: true
-  checkpoint_interval_steps: 100
-  resume_checkpoint:
+  checkpoint_interval_steps:  # null → uses policy-derived default; set a positive integer to override
+  resume_checkpoint:  # explicit path or "latest"
 
 variational:
   enabled: true
@@ -53,8 +56,8 @@ variational:
   normalize_loss: true
   huber_delta: 0.2
   huber_weight: 0.0
-  checkpoint_interval_steps: 100
-  resume_checkpoint:
+  checkpoint_interval_steps:  # null → uses policy-derived default; set a positive integer to override
+  resume_checkpoint:  # explicit path or "latest"
 
 predictive:
   enabled: true

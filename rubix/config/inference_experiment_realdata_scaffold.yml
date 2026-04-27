@@ -2,6 +2,9 @@ run:
   rubix_config_path: path/to/your/rubix_user_config.yml
   mode: deterministic
   smoke_only: true
+  auto_resume_latest: false
+  fail_on_stage_failure: false
+  checkpoint_policy: standard
   seed: 0
   noise_seed: 0
   output_dir: outputs/ifu_realdata_smoke
@@ -34,7 +37,7 @@ optimization:
   tol: 1.0e-6
   normalize_loss: true
   checkpoint_interval_steps: 100
-  resume_checkpoint:
+  resume_checkpoint: latest
 
 variational:
   enabled: false
@@ -48,7 +51,7 @@ variational:
   huber_delta: 0.2
   huber_weight: 0.0
   checkpoint_interval_steps: 100
-  resume_checkpoint:
+  resume_checkpoint: latest
 
 predictive:
   enabled: false
