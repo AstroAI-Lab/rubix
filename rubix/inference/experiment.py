@@ -283,7 +283,11 @@ def normalize_experiment_config(config: Mapping[str, Any]) -> dict[str, Any]:
             "auto_resume_latest": bool(run_cfg.get("auto_resume_latest", False)),
             "fail_on_stage_failure": bool(run_cfg.get("fail_on_stage_failure", False)),
             "checkpoint_policy": (
-                lambda v: v.strip().lower() if isinstance(v, str) and v.strip() else "standard"
+                lambda v: (
+                    v.strip().lower()
+                    if isinstance(v, str) and v.strip()
+                    else "standard"
+                )
             )(run_cfg.get("checkpoint_policy")),
             "seed": int(run_cfg.get("seed", 0)),
             "output_dir": run_cfg.get("output_dir", "outputs/ifu_science"),
@@ -652,9 +656,7 @@ def _run_optimization_stage(
         # Use cumulative steps_completed from checkpoint metadata; fall back to
         # per-chunk steps_run only if metadata is absent (legacy checkpoints).
         steps_completed = int(
-            payload.get("metadata", {}).get(
-                "steps_completed", latest_result.steps_run
-            )
+            payload.get("metadata", {}).get("steps_completed", latest_result.steps_run)
         )
         remaining = max(0, remaining - steps_completed)
         # Restore chunk_idx from the resumed filename so subsequent saves do
@@ -830,9 +832,7 @@ def _run_variational_stage(
         # Use cumulative steps_completed from checkpoint metadata; fall back to
         # per-chunk steps_run only if metadata is absent (legacy checkpoints).
         steps_completed = int(
-            payload.get("metadata", {}).get(
-                "steps_completed", latest_result.steps_run
-            )
+            payload.get("metadata", {}).get("steps_completed", latest_result.steps_run)
         )
         remaining = max(0, remaining - steps_completed)
         # Restore chunk_idx from the resumed filename so subsequent saves do
@@ -1266,8 +1266,9 @@ def save_ifu_experiment_outputs(outputs: Mapping[str, Any], output_dir: str) -> 
             json.dumps(_to_jsonable(dict(failure_artifacts)), indent=2),
             encoding="utf-8",
         )
-    
+
     return
+
 
 def generate_ifu_experiment_report(output_dir: str) -> dict[str, Any]:
     """Generate a compact report from saved IFU experiment artifacts.
