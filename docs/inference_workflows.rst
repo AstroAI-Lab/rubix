@@ -348,18 +348,32 @@ Real Data Runbook
    ``target``, optional ``mask``, optional ``weights``, optional ``sigma`` or
    ``inv_variance``.
 2. Copy and edit
-   ``rubix/config/inference_experiment_template.yml``:
+   ``rubix/config/inference_experiment_realdata_scaffold.yml``:
    set ``run.rubix_config_path``, ``data.*_path``, and stage hyperparameters.
-3. Run deterministic fitting first:
+3. Validate shapes and values before expensive runs:
+
+   .. code-block:: bash
+
+      python scripts/validate_ifu_experiment_inputs.py \
+        --config rubix/config/inference_experiment_realdata_scaffold.yml
+
+4. Run smoke-only dry-run first (set ``run.smoke_only: true``):
 
    .. code-block:: bash
 
       python scripts/run_ifu_science_experiment.py \
-        --config rubix/config/inference_experiment_template.yml
+        --config rubix/config/inference_experiment_realdata_scaffold.yml
 
-4. If interrupted, resume from latest stage checkpoint by setting
+5. Then disable smoke mode and run deterministic fitting:
+
+   .. code-block:: bash
+
+      python scripts/run_ifu_science_experiment.py \
+        --config rubix/config/inference_experiment_realdata_scaffold.yml
+
+6. If interrupted, resume from latest stage checkpoint by setting
    ``optimization.resume_checkpoint`` or ``variational.resume_checkpoint``.
-5. Inspect outputs in ``run.output_dir``:
+7. Inspect outputs in ``run.output_dir``:
    ``summary.json``, ``predictive_summary.npz``, ``residual_products.npz``.
 
 Benchmarking Full-IFU Optimization

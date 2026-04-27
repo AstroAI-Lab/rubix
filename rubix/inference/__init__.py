@@ -20,6 +20,7 @@ from .experiment import (
     normalize_experiment_config,
     run_ifu_experiment,
     save_ifu_experiment_outputs,
+    validate_ifu_experiment_inputs,
 )
 from .losses import combine_loss_fns, huber_data_loss, masked_gaussian_nll
 from .modes import get_pipeline_name_for_mode, make_inference_pipeline
@@ -132,6 +133,7 @@ __all__ = [
     "save_checkpoint",
     "run_ifu_experiment",
     "save_ifu_experiment_outputs",
+    "validate_ifu_experiment_inputs",
     "value_and_grad",
     "run_synthetic_science_recipe",
     "save_science_recipe_outputs",
