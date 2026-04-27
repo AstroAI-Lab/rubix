@@ -1089,7 +1089,6 @@ def generate_ifu_experiment_report(output_dir: str) -> dict[str, Any]:
             "optimization": summary.get("optimization"),
             "variational": summary.get("variational"),
             "metrics": summary.get("metrics"),
-            "run_metadata": summary.get("run_metadata"),
         },
         "artifacts": {},
     }
