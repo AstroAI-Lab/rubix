@@ -338,6 +338,7 @@ The template supports:
 - runtime objective selection via ``run.objective``
 - standard checkpoint cadence and optional auto-resume from latest stage checkpoint
 - posterior predictive output products and masked science metrics
+- standardized ``science_products.npz`` and ``science_metrics.csv`` artifacts
 - run metadata in ``summary.json`` (timestamps, duration, git SHA, config hash)
 - failure artifact export in ``failure_report.json`` when a stage fails
 
@@ -377,7 +378,15 @@ Real Data Runbook
    ``optimization.resume_checkpoint`` or ``variational.resume_checkpoint`` to
    ``latest`` (or set ``run.auto_resume_latest: true``).
 7. Inspect outputs in ``run.output_dir``:
-   ``summary.json``, ``predictive_summary.npz``, ``residual_products.npz``.
+   ``summary.json``, ``predictive_summary.npz``, ``residual_products.npz``,
+   ``science_products.npz``, and ``science_metrics.csv``.
+
+8. Generate a compact report for quick review:
+
+   .. code-block:: bash
+
+      python scripts/generate_ifu_experiment_report.py \
+        --output-dir outputs/ifu_realdata_smoke
 
 Benchmarking Full-IFU Optimization
 ----------------------------------

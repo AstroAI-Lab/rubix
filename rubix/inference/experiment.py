@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
 import subprocess
@@ -282,7 +283,11 @@ def normalize_experiment_config(config: Mapping[str, Any]) -> dict[str, Any]:
             "auto_resume_latest": bool(run_cfg.get("auto_resume_latest", False)),
             "fail_on_stage_failure": bool(run_cfg.get("fail_on_stage_failure", False)),
             "checkpoint_policy": (
-                lambda v: v.strip().lower() if isinstance(v, str) and v.strip() else "standard"
+                lambda v: (
+                    v.strip().lower()
+                    if isinstance(v, str) and v.strip()
+                    else "standard"
+                )
             )(run_cfg.get("checkpoint_policy")),
             "seed": int(run_cfg.get("seed", 0)),
             "output_dir": run_cfg.get("output_dir", "outputs/ifu_science"),
@@ -651,9 +656,7 @@ def _run_optimization_stage(
         # Use cumulative steps_completed from checkpoint metadata; fall back to
         # per-chunk steps_run only if metadata is absent (legacy checkpoints).
         steps_completed = int(
-            payload.get("metadata", {}).get(
-                "steps_completed", latest_result.steps_run
-            )
+            payload.get("metadata", {}).get("steps_completed", latest_result.steps_run)
         )
         remaining = max(0, remaining - steps_completed)
         # Restore chunk_idx from the resumed filename so subsequent saves do
@@ -829,9 +832,7 @@ def _run_variational_stage(
         # Use cumulative steps_completed from checkpoint metadata; fall back to
         # per-chunk steps_run only if metadata is absent (legacy checkpoints).
         steps_completed = int(
-            payload.get("metadata", {}).get(
-                "steps_completed", latest_result.steps_run
-            )
+            payload.get("metadata", {}).get("steps_completed", latest_result.steps_run)
         )
         remaining = max(0, remaining - steps_completed)
         # Restore chunk_idx from the resumed filename so subsequent saves do
@@ -1221,9 +1222,98 @@ def save_ifu_experiment_outputs(outputs: Mapping[str, Any], output_dir: str) -> 
             **{k: np.asarray(v) for k, v in residual_products.items()},
         )
 
+    science_products: dict[str, np.ndarray] = {}
+    if isinstance(predictive_summary, Mapping):
+        predictive_rename = {
+            "mean": "posterior_mean_cube",
+            "std": "posterior_std_cube",
+            "p16": "posterior_p16_cube",
+            "p50": "posterior_p50_cube",
+            "p84": "posterior_p84_cube",
+        }
+        for old_key, new_key in predictive_rename.items():
+            if old_key in predictive_summary:
+                science_products[new_key] = np.asarray(predictive_summary[old_key])
+
+    if isinstance(residual_products, Mapping):
+        residual_rename = {
+            "residual": "residual_cube",
+            "abs_residual": "abs_residual_cube",
+            "chi2": "chi2_cube",
+            "masked_residual": "masked_residual_cube",
+            "masked_chi2": "masked_chi2_cube",
+        }
+        for old_key, new_key in residual_rename.items():
+            if old_key in residual_products:
+                science_products[new_key] = np.asarray(residual_products[old_key])
+
+    if len(science_products) > 0:
+        np.savez_compressed(out_dir / "science_products.npz", **science_products)
+
+    metrics = outputs.get("metrics")
+    if isinstance(metrics, Mapping):
+        with (out_dir / "science_metrics.csv").open(
+            "w", newline="", encoding="utf-8"
+        ) as handle:
+            writer = csv.writer(handle)
+            writer.writerow(["metric", "value"])
+            for key in sorted(metrics.keys()):
+                writer.writerow([key, metrics[key]])
+
     failure_artifacts = outputs.get("failure_artifacts")
     if isinstance(failure_artifacts, Mapping):
         (out_dir / "failure_report.json").write_text(
             json.dumps(_to_jsonable(dict(failure_artifacts)), indent=2),
             encoding="utf-8",
         )
+
+    return
+
+
+def generate_ifu_experiment_report(output_dir: str) -> dict[str, Any]:
+    """Generate a compact report from saved IFU experiment artifacts.
+
+    Args:
+        output_dir (str): Directory containing saved experiment outputs.
+
+    Raises:
+        FileNotFoundError: If ``summary.json`` is missing.
+
+    Returns:
+        dict[str, Any]: Compact report with stage/metric summaries and artifact
+            key and shape diagnostics.
+    """
+    out_dir = Path(output_dir)
+    summary_path = out_dir / "summary.json"
+    if not summary_path.exists():
+        raise FileNotFoundError(f"missing required summary file: {summary_path}")
+
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    report: dict[str, Any] = {
+        "summary": {
+            "stages": summary.get("stages"),
+            "optimization": summary.get("optimization"),
+            "variational": summary.get("variational"),
+            "metrics": summary.get("metrics"),
+        },
+        "artifacts": {},
+    }
+
+    science_path = out_dir / "science_products.npz"
+    if science_path.exists():
+        with np.load(science_path) as data:
+            report["artifacts"]["science_products"] = {
+                key: {"shape": list(data[key].shape)} for key in data.files
+            }
+
+    pred_path = out_dir / "predictive_summary.npz"
+    if pred_path.exists():
+        with np.load(pred_path) as data:
+            report["artifacts"]["predictive_summary_keys"] = list(data.files)
+
+    residual_path = out_dir / "residual_products.npz"
+    if residual_path.exists():
+        with np.load(residual_path) as data:
+            report["artifacts"]["residual_products_keys"] = list(data.files)
+
+    return report
