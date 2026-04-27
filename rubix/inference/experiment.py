@@ -550,6 +550,27 @@ def _checkpoint_path(directory: str, stage: str, chunk_idx: int) -> str:
     return str(Path(directory) / f"{stage}_chunk_{chunk_idx:04d}.pkl")
 
 
+def _chunk_idx_from_path(path: str) -> int:
+    """Extract the chunk index encoded in a checkpoint filename.
+
+    Checkpoint filenames follow the pattern ``{stage}_chunk_{idx:04d}.pkl``.
+    If the index cannot be parsed, 0 is returned so the caller's ``+= 1``
+    logic still produces a safe (though non-contiguous) index.
+
+    Args:
+        path (str): Checkpoint file path.
+
+    Returns:
+        int: Parsed chunk index, or 0 on parse failure.
+    """
+    stem = Path(path).stem  # e.g. "optimization_chunk_0003"
+    parts = stem.rsplit("_", 1)
+    try:
+        return int(parts[-1])
+    except (ValueError, IndexError):
+        return 0
+
+
 def _run_optimization_stage(
     pipeline: Any,
     params_init: Mapping[str, Mapping[str, Any]],
@@ -625,8 +646,17 @@ def _run_optimization_stage(
         latest_state = payload["state"]
         state_init = latest_state
         current_params = latest_result.params
-        steps_completed = int(latest_result.steps_run)
+        # Use cumulative steps_completed from checkpoint metadata; fall back to
+        # per-chunk steps_run only if metadata is absent (legacy checkpoints).
+        steps_completed = int(
+            payload.get("metadata", {}).get(
+                "steps_completed", latest_result.steps_run
+            )
+        )
         remaining = max(0, remaining - steps_completed)
+        # Restore chunk_idx from the resumed filename so subsequent saves do
+        # not overwrite earlier chunk files.
+        chunk_idx = _chunk_idx_from_path(resolved_resume)
 
     while remaining > 0:
         run_steps = min(remaining, interval)
@@ -792,8 +822,17 @@ def _run_variational_stage(
         latest_state = payload["state"]
         state_init = latest_state
         current_params = latest_result.posterior_mean_constrained_params
-        steps_completed = int(latest_result.steps_run)
+        # Use cumulative steps_completed from checkpoint metadata; fall back to
+        # per-chunk steps_run only if metadata is absent (legacy checkpoints).
+        steps_completed = int(
+            payload.get("metadata", {}).get(
+                "steps_completed", latest_result.steps_run
+            )
+        )
         remaining = max(0, remaining - steps_completed)
+        # Restore chunk_idx from the resumed filename so subsequent saves do
+        # not overwrite earlier chunk files.
+        chunk_idx = _chunk_idx_from_path(resolved_resume)
 
     while remaining > 0:
         run_steps = min(remaining, interval)
