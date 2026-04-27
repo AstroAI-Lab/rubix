@@ -338,6 +338,7 @@ The template supports:
 - runtime objective selection via ``run.objective``
 - chunked optimization/VI with stage checkpoints
 - posterior predictive output products and masked science metrics
+- standardized ``science_products.npz`` and ``science_metrics.csv`` artifacts
 
 
 Real Data Runbook
@@ -374,7 +375,15 @@ Real Data Runbook
 6. If interrupted, resume from latest stage checkpoint by setting
    ``optimization.resume_checkpoint`` or ``variational.resume_checkpoint``.
 7. Inspect outputs in ``run.output_dir``:
-   ``summary.json``, ``predictive_summary.npz``, ``residual_products.npz``.
+   ``summary.json``, ``predictive_summary.npz``, ``residual_products.npz``,
+   ``science_products.npz``, and ``science_metrics.csv``.
+
+8. Generate a compact report for quick review:
+
+   .. code-block:: bash
+
+      python scripts/generate_ifu_experiment_report.py \
+        --output-dir outputs/ifu_realdata_smoke
 
 Benchmarking Full-IFU Optimization
 ----------------------------------

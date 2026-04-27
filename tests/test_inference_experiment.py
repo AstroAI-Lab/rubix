@@ -10,6 +10,7 @@ from rubix.inference.checkpoint import (
     save_checkpoint,
 )
 from rubix.inference.experiment import (
+    generate_ifu_experiment_report,
     normalize_experiment_config,
     run_ifu_experiment,
     save_ifu_experiment_outputs,
@@ -135,6 +136,14 @@ def test_run_ifu_experiment_and_save_outputs(tmp_path):
     assert (tmp_path / "saved" / "summary.json").exists()
     assert (tmp_path / "saved" / "predictive_summary.npz").exists()
     assert (tmp_path / "saved" / "residual_products.npz").exists()
+    assert (tmp_path / "saved" / "science_products.npz").exists()
+    assert (tmp_path / "saved" / "science_metrics.csv").exists()
+
+    report = generate_ifu_experiment_report(str(tmp_path / "saved"))
+    assert "summary" in report
+    assert "artifacts" in report
+    assert "science_products" in report["artifacts"]
+    assert "posterior_mean_cube" in report["artifacts"]["science_products"]
 
 
 def test_normalize_experiment_config_rejects_invalid_checkpoint_interval():
@@ -384,7 +393,9 @@ def test_smoke_only_rejects_both_sigma_and_inv_variance(tmp_path):
         assert "sigma" in str(exc)
         assert "inv_variance" in str(exc)
     else:
-        raise AssertionError("Expected ValueError when both sigma and inv_variance provided in smoke_only mode")
+        raise AssertionError(
+            "Expected ValueError when both sigma and inv_variance provided in smoke_only mode"
+        )
 
 
 def test_run_ifu_experiment_smoke_only_computes_metrics(tmp_path):
@@ -421,3 +432,17 @@ def test_run_ifu_experiment_smoke_only_computes_metrics(tmp_path):
     assert outputs["predictive_summary"] is None
     assert outputs["metrics"] is not None
     assert outputs["residual_products"] is not None
+
+    save_ifu_experiment_outputs(outputs, str(tmp_path / "saved_smoke"))
+    science_products = np.load(tmp_path / "saved_smoke" / "science_products.npz")
+    assert "residual_cube" in science_products.files
+    assert "chi2_cube" in science_products.files
+
+
+def test_generate_ifu_experiment_report_requires_summary(tmp_path):
+    try:
+        generate_ifu_experiment_report(str(tmp_path))
+    except FileNotFoundError as exc:
+        assert "summary.json" in str(exc)
+    else:
+        raise AssertionError("Expected FileNotFoundError when summary.json is missing")

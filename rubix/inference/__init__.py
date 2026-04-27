@@ -17,6 +17,7 @@ from .checkpoint import (
     save_checkpoint,
 )
 from .experiment import (
+    generate_ifu_experiment_report,
     normalize_experiment_config,
     run_ifu_experiment,
     save_ifu_experiment_outputs,
@@ -93,6 +94,7 @@ __all__ = [
     "load_checkpoint",
     "make_optimization_checkpoint",
     "make_variational_checkpoint",
+    "generate_ifu_experiment_report",
     "normalize_experiment_config",
     "build_age_metallicity_transforms",
     "build_ifu_cube_loss",
