@@ -350,7 +350,42 @@ def test_validate_ifu_experiment_inputs_valid_objective_passes(tmp_path):
     assert report["errors"] == []
 
 
-def test_run_ifu_experiment_smoke_only_computes_metrics(tmp_path):
+def test_run_ifu_experiment_smoke_only_raises_on_both_sigma_and_inv_variance(tmp_path):
+    cube = np.ones((2, 2, 4), dtype=np.float32)
+    target_path = tmp_path / "target.npy"
+    np.save(target_path, cube)
+    np.save(tmp_path / "sigma.npy", np.ones_like(cube))
+    np.save(tmp_path / "ivar.npy", np.ones_like(cube))
+    (tmp_path / "rubix_user.yml").write_text("pipeline:\n  name: calc_gradient\n")
+
+    cfg = {
+        "run": {
+            "rubix_config_path": str(tmp_path / "rubix_user.yml"),
+            "mode": "deterministic",
+            "smoke_only": True,
+        },
+        "data": {
+            "target_path": str(target_path),
+            "sigma_path": str(tmp_path / "sigma.npy"),
+            "inv_variance_path": str(tmp_path / "ivar.npy"),
+        },
+        "optimization": {"enabled": False},
+        "variational": {"enabled": False},
+        "predictive": {"enabled": False},
+    }
+
+    def pipeline_factory(_cfg, _mode):
+        return PreparedSyntheticPipeline(jnp.asarray(cube))
+
+    try:
+        run_ifu_experiment(cfg, pipeline_factory=pipeline_factory)
+    except ValueError as exc:
+        assert "smoke_only" in str(exc)
+        assert "sigma" in str(exc)
+        assert "inv_variance" in str(exc)
+    else:
+        raise AssertionError("Expected ValueError when both sigma and inv_variance provided in smoke_only mode")
+
     cube = np.ones((2, 2, 4), dtype=np.float32)
     target = 1.5 * cube
     target_path = tmp_path / "target.npy"

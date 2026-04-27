@@ -925,6 +925,11 @@ def run_ifu_experiment(
         }
 
     if smoke_only:
+        if sigma is not None and inv_variance is not None:
+            raise ValueError(
+                "smoke_only: provide only one of data.sigma_path or"
+                " data.inv_variance_path, not both"
+            )
         smoke_prediction = forward(
             pipeline=prepared.pipeline,
             params=params_init,
