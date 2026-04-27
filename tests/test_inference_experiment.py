@@ -13,6 +13,7 @@ from rubix.inference.experiment import (
     normalize_experiment_config,
     run_ifu_experiment,
     save_ifu_experiment_outputs,
+    validate_ifu_experiment_inputs,
 )
 from rubix.inference.optimize import OptimizationResult, OptimizationState
 
@@ -209,3 +210,214 @@ def test_run_ifu_experiment_rejects_mismatched_resume_checkpoint_kind(tmp_path):
         assert "variational.resume_checkpoint" in str(exc)
     else:
         raise AssertionError("Expected ValueError for mismatched checkpoint kind")
+
+
+def test_validate_ifu_experiment_inputs_reports_ok(tmp_path):
+    cube = np.ones((2, 2, 4), dtype=np.float32)
+    target_path = tmp_path / "target.npy"
+    np.save(target_path, cube)
+    np.save(tmp_path / "mask.npy", np.ones_like(cube))
+    np.save(tmp_path / "ivar.npy", np.ones_like(cube))
+    config_path = _write_config(tmp_path, str(target_path), str(tmp_path / "ckpt"))
+
+    def pipeline_factory(_cfg, _mode):
+        return PreparedSyntheticPipeline(jnp.asarray(cube))
+
+    report = validate_ifu_experiment_inputs(
+        str(config_path),
+        pipeline_factory=pipeline_factory,
+    )
+    assert report["ok"] is True
+    assert report["errors"] == []
+    assert tuple(report["shapes"]["target"]) == (2, 2, 4)
+
+
+def test_validate_ifu_experiment_inputs_detects_shape_mismatch(tmp_path):
+    cube = np.ones((2, 2, 4), dtype=np.float32)
+    target_path = tmp_path / "target.npy"
+    np.save(target_path, cube)
+    np.save(tmp_path / "mask.npy", np.ones((2, 2, 5), dtype=np.float32))
+    np.save(tmp_path / "ivar.npy", np.ones_like(cube))
+    config_path = _write_config(tmp_path, str(target_path), str(tmp_path / "ckpt"))
+
+    def pipeline_factory(_cfg, _mode):
+        return PreparedSyntheticPipeline(jnp.asarray(cube))
+
+    report = validate_ifu_experiment_inputs(
+        str(config_path),
+        pipeline_factory=pipeline_factory,
+    )
+    assert report["ok"] is False
+    assert any("mask shape" in error for error in report["errors"])
+
+
+def test_validate_ifu_experiment_inputs_detects_bad_objective_kind(tmp_path):
+    cube = np.ones((2, 2, 4), dtype=np.float32)
+    target_path = tmp_path / "target.npy"
+    np.save(target_path, cube)
+    np.save(tmp_path / "mask.npy", np.ones_like(cube))
+    np.save(tmp_path / "ivar.npy", np.ones_like(cube))
+    (tmp_path / "rubix_user.yml").write_text("pipeline:\n  name: calc_gradient\n")
+
+    cfg = {
+        "run": {
+            "rubix_config_path": str(tmp_path / "rubix_user.yml"),
+            "mode": "deterministic",
+            "objective": {"kind": "unsupported_kind"},
+        },
+        "data": {
+            "target_path": str(target_path),
+            "mask_path": str(tmp_path / "mask.npy"),
+            "inv_variance_path": str(tmp_path / "ivar.npy"),
+        },
+        "optimization": {"enabled": False},
+        "variational": {"enabled": False},
+        "predictive": {"enabled": False},
+    }
+
+    def pipeline_factory(_cfg, _mode):
+        return PreparedSyntheticPipeline(jnp.asarray(cube))
+
+    report = validate_ifu_experiment_inputs(cfg, pipeline_factory=pipeline_factory)
+    assert report["ok"] is False
+    assert any("objective_error" in error for error in report["errors"])
+
+
+def test_validate_ifu_experiment_inputs_detects_missing_tensor_key(tmp_path):
+    cube = np.ones((2, 2, 4), dtype=np.float32)
+    target_path = tmp_path / "target.npy"
+    np.save(target_path, cube)
+    np.save(tmp_path / "mask.npy", np.ones_like(cube))
+    np.save(tmp_path / "ivar.npy", np.ones_like(cube))
+    (tmp_path / "rubix_user.yml").write_text("pipeline:\n  name: calc_gradient\n")
+
+    # mask is loaded (so tensors["mask"] is present), but mask_key references a
+    # key that does not exist in the tensors mapping → objective_error expected
+    cfg = {
+        "run": {
+            "rubix_config_path": str(tmp_path / "rubix_user.yml"),
+            "mode": "deterministic",
+            "objective": {"kind": "mse", "mask_key": "nonexistent_key"},
+        },
+        "data": {
+            "target_path": str(target_path),
+            "mask_path": str(tmp_path / "mask.npy"),
+            "inv_variance_path": str(tmp_path / "ivar.npy"),
+        },
+        "optimization": {"enabled": False},
+        "variational": {"enabled": False},
+        "predictive": {"enabled": False},
+    }
+
+    def pipeline_factory(_cfg, _mode):
+        return PreparedSyntheticPipeline(jnp.asarray(cube))
+
+    report = validate_ifu_experiment_inputs(cfg, pipeline_factory=pipeline_factory)
+    assert report["ok"] is False
+    assert any("objective_error" in error for error in report["errors"])
+
+
+def test_validate_ifu_experiment_inputs_valid_objective_passes(tmp_path):
+    cube = np.ones((2, 2, 4), dtype=np.float32)
+    target_path = tmp_path / "target.npy"
+    np.save(target_path, cube)
+    np.save(tmp_path / "mask.npy", np.ones_like(cube))
+    np.save(tmp_path / "ivar.npy", np.ones_like(cube))
+    (tmp_path / "rubix_user.yml").write_text("pipeline:\n  name: calc_gradient\n")
+
+    # Use mask_key pointing at the actual loaded mask tensor
+    cfg = {
+        "run": {
+            "rubix_config_path": str(tmp_path / "rubix_user.yml"),
+            "mode": "deterministic",
+            "objective": {"kind": "mse", "mask_key": "mask"},
+        },
+        "data": {
+            "target_path": str(target_path),
+            "mask_path": str(tmp_path / "mask.npy"),
+            "inv_variance_path": str(tmp_path / "ivar.npy"),
+        },
+        "optimization": {"enabled": False},
+        "variational": {"enabled": False},
+        "predictive": {"enabled": False},
+    }
+
+    def pipeline_factory(_cfg, _mode):
+        return PreparedSyntheticPipeline(jnp.asarray(cube))
+
+    report = validate_ifu_experiment_inputs(cfg, pipeline_factory=pipeline_factory)
+    assert report["ok"] is True
+    assert report["errors"] == []
+
+
+def test_smoke_only_rejects_both_sigma_and_inv_variance(tmp_path):
+    cube = np.ones((2, 2, 4), dtype=np.float32)
+    target_path = tmp_path / "target.npy"
+    np.save(target_path, cube)
+    np.save(tmp_path / "sigma.npy", np.ones_like(cube))
+    np.save(tmp_path / "ivar.npy", np.ones_like(cube))
+    (tmp_path / "rubix_user.yml").write_text("pipeline:\n  name: calc_gradient\n")
+
+    cfg = {
+        "run": {
+            "rubix_config_path": str(tmp_path / "rubix_user.yml"),
+            "mode": "deterministic",
+            "smoke_only": True,
+        },
+        "data": {
+            "target_path": str(target_path),
+            "sigma_path": str(tmp_path / "sigma.npy"),
+            "inv_variance_path": str(tmp_path / "ivar.npy"),
+        },
+        "optimization": {"enabled": False},
+        "variational": {"enabled": False},
+        "predictive": {"enabled": False},
+    }
+
+    def pipeline_factory(_cfg, _mode):
+        return PreparedSyntheticPipeline(jnp.asarray(cube))
+
+    try:
+        run_ifu_experiment(cfg, pipeline_factory=pipeline_factory)
+    except ValueError as exc:
+        assert "smoke_only" in str(exc)
+        assert "sigma" in str(exc)
+        assert "inv_variance" in str(exc)
+    else:
+        raise AssertionError("Expected ValueError when both sigma and inv_variance provided in smoke_only mode")
+
+
+def test_run_ifu_experiment_smoke_only_computes_metrics(tmp_path):
+    cube = np.ones((2, 2, 4), dtype=np.float32)
+    target = 1.5 * cube
+    target_path = tmp_path / "target.npy"
+    np.save(target_path, target)
+    np.save(tmp_path / "mask.npy", np.ones_like(target))
+    np.save(tmp_path / "ivar.npy", np.ones_like(target))
+
+    cfg = {
+        "run": {
+            "rubix_config_path": str(tmp_path / "rubix_user.yml"),
+            "mode": "deterministic",
+            "smoke_only": True,
+        },
+        "data": {
+            "target_path": str(target_path),
+            "mask_path": str(tmp_path / "mask.npy"),
+            "inv_variance_path": str(tmp_path / "ivar.npy"),
+        },
+        "optimization": {"enabled": False},
+        "variational": {"enabled": False},
+        "predictive": {"enabled": False},
+    }
+    (tmp_path / "rubix_user.yml").write_text("pipeline:\n  name: calc_gradient\n")
+
+    def pipeline_factory(_cfg, _mode):
+        return PreparedSyntheticPipeline(jnp.asarray(cube))
+
+    outputs = run_ifu_experiment(cfg, pipeline_factory=pipeline_factory)
+    assert outputs["stages"]["optimization"]["reason"] == "smoke_only"
+    assert outputs["stages"]["variational"]["reason"] == "smoke_only"
+    assert outputs["predictive_summary"] is None
+    assert outputs["metrics"] is not None
+    assert outputs["residual_products"] is not None

@@ -11,6 +11,7 @@ import numpy as np
 from rubix.core.data import RubixData
 from rubix.utils import get_config, read_yaml
 
+from .api import forward
 from .checkpoint import (
     load_checkpoint,
     make_optimization_checkpoint,
@@ -205,6 +206,7 @@ def normalize_experiment_config(config: Mapping[str, Any]) -> dict[str, Any]:
         "run": {
             "rubix_config_path": rubix_config_path,
             "mode": mode,
+            "smoke_only": bool(run_cfg.get("smoke_only", False)),
             "seed": int(run_cfg.get("seed", 0)),
             "output_dir": run_cfg.get("output_dir", "outputs/ifu_science"),
             "checkpoint_dir": run_cfg.get("checkpoint_dir"),
@@ -264,6 +266,134 @@ def normalize_experiment_config(config: Mapping[str, Any]) -> dict[str, Any]:
             normalized[stage_name]["checkpoint_interval_steps"] = interval_int
 
     return normalized
+
+
+def validate_ifu_experiment_inputs(
+    config: ExperimentConfigInput,
+    pipeline_factory: PipelineFactory = make_inference_pipeline,
+) -> dict[str, Any]:
+    """Validate IFU experiment inputs and return a machine-readable report.
+
+    Validation covers config normalization, tensor loading, tensor shape/value
+    consistency, and default parameter initialization against prepared static
+    Rubix data.
+
+    Args:
+        config (ExperimentConfigInput): Mapping or YAML path following the
+            experiment schema consumed by :func:`normalize_experiment_config`.
+        pipeline_factory (PipelineFactory, optional): Pipeline builder used to
+            instantiate and prepare a Rubix pipeline. Defaults to
+            :func:`make_inference_pipeline`.
+
+    Returns:
+        dict[str, Any]: Validation report with keys ``ok``, ``errors``,
+        ``warnings``, ``config``, and ``shapes``.
+    """
+    report: dict[str, Any] = {
+        "ok": False,
+        "errors": [],
+        "warnings": [],
+        "config": None,
+        "shapes": {},
+    }
+
+    try:
+        raw_cfg = read_yaml(config) if isinstance(config, str) else dict(config)
+        cfg = normalize_experiment_config(raw_cfg)
+        report["config"] = cfg
+    except Exception as exc:  # pragma: no cover - exercised indirectly
+        report["errors"].append(f"config_error: {exc}")
+        return report
+
+    try:
+        prepared = _prepare_pipeline(
+            rubix_config_path=str(cfg["run"]["rubix_config_path"]),
+            mode=cfg["run"]["mode"],
+            pipeline_factory=pipeline_factory,
+        )
+    except Exception as exc:  # pragma: no cover - depends on runtime setup
+        report["errors"].append(f"pipeline_error: {exc}")
+        return report
+
+    try:
+        tensors = _resolve_data_tensors(cfg["data"])
+    except Exception as exc:
+        report["errors"].append(f"data_error: {exc}")
+        return report
+
+    target = tensors["target"]
+    mask = tensors["mask"]
+    weights = tensors["weights"]
+    sigma = tensors["sigma"]
+    inv_variance = tensors["inv_variance"]
+
+    report["shapes"] = {
+        "target": tuple(target.shape),
+        "mask": None if mask is None else tuple(mask.shape),
+        "weights": None if weights is None else tuple(weights.shape),
+        "sigma": None if sigma is None else tuple(sigma.shape),
+        "inv_variance": None if inv_variance is None else tuple(inv_variance.shape),
+    }
+
+    if target.ndim != 3:
+        report["errors"].append("target must be 3D")
+
+    if sigma is not None and inv_variance is not None:
+        report["errors"].append("only one of sigma or inv_variance may be provided")
+
+    if not bool(jnp.all(jnp.isfinite(target))):
+        report["errors"].append("target contains non-finite values")
+
+    for name, tensor in {
+        "mask": mask,
+        "weights": weights,
+        "sigma": sigma,
+        "inv_variance": inv_variance,
+    }.items():
+        if tensor is None:
+            continue
+        if tensor.shape != target.shape:
+            report["errors"].append(
+                f"{name} shape {tuple(tensor.shape)} does not match target shape {tuple(target.shape)}"
+            )
+        if not bool(jnp.all(jnp.isfinite(tensor))):
+            report["errors"].append(f"{name} contains non-finite values")
+
+    if mask is not None and not bool(jnp.all(mask >= 0)):
+        report["errors"].append("mask must be non-negative")
+
+    if weights is not None and not bool(jnp.all(weights >= 0)):
+        report["errors"].append("weights must be non-negative")
+
+    if sigma is not None and not bool(jnp.all(sigma > 0)):
+        report["errors"].append("sigma must be strictly positive")
+
+    if inv_variance is not None and not bool(jnp.all(inv_variance >= 0)):
+        report["errors"].append("inv_variance must be non-negative")
+
+    try:
+        params_init = _default_params_init(prepared.static_data)
+        _apply_params_overrides(params_init, cfg["run"]["params_init_overrides"])
+    except Exception as exc:
+        report["errors"].append(f"params_error: {exc}")
+
+    objective_cfg = cfg["run"].get("objective")
+    if isinstance(objective_cfg, Mapping):
+        try:
+            build_loss_from_config(
+                objective_config=objective_cfg,
+                tensors={
+                    "mask": mask,
+                    "weights": weights,
+                    "sigma": sigma,
+                    "inv_variance": inv_variance,
+                },
+            )
+        except Exception as exc:
+            report["errors"].append(f"objective_error: {exc}")
+
+    report["ok"] = len(report["errors"]) == 0
+    return report
 
 
 def _prepare_pipeline(
@@ -723,37 +853,45 @@ def run_ifu_experiment(
     if checkpoint_dir is not None:
         Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
 
-    opt_result, _, opt_status = _run_optimization_stage(
-        pipeline=prepared.pipeline,
-        params_init=params_init,
-        static_data=prepared.static_data,
-        target=target,
-        mask=mask,
-        weights=weights,
-        noise_key=noise_key,
-        objective_loss_fn=objective_loss_fn,
-        stage_cfg=cfg["optimization"],
-        checkpoint_dir=checkpoint_dir,
-    )
+    smoke_only = bool(run_cfg["smoke_only"])
 
-    vi_params_init = params_init
-    if opt_result is not None and opt_status.get("status") == "completed":
-        vi_params_init = opt_result.params
+    if smoke_only:
+        opt_result = None
+        vi_result = None
+        opt_status = {"status": "skipped", "reason": "smoke_only"}
+        vi_status = {"status": "skipped", "reason": "smoke_only"}
+    else:
+        opt_result, _, opt_status = _run_optimization_stage(
+            pipeline=prepared.pipeline,
+            params_init=params_init,
+            static_data=prepared.static_data,
+            target=target,
+            mask=mask,
+            weights=weights,
+            noise_key=noise_key,
+            objective_loss_fn=objective_loss_fn,
+            stage_cfg=cfg["optimization"],
+            checkpoint_dir=checkpoint_dir,
+        )
 
-    vi_result, _, vi_status = _run_variational_stage(
-        pipeline=prepared.pipeline,
-        params_init=vi_params_init,
-        static_data=prepared.static_data,
-        target=target,
-        sigma=sigma,
-        inv_variance=inv_variance,
-        mask=mask,
-        noise_key=noise_key,
-        objective_loss_fn=objective_loss_fn,
-        stage_cfg=cfg["variational"],
-        checkpoint_dir=checkpoint_dir,
-        seed=int(run_cfg["seed"]),
-    )
+        vi_params_init = params_init
+        if opt_result is not None and opt_status.get("status") == "completed":
+            vi_params_init = opt_result.params
+
+        vi_result, _, vi_status = _run_variational_stage(
+            pipeline=prepared.pipeline,
+            params_init=vi_params_init,
+            static_data=prepared.static_data,
+            target=target,
+            sigma=sigma,
+            inv_variance=inv_variance,
+            mask=mask,
+            noise_key=noise_key,
+            objective_loss_fn=objective_loss_fn,
+            stage_cfg=cfg["variational"],
+            checkpoint_dir=checkpoint_dir,
+            seed=int(run_cfg["seed"]),
+        )
 
     outputs: dict[str, Any] = {
         "config": cfg,
@@ -786,7 +924,34 @@ def run_ifu_experiment(
             "final_kl": float(vi_result.final_kl),
         }
 
-    if bool(cfg["predictive"]["enabled"]) and vi_result is not None:
+    if smoke_only:
+        if sigma is not None and inv_variance is not None:
+            raise ValueError(
+                "smoke_only: provide only one of data.sigma_path or"
+                " data.inv_variance_path, not both"
+            )
+        smoke_prediction = forward(
+            pipeline=prepared.pipeline,
+            params=params_init,
+            static_data=prepared.static_data,
+            noise_key=noise_key,
+        )
+        residual_products = compute_residual_products(
+            prediction=smoke_prediction,
+            target=target,
+            sigma=sigma,
+            inv_variance=inv_variance,
+            mask=mask,
+        )
+        metrics = summarize_masked_metrics(
+            prediction=smoke_prediction,
+            target=target,
+            mask=mask,
+            loss_fn=objective_loss_fn,
+        )
+        outputs["residual_products"] = residual_products
+        outputs["metrics"] = metrics
+    elif bool(cfg["predictive"]["enabled"]) and vi_result is not None:
         predictive_samples = sample_posterior_predictive_cubes(
             pipeline=prepared.pipeline,
             posterior_mean_params=vi_result.posterior_mean_params,
