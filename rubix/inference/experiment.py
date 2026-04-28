@@ -1327,6 +1327,7 @@ def run_ifu_experiment_sequence(
     run_smoke: bool = True,
     run_full: bool = True,
     output_root_dir: Optional[str] = None,
+    include_outputs: bool = False,
 ) -> dict[str, Any]:
     """Run validate -> smoke -> full IFU workflow sequence.
 
@@ -1344,12 +1345,17 @@ def run_ifu_experiment_sequence(
             Defaults to ``True``.
         output_root_dir (Optional[str], optional): Optional root output
             directory for phase artifacts. Defaults to ``None`` (use config).
+        include_outputs (bool, optional): When ``True``, attach the in-memory
+            phase output dicts to ``sequence["smoke"]["outputs"]`` and
+            ``sequence["full"]["outputs"]``. Defaults to ``False`` to avoid
+            large JAX/NumPy arrays in the return value.
 
     Raises:
         RuntimeError: If requested validation phase fails.
 
     Returns:
-        dict[str, Any]: Per-phase outputs/statuses and output directories.
+        dict[str, Any]: Lightweight per-phase metadata (output_dir + status).
+            Pass ``include_outputs=True`` to also receive in-memory arrays.
     """
     raw_cfg = read_yaml(config) if isinstance(config, str) else dict(config)
     base_cfg = normalize_experiment_config(raw_cfg)
@@ -1393,7 +1399,10 @@ def run_ifu_experiment_sequence(
         smoke_cfg["variational"]["enabled"] = False
         smoke_out = run_ifu_experiment(smoke_cfg, pipeline_factory=pipeline_factory)
         save_ifu_experiment_outputs(smoke_out, str(smoke_dir))
-        sequence["smoke"] = {"output_dir": str(smoke_dir)}
+        smoke_meta: dict[str, Any] = {"output_dir": str(smoke_dir)}
+        if include_outputs:
+            smoke_meta["outputs"] = smoke_out
+        sequence["smoke"] = smoke_meta
 
     if run_full:
         full_dir = output_root / "full"
@@ -1402,6 +1411,9 @@ def run_ifu_experiment_sequence(
         full_cfg["run"]["output_dir"] = str(full_dir)
         full_out = run_ifu_experiment(full_cfg, pipeline_factory=pipeline_factory)
         save_ifu_experiment_outputs(full_out, str(full_dir))
-        sequence["full"] = {"output_dir": str(full_dir)}
+        full_meta: dict[str, Any] = {"output_dir": str(full_dir)}
+        if include_outputs:
+            full_meta["outputs"] = full_out
+        sequence["full"] = full_meta
 
     return sequence
