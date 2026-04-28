@@ -46,6 +46,39 @@ jobs:
       env:
         ILLUSTRIS_API_KEY: ${{ secrets.ILLUSTRIS_API_KEY }} # need this to run the tests
 
+  guardrail-check:
+    name: Guardrail Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.13"
+
+    - name: Install Python package
+      run: |
+        python -m pip install setuptools
+        python -m pip install .[cpu,tests]
+
+    - name: Run guardrail benchmark profile
+      run: |
+        python bench/check_inference_guardrails.py \
+          --threshold-config rubix/config/guardrail_thresholds.yml \
+          --profile ci_fast \
+          --output-json outputs/guardrails/opt_guardrail_ci.json
+
+    - name: Upload guardrail report artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: guardrail-report
+        path: outputs/guardrails/opt_guardrail_ci.json
+
   coverage:
     name: Coverage Testing
     runs-on: ubuntu-latest
