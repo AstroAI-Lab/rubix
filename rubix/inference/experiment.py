@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import csv
 import hashlib
 import json
@@ -1317,3 +1318,84 @@ def generate_ifu_experiment_report(output_dir: str) -> dict[str, Any]:
             report["artifacts"]["residual_products_keys"] = list(data.files)
 
     return report
+
+
+def run_ifu_experiment_sequence(
+    config: ExperimentConfigInput,
+    pipeline_factory: PipelineFactory = make_inference_pipeline,
+    run_validate: bool = True,
+    run_smoke: bool = True,
+    run_full: bool = True,
+    output_root_dir: Optional[str] = None,
+) -> dict[str, Any]:
+    """Run validate -> smoke -> full IFU workflow sequence.
+
+    Args:
+        config (ExperimentConfigInput): Mapping or YAML path following the
+            experiment schema consumed by :func:`normalize_experiment_config`.
+        pipeline_factory (PipelineFactory, optional): Pipeline builder used to
+            instantiate and prepare a Rubix pipeline. Defaults to
+            :func:`make_inference_pipeline`.
+        run_validate (bool, optional): Whether to run input validation phase.
+            Defaults to ``True``.
+        run_smoke (bool, optional): Whether to run smoke-only phase.
+            Defaults to ``True``.
+        run_full (bool, optional): Whether to run full optimization/VI phase.
+            Defaults to ``True``.
+        output_root_dir (Optional[str], optional): Optional root output
+            directory for phase artifacts. Defaults to ``None`` (use config).
+
+    Raises:
+        RuntimeError: If requested validation phase fails.
+
+    Returns:
+        dict[str, Any]: Per-phase outputs/statuses and output directories.
+    """
+    raw_cfg = read_yaml(config) if isinstance(config, str) else dict(config)
+    base_cfg = normalize_experiment_config(raw_cfg)
+
+    if output_root_dir is None:
+        output_root = Path(str(base_cfg["run"]["output_dir"]))
+    else:
+        output_root = Path(output_root_dir)
+    output_root.mkdir(parents=True, exist_ok=True)
+
+    sequence: dict[str, Any] = {
+        "output_root_dir": str(output_root),
+        "validate": None,
+        "smoke": None,
+        "full": None,
+    }
+
+    if run_validate:
+        report = validate_ifu_experiment_inputs(
+            config=base_cfg,
+            pipeline_factory=pipeline_factory,
+        )
+        (output_root / "validate_report.json").write_text(
+            json.dumps(_to_jsonable(report), indent=2),
+            encoding="utf-8",
+        )
+        sequence["validate"] = {"ok": bool(report["ok"]), "report": report}
+        if not report["ok"]:
+            raise RuntimeError("validation phase failed; see validate_report.json")
+
+    if run_smoke:
+        smoke_cfg = copy.deepcopy(base_cfg)
+        smoke_cfg["run"]["smoke_only"] = True
+        smoke_cfg["optimization"]["enabled"] = False
+        smoke_cfg["variational"]["enabled"] = False
+        smoke_out = run_ifu_experiment(smoke_cfg, pipeline_factory=pipeline_factory)
+        smoke_dir = output_root / "smoke"
+        save_ifu_experiment_outputs(smoke_out, str(smoke_dir))
+        sequence["smoke"] = {"output_dir": str(smoke_dir), "outputs": smoke_out}
+
+    if run_full:
+        full_cfg = copy.deepcopy(base_cfg)
+        full_cfg["run"]["smoke_only"] = False
+        full_out = run_ifu_experiment(full_cfg, pipeline_factory=pipeline_factory)
+        full_dir = output_root / "full"
+        save_ifu_experiment_outputs(full_out, str(full_dir))
+        sequence["full"] = {"output_dir": str(full_dir), "outputs": full_out}
+
+    return sequence

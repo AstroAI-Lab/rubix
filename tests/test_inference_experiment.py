@@ -13,6 +13,7 @@ from rubix.inference.experiment import (
     generate_ifu_experiment_report,
     normalize_experiment_config,
     run_ifu_experiment,
+    run_ifu_experiment_sequence,
     save_ifu_experiment_outputs,
     validate_ifu_experiment_inputs,
 )
@@ -496,3 +497,49 @@ def test_generate_ifu_experiment_report_requires_summary(tmp_path):
         assert "summary.json" in str(exc)
     else:
         raise AssertionError("Expected FileNotFoundError when summary.json is missing")
+
+
+def test_run_ifu_experiment_sequence_writes_phase_outputs(tmp_path):
+    cube = np.ones((2, 2, 4), dtype=np.float32)
+    target_path = tmp_path / "target.npy"
+    np.save(target_path, cube)
+    np.save(tmp_path / "mask.npy", np.ones_like(cube))
+    np.save(tmp_path / "ivar.npy", np.ones_like(cube))
+    config_path = _write_config(tmp_path, str(target_path), str(tmp_path / "ckpt"))
+
+    def pipeline_factory(_cfg, _mode):
+        return PreparedSyntheticPipeline(jnp.asarray(cube))
+
+    result = run_ifu_experiment_sequence(
+        config=str(config_path),
+        pipeline_factory=pipeline_factory,
+        output_root_dir=str(tmp_path / "sequence"),
+    )
+    assert result["validate"]["ok"] is True
+    assert (tmp_path / "sequence" / "validate_report.json").exists()
+    assert (tmp_path / "sequence" / "smoke" / "summary.json").exists()
+    assert (tmp_path / "sequence" / "full" / "summary.json").exists()
+
+
+def test_run_ifu_experiment_sequence_raises_on_failed_validation(tmp_path):
+    cube = np.ones((2, 2, 4), dtype=np.float32)
+    target_path = tmp_path / "target.npy"
+    np.save(target_path, cube)
+    # Intentional mismatch for validation failure
+    np.save(tmp_path / "mask.npy", np.ones((2, 2, 5), dtype=np.float32))
+    np.save(tmp_path / "ivar.npy", np.ones_like(cube))
+    config_path = _write_config(tmp_path, str(target_path), str(tmp_path / "ckpt"))
+
+    def pipeline_factory(_cfg, _mode):
+        return PreparedSyntheticPipeline(jnp.asarray(cube))
+
+    try:
+        run_ifu_experiment_sequence(
+            config=str(config_path),
+            pipeline_factory=pipeline_factory,
+            output_root_dir=str(tmp_path / "sequence"),
+        )
+    except RuntimeError as exc:
+        assert "validation phase failed" in str(exc)
+    else:
+        raise AssertionError("Expected RuntimeError for failed validation phase")

@@ -388,6 +388,14 @@ Real Data Runbook
       python scripts/generate_ifu_experiment_report.py \
         --output-dir outputs/ifu_realdata_smoke
 
+For a one-command staged run, use the sequence orchestrator:
+
+.. code-block:: bash
+
+   python scripts/run_ifu_experiment_sequence.py \
+     --config rubix/config/inference_experiment_realdata_scaffold.yml \
+     --output-root-dir outputs/ifu_sequence
+
 Benchmarking Full-IFU Optimization
 ----------------------------------
 
