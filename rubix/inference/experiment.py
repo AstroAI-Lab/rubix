@@ -1360,6 +1360,10 @@ def run_ifu_experiment_sequence(
         output_root = Path(output_root_dir)
     output_root.mkdir(parents=True, exist_ok=True)
 
+    # Align the embedded config output_dir with the actual root so that every
+    # artifact written during validation self-describes its real location.
+    base_cfg["run"]["output_dir"] = str(output_root)
+
     sequence: dict[str, Any] = {
         "output_root_dir": str(output_root),
         "validate": None,
@@ -1381,21 +1385,23 @@ def run_ifu_experiment_sequence(
             raise RuntimeError("validation phase failed; see validate_report.json")
 
     if run_smoke:
+        smoke_dir = output_root / "smoke"
         smoke_cfg = copy.deepcopy(base_cfg)
         smoke_cfg["run"]["smoke_only"] = True
+        smoke_cfg["run"]["output_dir"] = str(smoke_dir)
         smoke_cfg["optimization"]["enabled"] = False
         smoke_cfg["variational"]["enabled"] = False
         smoke_out = run_ifu_experiment(smoke_cfg, pipeline_factory=pipeline_factory)
-        smoke_dir = output_root / "smoke"
         save_ifu_experiment_outputs(smoke_out, str(smoke_dir))
-        sequence["smoke"] = {"output_dir": str(smoke_dir), "outputs": smoke_out}
+        sequence["smoke"] = {"output_dir": str(smoke_dir)}
 
     if run_full:
+        full_dir = output_root / "full"
         full_cfg = copy.deepcopy(base_cfg)
         full_cfg["run"]["smoke_only"] = False
+        full_cfg["run"]["output_dir"] = str(full_dir)
         full_out = run_ifu_experiment(full_cfg, pipeline_factory=pipeline_factory)
-        full_dir = output_root / "full"
         save_ifu_experiment_outputs(full_out, str(full_dir))
-        sequence["full"] = {"output_dir": str(full_dir), "outputs": full_out}
+        sequence["full"] = {"output_dir": str(full_dir)}
 
     return sequence
