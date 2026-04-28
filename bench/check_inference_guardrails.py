@@ -146,9 +146,7 @@ def main() -> None:
     max_steps = (
         _resolve_int_with_profile(args.max_steps, benchmark_profile, "max_steps") or 120
     )
-    repeats = (
-        _resolve_int_with_profile(args.repeats, benchmark_profile, "repeats") or 2
-    )
+    repeats = _resolve_int_with_profile(args.repeats, benchmark_profile, "repeats") or 2
 
     cube = jnp.ones((nx, ny, nw), dtype=jnp.float32)
     target = 1.5 * cube
