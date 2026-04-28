@@ -414,3 +414,6 @@ For CI-style threshold checks on a representative synthetic IFU size:
 Thresholds and benchmark sizes are versioned in
 ``rubix/config/guardrail_thresholds.yml``. CLI flags can still override profile
 values for ad-hoc checks.
+
+CI runs the same script with the ``ci_fast`` profile and stores
+``outputs/guardrails/opt_guardrail_ci.json`` as a workflow artifact.
