@@ -42,9 +42,24 @@ class PerformanceCheckResult:
 
 
 def _as_optional_float(value: Any) -> Optional[float]:
-    """Convert supported scalar value to optional float."""
+    """Convert supported scalar value to optional float.
+
+    Raises:
+        ValueError: If *value* is a ``bool`` (which is a numeric subtype but
+            almost always indicates a YAML/config mistake) or any other
+            non-numeric type.
+    """
     if value is None:
         return None
+    if isinstance(value, bool):
+        raise ValueError(
+            f"expected a numeric value, got bool {value!r}; "
+            "check the guardrail config for a YAML boolean where a number was intended"
+        )
+    if not isinstance(value, (int, float)):
+        raise ValueError(
+            f"expected a numeric value, got {type(value).__name__!r}: {value!r}"
+        )
     return float(value)
 
 

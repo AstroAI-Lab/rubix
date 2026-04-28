@@ -70,16 +70,53 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _resolve_with_profile(
+def _resolve_int_with_profile(
+    override: Optional[int],
+    profile_mapping: Mapping[str, Any],
+    key: str,
+) -> Optional[int]:
+    """Resolve an integer value from CLI override or profile mapping.
+
+    Raises:
+        SystemExit: If the profile value is not a plain ``int`` (e.g. a float
+            or bool), so invalid profile entries fail fast instead of silently
+            truncating.
+    """
+    if override is not None:
+        return override
+    value = profile_mapping.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise SystemExit(
+            f"profile key '{key}' must be an integer, "
+            f"got {type(value).__name__!r}: {value!r}"
+        )
+    return value
+
+
+def _resolve_float_with_profile(
     override: Optional[float],
     profile_mapping: Mapping[str, Any],
     key: str,
 ) -> Optional[float]:
-    """Resolve value from CLI override or profile mapping."""
+    """Resolve a float value from CLI override or profile mapping.
+
+    Raises:
+        SystemExit: If the profile value is a bool or non-numeric type so
+            config mistakes fail fast.
+    """
     if override is not None:
         return override
     value = profile_mapping.get(key)
-    return None if value is None else float(value)
+    if value is None:
+        return None
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        raise SystemExit(
+            f"profile key '{key}' must be a number, "
+            f"got {type(value).__name__!r}: {value!r}"
+        )
+    return float(value)
 
 
 def main() -> None:
@@ -103,14 +140,14 @@ def main() -> None:
     if not isinstance(benchmark_profile, Mapping):
         raise SystemExit(f"profile '{args.profile}' benchmark section must be mapping")
 
-    nx = int(_resolve_with_profile(args.nx, benchmark_profile, "nx") or 8)
-    ny = int(_resolve_with_profile(args.ny, benchmark_profile, "ny") or 8)
-    nw = int(_resolve_with_profile(args.nw, benchmark_profile, "nw") or 64)
-    max_steps = int(
-        _resolve_with_profile(args.max_steps, benchmark_profile, "max_steps") or 120
+    nx = _resolve_int_with_profile(args.nx, benchmark_profile, "nx") or 8
+    ny = _resolve_int_with_profile(args.ny, benchmark_profile, "ny") or 8
+    nw = _resolve_int_with_profile(args.nw, benchmark_profile, "nw") or 64
+    max_steps = (
+        _resolve_int_with_profile(args.max_steps, benchmark_profile, "max_steps") or 120
     )
-    repeats = int(
-        _resolve_with_profile(args.repeats, benchmark_profile, "repeats") or 2
+    repeats = (
+        _resolve_int_with_profile(args.repeats, benchmark_profile, "repeats") or 2
     )
 
     cube = jnp.ones((nx, ny, nw), dtype=jnp.float32)
@@ -134,24 +171,24 @@ def main() -> None:
         mode="optimization",
     )
     runtime_thresholds = RuntimeThresholds(
-        max_mean_runtime_s=_resolve_with_profile(
+        max_mean_runtime_s=_resolve_float_with_profile(
             args.max_mean_runtime_s,
             {"max_mean_runtime_s": runtime_thresholds.max_mean_runtime_s},
             "max_mean_runtime_s",
         ),
-        max_median_runtime_s=_resolve_with_profile(
+        max_median_runtime_s=_resolve_float_with_profile(
             args.max_median_runtime_s,
             {"max_median_runtime_s": runtime_thresholds.max_median_runtime_s},
             "max_median_runtime_s",
         ),
     )
     objective_thresholds = OptimizationObjectiveThresholds(
-        max_final_loss=_resolve_with_profile(
+        max_final_loss=_resolve_float_with_profile(
             args.max_final_loss,
             {"max_final_loss": objective_thresholds.max_final_loss},
             "max_final_loss",
         ),
-        max_best_loss=_resolve_with_profile(
+        max_best_loss=_resolve_float_with_profile(
             args.max_best_loss,
             {"max_best_loss": objective_thresholds.max_best_loss},
             "max_best_loss",
