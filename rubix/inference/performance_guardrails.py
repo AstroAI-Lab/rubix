@@ -74,6 +74,8 @@ def load_guardrail_threshold_profile(
         raise ValueError("mode must be 'optimization' or 'variational'")
 
     cfg = read_yaml(str(config_path))
+    if not isinstance(cfg, Mapping):
+        raise ValueError("guardrail config must be a mapping")
     profiles = cfg.get("profiles")
     if not isinstance(profiles, Mapping):
         raise ValueError("guardrail config must contain a 'profiles' mapping")
