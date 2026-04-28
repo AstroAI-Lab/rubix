@@ -20,6 +20,7 @@ from .experiment import (
     generate_ifu_experiment_report,
     normalize_experiment_config,
     run_ifu_experiment,
+    run_ifu_experiment_sequence,
     save_ifu_experiment_outputs,
     validate_ifu_experiment_inputs,
 )
@@ -136,6 +137,7 @@ __all__ = [
     "summarize_predictive_cube_samples",
     "save_checkpoint",
     "run_ifu_experiment",
+    "run_ifu_experiment_sequence",
     "save_ifu_experiment_outputs",
     "validate_ifu_experiment_inputs",
     "value_and_grad",
