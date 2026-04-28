@@ -74,6 +74,7 @@ jobs:
           --output-json outputs/guardrails/opt_guardrail_ci.json
 
     - name: Upload guardrail report artifact
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: guardrail-report
