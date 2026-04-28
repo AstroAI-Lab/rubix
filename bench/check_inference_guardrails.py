@@ -85,7 +85,15 @@ def _resolve_with_profile(
 def main() -> None:
     args = parse_args()
     cfg = read_yaml(args.threshold_config)
+    if not isinstance(cfg, Mapping):
+        raise SystemExit(
+            f"threshold config {args.threshold_config} must contain a top-level mapping"
+        )
     profiles = cfg.get("profiles") or {}
+    if not isinstance(profiles, Mapping):
+        raise SystemExit(
+            f"threshold config {args.threshold_config} field 'profiles' must be a mapping"
+        )
     profile = profiles.get(args.profile)
     if not isinstance(profile, Mapping):
         raise SystemExit(
