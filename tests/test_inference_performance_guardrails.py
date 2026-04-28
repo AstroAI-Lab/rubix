@@ -1,3 +1,5 @@
+import yaml
+
 from rubix.inference.benchmark import IFUCubeBenchmarkResult
 from rubix.inference.performance_guardrails import (
     OptimizationObjectiveThresholds,
@@ -5,6 +7,7 @@ from rubix.inference.performance_guardrails import (
     VIObjectiveThresholds,
     check_ifu_optimization_guardrails,
     check_vi_guardrails,
+    load_guardrail_threshold_profile,
 )
 from rubix.inference.vi_benchmark import VIBenchmarkResult
 
@@ -64,6 +67,7 @@ def test_check_ifu_optimization_guardrails_fails_on_runtime_and_loss():
     assert check.passed is False
     assert "mean runtime" in check.message
     assert "final loss" in check.message
+    assert len(check.failed_conditions) >= 1
 
 
 def test_check_vi_guardrails_passes_within_limits():
@@ -83,3 +87,62 @@ def test_check_vi_guardrails_fails_on_objective():
     check = check_vi_guardrails(result, runtime, objective)
     assert check.passed is False
     assert "final objective" in check.message
+    assert len(check.failed_conditions) >= 1
+
+
+def test_load_guardrail_threshold_profile_optimization(tmp_path):
+    cfg = {
+        "profiles": {
+            "test_profile": {
+                "optimization": {
+                    "runtime": {
+                        "max_mean_runtime_s": 1.5,
+                        "max_median_runtime_s": 1.25,
+                    },
+                    "objective": {
+                        "max_final_loss": 1e-4,
+                        "max_best_loss": 1e-5,
+                    },
+                }
+            }
+        }
+    }
+    path = tmp_path / "guardrail.yml"
+    path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
+
+    runtime, objective = load_guardrail_threshold_profile(
+        path, profile_name="test_profile", mode="optimization"
+    )
+    assert runtime.max_mean_runtime_s == 1.5
+    assert runtime.max_median_runtime_s == 1.25
+    assert objective.max_final_loss == 1e-4
+    assert objective.max_best_loss == 1e-5
+
+
+def test_load_guardrail_threshold_profile_variational(tmp_path):
+    cfg = {
+        "profiles": {
+            "test_profile": {
+                "variational": {
+                    "runtime": {
+                        "max_mean_runtime_s": 2.0,
+                        "max_median_runtime_s": 1.9,
+                    },
+                    "objective": {
+                        "max_final_objective": 1e-3,
+                        "max_best_objective": 8e-4,
+                    },
+                }
+            }
+        }
+    }
+    path = tmp_path / "guardrail.yml"
+    path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
+
+    runtime, objective = load_guardrail_threshold_profile(
+        path, profile_name="test_profile", mode="variational"
+    )
+    assert runtime.max_mean_runtime_s == 2.0
+    assert runtime.max_median_runtime_s == 1.9
+    assert objective.max_final_objective == 1e-3
+    assert objective.max_best_objective == 8e-4

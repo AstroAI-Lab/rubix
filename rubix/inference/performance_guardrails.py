@@ -1,5 +1,8 @@
 from dataclasses import dataclass
-from typing import Optional
+from pathlib import Path
+from typing import Any, Mapping, Optional, Union
+
+from rubix.utils import read_yaml
 
 from .benchmark import IFUCubeBenchmarkResult
 from .vi_benchmark import VIBenchmarkResult
@@ -35,6 +38,104 @@ class PerformanceCheckResult:
 
     passed: bool
     message: str
+    failed_conditions: tuple[str, ...] = ()
+
+
+def _as_optional_float(value: Any) -> Optional[float]:
+    """Convert supported scalar value to optional float.
+
+    Raises:
+        ValueError: If *value* is a ``bool`` (which is a numeric subtype but
+            almost always indicates a YAML/config mistake) or any other
+            non-numeric type.
+    """
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise ValueError(
+            f"expected a numeric value, got bool {value!r}; "
+            "check the guardrail config for a YAML boolean where a number was intended"
+        )
+    if not isinstance(value, (int, float)):
+        raise ValueError(
+            f"expected a numeric value, got {type(value).__name__!r}: {value!r}"
+        )
+    return float(value)
+
+
+def load_guardrail_threshold_profile(
+    config_path: Union[str, Path],
+    profile_name: str,
+    mode: str,
+) -> tuple[
+    RuntimeThresholds,
+    Union[OptimizationObjectiveThresholds, VIObjectiveThresholds],
+]:
+    """Load runtime/objective thresholds from a versioned YAML profile.
+
+    Args:
+        config_path (Union[str, Path]): Guardrail threshold config path.
+        profile_name (str): Profile key under ``profiles``.
+        mode (str): One of ``'optimization'`` or ``'variational'``.
+
+    Raises:
+        ValueError: If config schema, profile, or mode entries are invalid.
+
+    Returns:
+        tuple[RuntimeThresholds, Union[OptimizationObjectiveThresholds,
+        VIObjectiveThresholds]]: Runtime and objective thresholds.
+    """
+    if mode not in {"optimization", "variational"}:
+        raise ValueError("mode must be 'optimization' or 'variational'")
+
+    cfg = read_yaml(str(config_path))
+    if not isinstance(cfg, Mapping):
+        raise ValueError("guardrail config must be a mapping")
+    profiles = cfg.get("profiles")
+    if not isinstance(profiles, Mapping):
+        raise ValueError("guardrail config must contain a 'profiles' mapping")
+
+    profile = profiles.get(profile_name)
+    if not isinstance(profile, Mapping):
+        raise ValueError(
+            f"profile '{profile_name}' not found in guardrail config {config_path}"
+        )
+
+    mode_cfg = profile.get(mode)
+    if not isinstance(mode_cfg, Mapping):
+        raise ValueError(f"profile '{profile_name}' must define a '{mode}' mapping")
+
+    runtime_cfg = mode_cfg.get("runtime") or {}
+    if not isinstance(runtime_cfg, Mapping):
+        raise ValueError(f"profile '{profile_name}' {mode}.runtime must be a mapping")
+
+    runtime = RuntimeThresholds(
+        max_mean_runtime_s=_as_optional_float(runtime_cfg.get("max_mean_runtime_s")),
+        max_median_runtime_s=_as_optional_float(
+            runtime_cfg.get("max_median_runtime_s")
+        ),
+    )
+
+    objective_cfg = mode_cfg.get("objective") or {}
+    if not isinstance(objective_cfg, Mapping):
+        raise ValueError(f"profile '{profile_name}' {mode}.objective must be a mapping")
+
+    if mode == "optimization":
+        objective = OptimizationObjectiveThresholds(
+            max_final_loss=_as_optional_float(objective_cfg.get("max_final_loss")),
+            max_best_loss=_as_optional_float(objective_cfg.get("max_best_loss")),
+        )
+    else:
+        objective = VIObjectiveThresholds(
+            max_final_objective=_as_optional_float(
+                objective_cfg.get("max_final_objective")
+            ),
+            max_best_objective=_as_optional_float(
+                objective_cfg.get("max_best_objective")
+            ),
+        )
+
+    return runtime, objective
 
 
 def _check_runtime(
@@ -99,11 +200,13 @@ def check_ifu_optimization_guardrails(
         return PerformanceCheckResult(
             passed=False,
             message="; ".join(errors),
+            failed_conditions=tuple(errors),
         )
 
     return PerformanceCheckResult(
         passed=True,
         message="optimization benchmark satisfies configured thresholds",
+        failed_conditions=(),
     )
 
 
@@ -146,9 +249,11 @@ def check_vi_guardrails(
         return PerformanceCheckResult(
             passed=False,
             message="; ".join(errors),
+            failed_conditions=tuple(errors),
         )
 
     return PerformanceCheckResult(
         passed=True,
         message="VI benchmark satisfies configured thresholds",
+        failed_conditions=(),
     )
