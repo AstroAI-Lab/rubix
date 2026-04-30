@@ -149,6 +149,7 @@ def test_run_ifu_experiment_and_save_outputs(tmp_path):
 
     save_ifu_experiment_outputs(outputs, str(tmp_path / "saved"))
     assert (tmp_path / "saved" / "summary.json").exists()
+    assert (tmp_path / "saved" / "run_manifest.json").exists()
     assert (tmp_path / "saved" / "predictive_summary.npz").exists()
     assert (tmp_path / "saved" / "residual_products.npz").exists()
     assert (tmp_path / "saved" / "science_products.npz").exists()
@@ -157,6 +158,7 @@ def test_run_ifu_experiment_and_save_outputs(tmp_path):
     report = generate_ifu_experiment_report(str(tmp_path / "saved"))
     assert "summary" in report
     assert "artifacts" in report
+    assert report["manifest"] is not None
     assert "science_products" in report["artifacts"]
     assert "posterior_mean_cube" in report["artifacts"]["science_products"]
 
