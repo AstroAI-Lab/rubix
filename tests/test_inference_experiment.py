@@ -159,6 +159,8 @@ def test_run_ifu_experiment_and_save_outputs(tmp_path):
     assert "summary" in report
     assert "artifacts" in report
     assert report["manifest"] is not None
+    assert "run_manifest.json" in report["manifest"]["artifacts"]
+    assert report["manifest"]["artifacts"]["run_manifest.json"]["kind"] == "json"
     assert "science_products" in report["artifacts"]
     assert "posterior_mean_cube" in report["artifacts"]["science_products"]
 

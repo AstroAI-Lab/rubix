@@ -1298,6 +1298,10 @@ def save_ifu_experiment_outputs(outputs: Mapping[str, Any], output_dir: str) -> 
             "kind": "json",
         }
 
+    artifact_inventory["run_manifest.json"] = {
+        "exists": True,
+        "kind": "json",
+    }
     manifest = {
         "generated_at_utc": _utc_now_iso(),
         "output_dir": str(out_dir),
@@ -1323,8 +1327,13 @@ def generate_ifu_experiment_report(output_dir: str) -> dict[str, Any]:
         FileNotFoundError: If ``summary.json`` is missing.
 
     Returns:
-        dict[str, Any]: Compact report with stage/metric summaries and artifact
-            key and shape diagnostics.
+        dict[str, Any]: Compact report with the following keys:
+
+        - ``"summary"``: stage/metric summaries from ``summary.json``.
+        - ``"artifacts"``: artifact key and shape diagnostics for science,
+          predictive, and residual products.
+        - ``"manifest"``: parsed contents of ``run_manifest.json`` when the
+          sidecar exists, or ``None`` when it is absent.
     """
     out_dir = Path(output_dir)
     summary_path = out_dir / "summary.json"
