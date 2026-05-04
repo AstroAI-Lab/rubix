@@ -1208,6 +1208,12 @@ def save_ifu_experiment_outputs(outputs: Mapping[str, Any], output_dir: str) -> 
         json.dumps(_to_jsonable(summary), indent=2),
         encoding="utf-8",
     )
+    artifact_inventory: dict[str, dict[str, Any]] = {
+        "summary.json": {
+            "exists": True,
+            "kind": "json",
+        }
+    }
 
     predictive_summary = outputs.get("predictive_summary")
     if isinstance(predictive_summary, Mapping):
@@ -1215,6 +1221,11 @@ def save_ifu_experiment_outputs(outputs: Mapping[str, Any], output_dir: str) -> 
             out_dir / "predictive_summary.npz",
             **{k: np.asarray(v) for k, v in predictive_summary.items()},
         )
+        artifact_inventory["predictive_summary.npz"] = {
+            "exists": True,
+            "kind": "npz",
+            "keys": sorted(list(predictive_summary.keys())),
+        }
 
     residual_products = outputs.get("residual_products")
     if isinstance(residual_products, Mapping):
@@ -1222,6 +1233,11 @@ def save_ifu_experiment_outputs(outputs: Mapping[str, Any], output_dir: str) -> 
             out_dir / "residual_products.npz",
             **{k: np.asarray(v) for k, v in residual_products.items()},
         )
+        artifact_inventory["residual_products.npz"] = {
+            "exists": True,
+            "kind": "npz",
+            "keys": sorted(list(residual_products.keys())),
+        }
 
     science_products: dict[str, np.ndarray] = {}
     if isinstance(predictive_summary, Mapping):
@@ -1250,6 +1266,11 @@ def save_ifu_experiment_outputs(outputs: Mapping[str, Any], output_dir: str) -> 
 
     if len(science_products) > 0:
         np.savez_compressed(out_dir / "science_products.npz", **science_products)
+        artifact_inventory["science_products.npz"] = {
+            "exists": True,
+            "kind": "npz",
+            "keys": sorted(list(science_products.keys())),
+        }
 
     metrics = outputs.get("metrics")
     if isinstance(metrics, Mapping):
@@ -1260,6 +1281,11 @@ def save_ifu_experiment_outputs(outputs: Mapping[str, Any], output_dir: str) -> 
             writer.writerow(["metric", "value"])
             for key in sorted(metrics.keys()):
                 writer.writerow([key, metrics[key]])
+        artifact_inventory["science_metrics.csv"] = {
+            "exists": True,
+            "kind": "csv",
+            "rows": len(metrics),
+        }
 
     failure_artifacts = outputs.get("failure_artifacts")
     if isinstance(failure_artifacts, Mapping):
@@ -1267,6 +1293,26 @@ def save_ifu_experiment_outputs(outputs: Mapping[str, Any], output_dir: str) -> 
             json.dumps(_to_jsonable(dict(failure_artifacts)), indent=2),
             encoding="utf-8",
         )
+        artifact_inventory["failure_report.json"] = {
+            "exists": True,
+            "kind": "json",
+        }
+
+    artifact_inventory["run_manifest.json"] = {
+        "exists": True,
+        "kind": "json",
+    }
+    manifest = {
+        "generated_at_utc": _utc_now_iso(),
+        "output_dir": str(out_dir),
+        "run_metadata": outputs.get("run_metadata"),
+        "stages": outputs.get("stages"),
+        "artifacts": artifact_inventory,
+    }
+    (out_dir / "run_manifest.json").write_text(
+        json.dumps(_to_jsonable(manifest), indent=2),
+        encoding="utf-8",
+    )
 
     return
 
@@ -1281,8 +1327,13 @@ def generate_ifu_experiment_report(output_dir: str) -> dict[str, Any]:
         FileNotFoundError: If ``summary.json`` is missing.
 
     Returns:
-        dict[str, Any]: Compact report with stage/metric summaries and artifact
-            key and shape diagnostics.
+        dict[str, Any]: Compact report with the following keys:
+
+        - ``"summary"``: stage/metric summaries from ``summary.json``.
+        - ``"artifacts"``: artifact key and shape diagnostics for science,
+          predictive, and residual products.
+        - ``"manifest"``: parsed contents of ``run_manifest.json`` when the
+          sidecar exists, or ``None`` when it is absent.
     """
     out_dir = Path(output_dir)
     summary_path = out_dir / "summary.json"
@@ -1299,6 +1350,11 @@ def generate_ifu_experiment_report(output_dir: str) -> dict[str, Any]:
         },
         "artifacts": {},
     }
+    manifest_path = out_dir / "run_manifest.json"
+    if manifest_path.exists():
+        report["manifest"] = json.loads(manifest_path.read_text(encoding="utf-8"))
+    else:
+        report["manifest"] = None
 
     science_path = out_dir / "science_products.npz"
     if science_path.exists():

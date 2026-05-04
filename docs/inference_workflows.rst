@@ -377,9 +377,10 @@ Real Data Runbook
 6. If interrupted, resume from latest stage checkpoint by setting
    ``optimization.resume_checkpoint`` or ``variational.resume_checkpoint`` to
    ``latest`` (or set ``run.auto_resume_latest: true``).
-7. Inspect outputs in ``run.output_dir``:
+7. Inspect the standard artifacts in ``run.output_dir``:
    ``summary.json``, ``predictive_summary.npz``, ``residual_products.npz``,
-   ``science_products.npz``, and ``science_metrics.csv``.
+   ``science_products.npz``, ``science_metrics.csv``, and
+   ``run_manifest.json``.
 
 8. Generate a compact report for quick review:
 
