@@ -10,6 +10,8 @@ from rubix.inference.checkpoint import (
     save_checkpoint,
 )
 from rubix.inference.experiment import (
+    compare_science_run_to_baseline,
+    create_science_run_baseline,
     generate_ifu_experiment_report,
     normalize_experiment_config,
     run_ifu_experiment,
@@ -547,3 +549,38 @@ def test_run_ifu_experiment_sequence_raises_on_failed_validation(tmp_path):
         assert "validation phase failed" in str(exc)
     else:
         raise AssertionError("Expected RuntimeError for failed validation phase")
+
+
+def test_create_and_compare_science_run_baseline(tmp_path):
+    cube = np.ones((2, 2, 4), dtype=np.float32)
+    target_path = tmp_path / "target.npy"
+    np.save(target_path, cube)
+    np.save(tmp_path / "mask.npy", np.ones_like(cube))
+    np.save(tmp_path / "ivar.npy", np.ones_like(cube))
+    config_path = _write_config(tmp_path, str(target_path), str(tmp_path / "ckpt"))
+
+    def pipeline_factory(_cfg, _mode):
+        return PreparedSyntheticPipeline(jnp.asarray(cube))
+
+    outputs = run_ifu_experiment(str(config_path), pipeline_factory=pipeline_factory)
+    output_dir = tmp_path / "saved"
+    save_ifu_experiment_outputs(outputs, str(output_dir))
+
+    baseline_path = tmp_path / "baseline.json"
+    baseline = create_science_run_baseline(str(output_dir), str(baseline_path))
+    assert baseline_path.exists()
+    assert baseline["metrics"] is not None
+
+    compare_ok = compare_science_run_to_baseline(
+        output_dir=str(output_dir),
+        baseline_path=str(baseline_path),
+        tolerances={},
+    )
+    assert compare_ok["passed"] is True
+
+    compare_fail = compare_science_run_to_baseline(
+        output_dir=str(output_dir),
+        baseline_path=str(baseline_path),
+        tolerances={"mse": -1.0},
+    )
+    assert compare_fail["passed"] is False

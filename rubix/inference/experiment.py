@@ -1473,3 +1473,89 @@ def run_ifu_experiment_sequence(
         sequence["full"] = full_meta
 
     return sequence
+
+
+def create_science_run_baseline(output_dir: str, baseline_path: str) -> dict[str, Any]:
+    """Create a baseline JSON snapshot from saved run outputs.
+
+    Args:
+        output_dir (str): Directory containing saved run outputs.
+        baseline_path (str): Destination baseline JSON path.
+
+    Returns:
+        dict[str, Any]: Baseline payload written to ``baseline_path``.
+    """
+    report = generate_ifu_experiment_report(output_dir)
+    summary = report.get("summary", {})
+    baseline = {
+        "created_at_utc": _utc_now_iso(),
+        "output_dir": output_dir,
+        "run_metadata": summary.get("run_metadata"),
+        "metrics": summary.get("metrics"),
+        "optimization": summary.get("optimization"),
+        "variational": summary.get("variational"),
+    }
+    path = Path(baseline_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(_to_jsonable(baseline), indent=2), encoding="utf-8")
+    return baseline
+
+
+def compare_science_run_to_baseline(
+    output_dir: str,
+    baseline_path: str,
+    tolerances: Optional[Mapping[str, float]] = None,
+) -> dict[str, Any]:
+    """Compare a saved run against a baseline snapshot.
+
+    Args:
+        output_dir (str): Directory containing saved run outputs.
+        baseline_path (str): Baseline JSON produced by
+            :func:`create_science_run_baseline`.
+        tolerances (Optional[Mapping[str, float]], optional): Absolute
+            tolerances by metric/objective key (for example ``mse`` or
+            ``final_objective``). Defaults to ``None`` (zero tolerance).
+
+    Returns:
+        dict[str, Any]: Comparison report with pass/fail and per-key deltas.
+    """
+    report = generate_ifu_experiment_report(output_dir)
+    current_summary = report.get("summary", {})
+    baseline = json.loads(Path(baseline_path).read_text(encoding="utf-8"))
+    tolerances = dict(tolerances or {})
+
+    comparisons: dict[str, Any] = {}
+
+    def compare_section(section: str, keys: list[str]) -> None:
+        current_section = current_summary.get(section) or {}
+        baseline_section = baseline.get(section) or {}
+        for key in keys:
+            if key not in current_section or key not in baseline_section:
+                continue
+            current_value = float(current_section[key])
+            baseline_value = float(baseline_section[key])
+            delta = current_value - baseline_value
+            tol = float(tolerances.get(key, 0.0))
+            comparisons[f"{section}.{key}"] = {
+                "current": current_value,
+                "baseline": baseline_value,
+                "delta": delta,
+                "abs_delta": abs(delta),
+                "tolerance": tol,
+                "passed": abs(delta) <= tol,
+            }
+
+    metric_keys = list((current_summary.get("metrics") or {}).keys())
+    compare_section("metrics", metric_keys)
+    compare_section("optimization", ["final_loss", "best_loss"])
+    compare_section("variational", ["final_objective", "best_objective"])
+
+    passed = (
+        all(item["passed"] for item in comparisons.values()) if comparisons else True
+    )
+    return {
+        "passed": passed,
+        "baseline_path": baseline_path,
+        "output_dir": output_dir,
+        "comparisons": comparisons,
+    }

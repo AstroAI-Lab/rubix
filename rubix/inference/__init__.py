@@ -17,6 +17,8 @@ from .checkpoint import (
     save_checkpoint,
 )
 from .experiment import (
+    compare_science_run_to_baseline,
+    create_science_run_baseline,
     generate_ifu_experiment_report,
     normalize_experiment_config,
     run_ifu_experiment,
@@ -103,6 +105,7 @@ __all__ = [
     "build_loss_from_config",
     "build_loss_from_user_config",
     "combine_loss_fns",
+    "compare_science_run_to_baseline",
     "benchmark_callable",
     "benchmark_ifu_cube_optimization",
     "benchmark_result_to_dict",
@@ -136,6 +139,7 @@ __all__ = [
     "summarize_masked_metrics",
     "summarize_predictive_cube_samples",
     "save_checkpoint",
+    "create_science_run_baseline",
     "run_ifu_experiment",
     "run_ifu_experiment_sequence",
     "save_ifu_experiment_outputs",
