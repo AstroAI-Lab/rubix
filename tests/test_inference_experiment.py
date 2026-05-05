@@ -570,6 +570,9 @@ def test_create_and_compare_science_run_baseline(tmp_path):
     baseline = create_science_run_baseline(str(output_dir), str(baseline_path))
     assert baseline_path.exists()
     assert baseline["metrics"] is not None
+    assert baseline["run_metadata"] is not None
+    assert baseline["run_metadata"]["git_commit_sha"] is not None
+    assert baseline["run_metadata"]["config_hash_sha256"] is not None
 
     compare_ok = compare_science_run_to_baseline(
         output_dir=str(output_dir),
