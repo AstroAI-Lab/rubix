@@ -1585,12 +1585,14 @@ def compare_science_run_to_baseline(
     compare_section("optimization", ["final_loss", "best_loss"])
     compare_section("variational", ["final_objective", "best_objective"])
 
-    passed = (
-        all(item["passed"] for item in comparisons.values()) if comparisons else True
+    compared_keys = len(comparisons)
+    passed = compared_keys > 0 and all(
+        item["passed"] for item in comparisons.values()
     )
     return {
         "passed": passed,
         "baseline_path": baseline_path,
         "output_dir": output_dir,
+        "compared_keys": compared_keys,
         "comparisons": comparisons,
     }
