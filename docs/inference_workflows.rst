@@ -397,6 +397,20 @@ For a one-command staged run, use the sequence orchestrator:
      --config rubix/config/inference_experiment_realdata_scaffold.yml \
      --output-root-dir outputs/ifu_sequence
 
+For baseline tracking across small science runs:
+
+.. code-block:: bash
+
+   python scripts/science_run_baseline.py create \
+     --output-dir outputs/ifu_sequence/full \
+     --baseline-path outputs/ifu_baselines/small_run_baseline.json
+
+   python scripts/science_run_baseline.py compare \
+     --output-dir outputs/ifu_sequence/full \
+     --baseline-path outputs/ifu_baselines/small_run_baseline.json \
+     --tolerance mse=1e-4 \
+     --tolerance final_objective=1e-3
+
 Benchmarking Full-IFU Optimization
 ----------------------------------
 
