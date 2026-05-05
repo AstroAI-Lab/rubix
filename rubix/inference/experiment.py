@@ -1487,10 +1487,19 @@ def create_science_run_baseline(output_dir: str, baseline_path: str) -> dict[str
     """
     report = generate_ifu_experiment_report(output_dir)
     summary = report.get("summary", {})
+
+    run_metadata = summary.get("run_metadata")
+    if run_metadata is None:
+        summary_path = Path(output_dir) / "summary.json"
+        if summary_path.exists():
+            loaded_summary = json.loads(summary_path.read_text(encoding="utf-8"))
+            if isinstance(loaded_summary, dict):
+                run_metadata = loaded_summary.get("run_metadata")
+
     baseline = {
         "created_at_utc": _utc_now_iso(),
         "output_dir": output_dir,
-        "run_metadata": summary.get("run_metadata"),
+        "run_metadata": run_metadata,
         "metrics": summary.get("metrics"),
         "optimization": summary.get("optimization"),
         "variational": summary.get("variational"),
