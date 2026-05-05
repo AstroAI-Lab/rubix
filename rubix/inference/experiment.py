@@ -1539,22 +1539,48 @@ def compare_science_run_to_baseline(
         current_section = current_summary.get(section) or {}
         baseline_section = baseline.get(section) or {}
         for key in keys:
-            if key not in current_section or key not in baseline_section:
+            current_has_key = key in current_section
+            baseline_has_key = key in baseline_section
+            comparison_key = f"{section}.{key}"
+            if not current_has_key or not baseline_has_key:
+                comparisons[comparison_key] = {
+                    "current": (
+                        float(current_section[key]) if current_has_key else None
+                    ),
+                    "baseline": (
+                        float(baseline_section[key]) if baseline_has_key else None
+                    ),
+                    "delta": None,
+                    "abs_delta": None,
+                    "tolerance": float(tolerances.get(key, 0.0)),
+                    "missing": {
+                        "current": not current_has_key,
+                        "baseline": not baseline_has_key,
+                    },
+                    "passed": False,
+                }
                 continue
             current_value = float(current_section[key])
             baseline_value = float(baseline_section[key])
             delta = current_value - baseline_value
             tol = float(tolerances.get(key, 0.0))
-            comparisons[f"{section}.{key}"] = {
+            comparisons[comparison_key] = {
                 "current": current_value,
                 "baseline": baseline_value,
                 "delta": delta,
                 "abs_delta": abs(delta),
                 "tolerance": tol,
+                "missing": {
+                    "current": False,
+                    "baseline": False,
+                },
                 "passed": abs(delta) <= tol,
             }
 
-    metric_keys = list((current_summary.get("metrics") or {}).keys())
+    metric_keys = list(
+        set((current_summary.get("metrics") or {}).keys())
+        | set((baseline.get("metrics") or {}).keys())
+    )
     compare_section("metrics", metric_keys)
     compare_section("optimization", ["final_loss", "best_loss"])
     compare_section("variational", ["final_objective", "best_objective"])
