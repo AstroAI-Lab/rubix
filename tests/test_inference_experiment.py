@@ -583,7 +583,8 @@ def test_create_and_compare_science_run_baseline(tmp_path):
     )
     assert compare_ok["passed"] is True
 
-    # Perturb baseline metrics to force a comparison failure without negative tolerances
+    # Perturb baseline metrics to force a comparison failure without negative tolerances.
+    # A large offset (999.0) is chosen to exceed any realistic metric tolerance.
     baseline_data = json.loads(baseline_path.read_text())
     metrics = baseline_data.get("metrics") or {}
     if metrics:

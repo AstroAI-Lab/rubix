@@ -1532,8 +1532,8 @@ def compare_science_run_to_baseline(
     current_summary = report.get("summary", {})
     baseline = json.loads(Path(baseline_path).read_text(encoding="utf-8"))
     tolerances = dict(tolerances or {})
-    invalid_tolerances = {k: v for k, v in tolerances.items() if v < 0}
-    if invalid_tolerances:
+    if any(v < 0 for v in tolerances.values()):
+        invalid_tolerances = {k: v for k, v in tolerances.items() if v < 0}
         raise ValueError(
             f"All tolerances must be >= 0; got negative values for: {invalid_tolerances}"
         )
