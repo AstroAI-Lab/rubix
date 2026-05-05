@@ -1586,9 +1586,7 @@ def compare_science_run_to_baseline(
     compare_section("variational", ["final_objective", "best_objective"])
 
     compared_keys = len(comparisons)
-    passed = compared_keys > 0 and all(
-        item["passed"] for item in comparisons.values()
-    )
+    passed = compared_keys > 0 and all(item["passed"] for item in comparisons.values())
     return {
         "passed": passed,
         "baseline_path": baseline_path,
