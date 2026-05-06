@@ -32,9 +32,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-root-dir", required=True, type=str)
     parser.add_argument(
         "--baseline-path",
-        required=True,
+        required=False,
+        default=None,
         type=str,
-        help="Baseline JSON path for create/compare.",
+        help="Baseline JSON path for create/compare. Required when --create-baseline or --compare-baseline is set.",
     )
     parser.add_argument(
         "--create-baseline",
@@ -72,7 +73,11 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    tolerances = parse_tolerances(args.tolerance)
+
+    if (args.create_baseline or args.compare_baseline) and not args.baseline_path:
+        raise SystemExit(
+            "--baseline-path is required when using --create-baseline or --compare-baseline"
+        )
 
     sequence = run_ifu_experiment_sequence(
         config=args.config,
@@ -105,6 +110,7 @@ def main() -> None:
             raise SystemExit(
                 f"baseline file does not exist for comparison: {baseline_path}"
             )
+        tolerances = parse_tolerances(args.tolerance)
         compare_result = compare_science_run_to_baseline(
             output_dir=str(full_output_dir),
             baseline_path=args.baseline_path,
