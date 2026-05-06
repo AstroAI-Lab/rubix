@@ -1525,6 +1525,10 @@ def compare_science_run_to_baseline(
             tolerances by metric/objective key (for example ``mse`` or
             ``final_objective``). Defaults to ``None`` (zero tolerance).
 
+    Raises:
+        ValueError: If numeric values in compared sections or tolerances cannot
+            be converted to floats.
+
     Returns:
         dict[str, Any]: Comparison report with pass/fail and per-key deltas.
     """
