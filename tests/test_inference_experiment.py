@@ -20,7 +20,6 @@ from rubix.inference.experiment import (
     validate_ifu_experiment_inputs,
 )
 from rubix.inference.optimize import OptimizationResult, OptimizationState
-
 from tests._helpers import PreparedSyntheticPipeline, write_experiment_config
 
 

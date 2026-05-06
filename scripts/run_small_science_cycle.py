@@ -129,7 +129,9 @@ def main() -> None:
         "full_output_dir": (sequence.get("full") or {}).get("output_dir"),
         "baseline_created": baseline_result is not None,
         "baseline_compared": compare_result is not None,
-        "compare_passed": compare_result["passed"] if compare_result is not None else None,
+        "compare_passed": (
+            compare_result["passed"] if compare_result is not None else None
+        ),
     }
     print(json.dumps(summary, indent=2))
 

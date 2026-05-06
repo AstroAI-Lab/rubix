@@ -11,7 +11,6 @@ from rubix.inference.experiment import (
     create_science_run_baseline,
     run_ifu_experiment_sequence,
 )
-
 from tests._helpers import PreparedSyntheticPipeline, write_experiment_config
 
 _SCRIPT = Path(__file__).parent.parent / "scripts" / "run_small_science_cycle.py"
@@ -24,8 +23,12 @@ def test_small_science_cycle_sequence_create_compare(tmp_path):
     np.save(tmp_path / "mask.npy", np.ones_like(cube))
     np.save(tmp_path / "ivar.npy", np.ones_like(cube))
     config_path = write_experiment_config(
-        tmp_path, str(target_path), str(tmp_path / "ckpt"),
-        max_steps=40, checkpoint_interval_steps=20, num_draws=4,
+        tmp_path,
+        str(target_path),
+        str(tmp_path / "ckpt"),
+        max_steps=40,
+        checkpoint_interval_steps=20,
+        num_draws=4,
     )
 
     def pipeline_factory(_cfg, _mode):
@@ -78,8 +81,12 @@ def test_cli_sequence_only_exits_0(tmp_path):
     np.save(tmp_path / "mask.npy", np.ones_like(cube))
     np.save(tmp_path / "ivar.npy", np.ones_like(cube))
     config_path = write_experiment_config(
-        tmp_path, str(target_path), str(tmp_path / "ckpt"),
-        max_steps=40, checkpoint_interval_steps=20, num_draws=4,
+        tmp_path,
+        str(target_path),
+        str(tmp_path / "ckpt"),
+        max_steps=40,
+        checkpoint_interval_steps=20,
+        num_draws=4,
     )
 
     result = subprocess.run(
