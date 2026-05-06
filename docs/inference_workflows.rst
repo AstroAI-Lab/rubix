@@ -411,6 +411,24 @@ For baseline tracking across small science runs:
      --tolerance mse=1e-4 \
      --tolerance final_objective=1e-3
 
+For one-command execution of sequence + baseline operations:
+
+.. code-block:: bash
+
+   python scripts/run_small_science_cycle.py \
+     --config rubix/config/inference_experiment_realdata_scaffold.yml \
+     --output-root-dir outputs/ifu_sequence_run1 \
+     --baseline-path outputs/ifu_baselines/run1.json \
+     --create-baseline
+
+   python scripts/run_small_science_cycle.py \
+     --config rubix/config/inference_experiment_realdata_scaffold.yml \
+     --output-root-dir outputs/ifu_sequence_run2 \
+     --baseline-path outputs/ifu_baselines/run1.json \
+     --compare-baseline \
+     --tolerance mse=1e-4 \
+     --tolerance final_objective=1e-3
+
 Benchmarking Full-IFU Optimization
 ----------------------------------
 
