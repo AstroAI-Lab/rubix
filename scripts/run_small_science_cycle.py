@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import argparse
 import json
+import sys
 from pathlib import Path
 
 from rubix.inference.experiment import (
@@ -79,14 +80,17 @@ def main() -> None:
             "--baseline-path is required when using --create-baseline or --compare-baseline"
         )
 
-    sequence = run_ifu_experiment_sequence(
-        config=args.config,
-        output_root_dir=args.output_root_dir,
-        run_validate=not args.skip_validate,
-        run_smoke=not args.skip_smoke,
-        run_full=not args.skip_full,
-        include_outputs=False,
-    )
+    try:
+        sequence = run_ifu_experiment_sequence(
+            config=args.config,
+            output_root_dir=args.output_root_dir,
+            run_validate=not args.skip_validate,
+            run_smoke=not args.skip_smoke,
+            run_full=not args.skip_full,
+            include_outputs=False,
+        )
+    except RuntimeError as exc:
+        raise SystemExit(str(exc))
 
     full_meta = sequence.get("full")
     full_output_dir = None if full_meta is None else full_meta.get("output_dir")
@@ -98,7 +102,7 @@ def main() -> None:
         if full_output_dir is None:
             raise SystemExit("cannot create baseline without full phase outputs")
         baseline_result = create_science_run_baseline(
-            output_dir=str(full_output_dir),
+            output_dir=full_output_dir,
             baseline_path=args.baseline_path,
         )
 
@@ -112,12 +116,12 @@ def main() -> None:
             )
         tolerances = parse_tolerances(args.tolerance)
         compare_result = compare_science_run_to_baseline(
-            output_dir=str(full_output_dir),
+            output_dir=full_output_dir,
             baseline_path=args.baseline_path,
             tolerances=tolerances,
         )
         if not compare_result["passed"]:
-            print(json.dumps(compare_result, indent=2))
+            print(json.dumps(compare_result, indent=2), file=sys.stderr)
             raise SystemExit(1)
 
     # Print a lightweight, machine-readable summary; detailed per-phase
