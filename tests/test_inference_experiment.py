@@ -594,7 +594,9 @@ def test_create_and_compare_science_run_baseline(tmp_path):
         # Fall back to perturbing optimization if metrics are absent
         opt = baseline_data.get("optimization") or {}
         if "final_loss" in opt:
-            baseline_data["optimization"]["final_loss"] = float(opt["final_loss"]) + 999.0
+            baseline_data["optimization"]["final_loss"] = (
+                float(opt["final_loss"]) + 999.0
+            )
     baseline_path.write_text(json.dumps(baseline_data))
 
     compare_fail = compare_science_run_to_baseline(
