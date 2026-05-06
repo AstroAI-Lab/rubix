@@ -120,13 +120,18 @@ def main() -> None:
             print(json.dumps(compare_result, indent=2))
             raise SystemExit(1)
 
-    payload = {
-        "sequence": sequence,
+    # Print a lightweight, machine-readable summary; detailed per-phase
+    # artifacts (summary.json, validate_report.json, etc.) are on disk.
+    summary = {
+        "output_root_dir": sequence.get("output_root_dir"),
+        "validate_ok": (sequence.get("validate") or {}).get("ok"),
+        "smoke_output_dir": (sequence.get("smoke") or {}).get("output_dir"),
+        "full_output_dir": (sequence.get("full") or {}).get("output_dir"),
         "baseline_created": baseline_result is not None,
         "baseline_compared": compare_result is not None,
-        "compare_result": compare_result,
+        "compare_passed": compare_result["passed"] if compare_result is not None else None,
     }
-    print(json.dumps(payload, indent=2, default=str))
+    print(json.dumps(summary, indent=2))
 
 
 if __name__ == "__main__":
