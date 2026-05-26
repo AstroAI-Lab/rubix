@@ -380,6 +380,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Disable AGAMA IC sampling even if installed.",
     )
+    parser.add_argument(
+        "--skip-gradient-check",
+        action="store_true",
+        help="Skip finite-difference gradient check (recommended for routine runs).",
+    )
     return parser.parse_args()
 
 
@@ -406,6 +411,10 @@ def main() -> None:
         agama_qjr=args.agama_qjr,
         agama_qjphi=args.agama_qjphi,
     )
+    print(
+        f"[stage] sampled ICs via {sampler} (n_particles={args.n_particles})",
+        flush=True,
+    )
     spaxels = _coords_to_spaxels(ics.coords_xy, nx=args.nx, ny=args.ny)
     template, template_source = _build_wavelength_template(
         args.nw,
@@ -413,6 +422,7 @@ def main() -> None:
         ssp_age_gyr=args.ssp_age_gyr,
         ssp_metallicity=args.ssp_metallicity,
     )
+    print(f"[stage] wavelength template source: {template_source}", flush=True)
 
     pipe = LocalSpaxelSpectralPipeline(
         particle_spaxels=spaxels,
@@ -446,6 +456,7 @@ def main() -> None:
             gas=static_data.gas,
         )
     )
+    print("[stage] built synthetic target cube", flush=True)
 
     sigma = jnp.ones_like(target) * args.noise_level
 
@@ -466,10 +477,18 @@ def main() -> None:
         )
         return jnp.mean((pred - target) ** 2)
 
-    _, grads_auto = jax.value_and_grad(objective)(init_params)
-    grads_fd = finite_difference_grad(objective, init_params, eps=1e-4)
-    grad_summary = compare_gradients(grads_auto, grads_fd)
+    if args.skip_gradient_check:
+        grad_summary = None
+        print("[stage] skipped finite-difference gradient check", flush=True)
+    else:
+        print("[stage] running autodiff gradient", flush=True)
+        _, grads_auto = jax.value_and_grad(objective)(init_params)
+        print("[stage] running finite-difference gradient (can be slow)", flush=True)
+        grads_fd = finite_difference_grad(objective, init_params, eps=1e-4)
+        grad_summary = compare_gradients(grads_auto, grads_fd)
+        print("[stage] completed gradient comparison", flush=True)
 
+    print("[stage] running variational inference", flush=True)
     vi_result = optimize_variational_ifu_cube(
         pipeline=pipe,
         params_init=init_params,
@@ -483,7 +502,9 @@ def main() -> None:
         beta_kl=args.beta_kl,
         seed=args.seed,
     )
+    print("[stage] completed variational inference", flush=True)
 
+    print("[stage] sampling posterior predictive cubes", flush=True)
     samples = sample_posterior_predictive_cubes(
         pipeline=pipe,
         posterior_mean_params=vi_result.posterior_mean_params,
@@ -497,6 +518,7 @@ def main() -> None:
         prediction=pred_summary["mean"], target=target, sigma=sigma
     )
     metrics = summarize_masked_metrics(prediction=pred_summary["mean"], target=target)
+    print("[stage] computed posterior diagnostics", flush=True)
 
     truth_age = np.asarray(true_params["stars"]["age"])
     truth_met = np.asarray(true_params["stars"]["metallicity"])
@@ -549,10 +571,19 @@ def main() -> None:
         "provenance": {
             "wavelength_template_source": template_source,
         },
-        "gradient_check": {
-            "max_abs_error": float(grad_summary.max_abs_error),
-            "relative_l2_error": float(grad_summary.relative_l2_error),
-        },
+        "gradient_check": (
+            {
+                "enabled": True,
+                "max_abs_error": float(grad_summary.max_abs_error),
+                "relative_l2_error": float(grad_summary.relative_l2_error),
+            }
+            if grad_summary is not None
+            else {
+                "enabled": False,
+                "max_abs_error": None,
+                "relative_l2_error": None,
+            }
+        ),
         "vi": {
             "final_objective": float(vi_result.final_objective),
             "final_reconstruction": float(vi_result.final_reconstruction),
