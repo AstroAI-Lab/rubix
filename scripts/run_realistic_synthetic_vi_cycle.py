@@ -477,14 +477,23 @@ def main() -> None:
         )
         return jnp.mean((pred - target) ** 2)
 
+    objective_jit = jax.jit(objective)
+    objective_and_grad_jit = jax.jit(jax.value_and_grad(objective))
+
     if args.skip_gradient_check:
         grad_summary = None
         print("[stage] skipped finite-difference gradient check", flush=True)
     else:
         print("[stage] running autodiff gradient", flush=True)
-        _, grads_auto = jax.value_and_grad(objective)(init_params)
+        _, grads_auto = objective_and_grad_jit(init_params)
         print("[stage] running finite-difference gradient (can be slow)", flush=True)
-        grads_fd = finite_difference_grad(objective, init_params, eps=1e-4)
+        grads_fd = finite_difference_grad(
+            objective_jit,
+            init_params,
+            eps=1e-4,
+            batch_size=16,
+            jit_compile=True,
+        )
         grad_summary = compare_gradients(grads_auto, grads_fd)
         print("[stage] completed gradient comparison", flush=True)
 

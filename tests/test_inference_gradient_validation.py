@@ -144,6 +144,18 @@ def test_finite_difference_grad_rejects_non_positive_eps():
         finite_difference_grad(lambda p: jnp.sum(p["stars"]["age"]), params, eps=0.0)
 
 
+def test_finite_difference_grad_rejects_non_positive_batch_size():
+    params = _params_init()
+
+    with pytest.raises(ValueError, match="batch_size must be strictly positive"):
+        finite_difference_grad(
+            lambda p: jnp.sum(p["stars"]["age"]),
+            params,
+            eps=1e-4,
+            batch_size=0,
+        )
+
+
 def test_finite_difference_grad_rejects_non_scalar_loss_fn():
     params = _params_init()
 
