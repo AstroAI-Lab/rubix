@@ -234,6 +234,7 @@ def optimize_variational_posterior(
         update_norm_history = list(state_init.update_norm_history)
         steps_run = int(state_init.steps_run)
 
+    converged = False
     initial_steps_run = steps_run
 
     def objective_fn(current_params, step_key):
@@ -268,131 +269,34 @@ def optimize_variational_posterior(
         objective = reconstruction + beta_kl * kl
         return objective, (reconstruction, kl)
 
-    def scan_step(carry, i):
-        (
-            current_params,
-            current_opt_state,
-            current_best_mean,
-            current_best_objective,
-            current_best_step,
-            current_key,
-            done,
-        ) = carry
+    for step in range(max_steps):
+        key, step_key = jax.random.split(key)
+        (value, (reconstruction_value, kl_value)), grads = jax.value_and_grad(
+            objective_fn, has_aux=True
+        )(variational_params, step_key)
 
-        def active_step(active_carry):
-            (
-                current_params,
-                current_opt_state,
-                current_best_mean,
-                current_best_objective,
-                current_best_step,
-                current_key,
-                _,
-            ) = active_carry
-            new_key, step_key = jax.random.split(current_key)
-            (value, (reconstruction_value, kl_value)), grads = jax.value_and_grad(
-                objective_fn, has_aux=True
-            )(current_params, step_key)
+        current_mean = variational_params["mean"]
+        if value < best_objective:
+            best_objective = value
+            best_mean = current_mean
+            best_step = initial_steps_run + step
 
-            updates, new_opt_state = optimizer.update(
-                grads, current_opt_state, current_params
-            )
-            new_params = optax.apply_updates(current_params, updates)
+        updates, opt_state = optimizer.update(grads, opt_state, variational_params)
+        variational_params = optax.apply_updates(variational_params, updates)
 
-            grad_norm = optax.global_norm(grads)
-            update_norm = optax.global_norm(updates)
+        grad_norm = float(optax.global_norm(grads))
+        update_norm = float(optax.global_norm(updates))
 
-            is_better = value < current_best_objective
-            new_best_objective = jnp.where(is_better, value, current_best_objective)
-            new_best_mean = jax.tree_util.tree_map(
-                lambda current, old: jnp.where(is_better, current, old),
-                current_params["mean"],
-                current_best_mean,
-            )
-            step_abs = jnp.asarray(initial_steps_run + i, dtype=jnp.int32)
-            new_best_step = jnp.where(is_better, step_abs, current_best_step)
-            new_done = update_norm < tol
-            new_carry = (
-                new_params,
-                new_opt_state,
-                new_best_mean,
-                new_best_objective,
-                new_best_step,
-                new_key,
-                new_done,
-            )
-            return new_carry, (
-                value,
-                reconstruction_value,
-                kl_value,
-                grad_norm,
-                update_norm,
-                new_done,
-            )
+        objective_history.append(float(value))
+        reconstruction_history.append(float(reconstruction_value))
+        kl_history.append(float(kl_value))
+        grad_norm_history.append(grad_norm)
+        update_norm_history.append(update_norm)
 
-        def finished_step(finished_carry):
-            (
-                current_params,
-                current_opt_state,
-                current_best_mean,
-                current_best_objective,
-                current_best_step,
-                current_key,
-                done,
-            ) = finished_carry
-            zero = jnp.array(0.0)
-            return (
-                current_params,
-                current_opt_state,
-                current_best_mean,
-                current_best_objective,
-                current_best_step,
-                current_key,
-                done,
-            ), (zero, zero, zero, zero, zero, done)
-
-        return jax.lax.cond(done, finished_step, active_step, carry)
-
-    init_carry = (
-        variational_params,
-        opt_state,
-        best_mean,
-        jnp.asarray(best_objective),
-        jnp.asarray(best_step, dtype=jnp.int32),
-        key,
-        jnp.array(False),
-    )
-    (
-        variational_params,
-        opt_state,
-        best_mean,
-        best_objective,
-        best_step,
-        state_key,
-        converged_flag,
-    ), (
-        objective_arr,
-        reconstruction_arr,
-        kl_arr,
-        grad_norm_arr,
-        update_norm_arr,
-        done_arr,
-    ) = jax.lax.scan(
-        scan_step, init_carry, jnp.arange(max_steps), length=max_steps
-    )
-
-    converged = bool(converged_flag)
-    ran_steps = (
-        int(jnp.argmax(done_arr.astype(jnp.int32))) + 1 if converged else max_steps
-    )
-    steps_run = initial_steps_run + ran_steps
-
-    objective_history.extend(objective_arr[:ran_steps].tolist())
-    reconstruction_history.extend(reconstruction_arr[:ran_steps].tolist())
-    kl_history.extend(kl_arr[:ran_steps].tolist())
-    grad_norm_history.extend(grad_norm_arr[:ran_steps].tolist())
-    update_norm_history.extend(update_norm_arr[:ran_steps].tolist())
-    best_step = int(best_step)
+        steps_run = steps_run + 1
+        if update_norm < tol:
+            converged = True
+            break
 
     final_mean = variational_params["mean"]
     final_log_std = variational_params["log_std"]
@@ -412,12 +316,18 @@ def optimize_variational_posterior(
             direction="forward",
         )
 
-    if ran_steps == 0 and len(objective_history) == 0:
+    if len(objective_history) == 0:
         final_objective = float("nan")
         final_reconstruction = float("nan")
         final_kl = float("nan")
+        state_key = key
     else:
-        _, final_eval_key = jax.random.split(state_key)
+        # Capture the training-loop key state before the final evaluation so
+        # that the VariationalState records the PRNG state at which the loop
+        # ended.  This ensures resumed runs continue with the same key
+        # sequence as a continuous run of the same total length would.
+        state_key = key
+        key, final_eval_key = jax.random.split(key)
         final_value, (final_reconstruction_value, final_kl_value) = objective_fn(
             variational_params, final_eval_key
         )
