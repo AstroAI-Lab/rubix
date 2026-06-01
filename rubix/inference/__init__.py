@@ -60,6 +60,7 @@ from .posterior_predictive import (
     summarize_masked_metrics,
     summarize_predictive_cube_samples,
 )
+from .priors import build_sfh_ceh_prior_penalty
 from .validation import GradientComparison, compare_gradients, finite_difference_grad
 from .variational import (
     VariationalResult,
@@ -111,6 +112,7 @@ __all__ = [
     "benchmark_result_to_dict",
     "compare_gradients",
     "compute_residual_products",
+    "build_sfh_ceh_prior_penalty",
     "check_ifu_optimization_guardrails",
     "check_vi_guardrails",
     "load_guardrail_threshold_profile",

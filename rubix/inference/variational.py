@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Mapping, Optional
+from typing import Callable, Mapping, Optional
 
 import jax
 import jax.numpy as jnp
@@ -140,6 +140,9 @@ def optimize_variational_posterior(
     seed: int = 0,
     state_init: Optional[VariationalState] = None,
     return_state: bool = False,
+    param_penalty_fn: Optional[Callable[[ParamsTree], jnp.ndarray]] = None,
+    param_penalty_weight: float = 0.0,
+    param_penalty_ramp_steps: int = 0,
 ) -> Any:
     """Optimize a mean-field variational posterior with reparameterization.
 
@@ -179,6 +182,14 @@ def optimize_variational_posterior(
             Defaults to ``None``.
         return_state (bool, optional): If ``True``, also return updated
             :class:`VariationalState`. Defaults to ``False``.
+        param_penalty_fn (Optional[Callable[[ParamsTree], jnp.ndarray]], optional):
+            Optional penalty on constrained parameters (e.g. smoothness priors).
+            Defaults to ``None``.
+        param_penalty_weight (float, optional): Global multiplier for
+            ``param_penalty_fn``. Defaults to 0.0.
+        param_penalty_ramp_steps (int, optional): Number of initial steps over
+            which to linearly ramp ``param_penalty_weight`` from 0 to full.
+            Defaults to 0 (no ramp).
 
     Raises:
         ValueError: If ``num_samples`` is not strictly positive.
@@ -237,7 +248,12 @@ def optimize_variational_posterior(
     converged = False
     initial_steps_run = steps_run
 
-    def objective_fn(current_params, step_key):
+    if param_penalty_weight < 0:
+        raise ValueError("param_penalty_weight must be non-negative")
+    if param_penalty_ramp_steps < 0:
+        raise ValueError("param_penalty_ramp_steps must be non-negative")
+
+    def objective_fn(current_params, step_key, step_index):
         current_mean = current_params["mean"]
         current_log_std = current_params["log_std"]
         sample_keys = jax.random.split(step_key, num_samples)
@@ -266,14 +282,36 @@ def optimize_variational_posterior(
         reconstructions = jax.vmap(sample_reconstruction)(sample_keys)
         reconstruction = jnp.mean(reconstructions)
         kl = kl_diag_gaussian_to_standard_normal(current_mean, current_log_std)
-        objective = reconstruction + beta_kl * kl
-        return objective, (reconstruction, kl)
+        prior_penalty = jnp.asarray(0.0, dtype=reconstruction.dtype)
+        if param_penalty_fn is not None and param_penalty_weight > 0.0:
+            if transforms is None:
+                constrained_mean = current_mean
+            else:
+                constrained_mean = apply_transforms(
+                    params=current_mean,
+                    transforms=transforms,
+                    direction="forward",
+                )
+            ramp = jnp.asarray(1.0, dtype=reconstruction.dtype)
+            if param_penalty_ramp_steps > 0:
+                ramp = jnp.minimum(
+                    (step_index + 1.0) / float(param_penalty_ramp_steps),
+                    1.0,
+                )
+            prior_penalty = (
+                jnp.asarray(param_penalty_weight, dtype=reconstruction.dtype)
+                * ramp
+                * param_penalty_fn(constrained_mean)
+            )
+        objective = reconstruction + beta_kl * kl + prior_penalty
+        return objective, (reconstruction, kl, prior_penalty)
 
     for step in range(max_steps):
         key, step_key = jax.random.split(key)
-        (value, (reconstruction_value, kl_value)), grads = jax.value_and_grad(
+        step_index = jnp.asarray(initial_steps_run + step, dtype=jnp.float32)
+        (value, (reconstruction_value, kl_value, _)), grads = jax.value_and_grad(
             objective_fn, has_aux=True
-        )(variational_params, step_key)
+        )(variational_params, step_key, step_index)
 
         current_mean = variational_params["mean"]
         if value < best_objective:
@@ -328,8 +366,9 @@ def optimize_variational_posterior(
         # sequence as a continuous run of the same total length would.
         state_key = key
         key, final_eval_key = jax.random.split(key)
-        final_value, (final_reconstruction_value, final_kl_value) = objective_fn(
-            variational_params, final_eval_key
+        final_step_index = jnp.asarray(max(steps_run - 1, 0), dtype=jnp.float32)
+        final_value, (final_reconstruction_value, final_kl_value, _) = objective_fn(
+            variational_params, final_eval_key, final_step_index
         )
         final_objective = float(final_value)
         final_reconstruction = float(final_reconstruction_value)
@@ -400,6 +439,9 @@ def optimize_variational_ifu_cube(
     seed: int = 0,
     state_init: Optional[VariationalState] = None,
     return_state: bool = False,
+    param_penalty_fn: Optional[Callable[[ParamsTree], jnp.ndarray]] = None,
+    param_penalty_weight: float = 0.0,
+    param_penalty_ramp_steps: int = 0,
 ) -> Any:
     """Optimize a VI posterior against full IFU cubes with science losses.
 
@@ -438,6 +480,12 @@ def optimize_variational_ifu_cube(
             state for exact continuation. Defaults to ``None``.
         return_state (bool, optional): If ``True``, also return updated
             :class:`VariationalState`. Defaults to ``False``.
+        param_penalty_fn (Optional[Callable[[ParamsTree], jnp.ndarray]], optional):
+            Optional penalty on constrained parameters. Defaults to ``None``.
+        param_penalty_weight (float, optional): Global multiplier for
+            ``param_penalty_fn``. Defaults to 0.0.
+        param_penalty_ramp_steps (int, optional): Number of steps to ramp
+            penalty weight. Defaults to 0.
 
     Raises:
         ValueError: If ``target`` is not 3D, if Huber settings are invalid, if
@@ -524,4 +572,7 @@ def optimize_variational_ifu_cube(
         seed=seed,
         state_init=state_init,
         return_state=return_state,
+        param_penalty_fn=param_penalty_fn,
+        param_penalty_weight=param_penalty_weight,
+        param_penalty_ramp_steps=param_penalty_ramp_steps,
     )
