@@ -248,6 +248,55 @@ def sample_particle_ics(
     return _sample_fallback_disk(n_particles=n_particles, seed=seed), "fallback_disk"
 
 
+def _apply_sfh_ceh_population_model(
+    ics: ParticleICs,
+    *,
+    seed: int,
+    age_min_gyr: float,
+    age_max_gyr: float,
+    sfh_tau_gyr: float,
+    ceh_z_old: float,
+    ceh_z_young: float,
+    ceh_gamma: float,
+    ceh_sigma: float,
+    metallicity_min: float,
+    metallicity_max: float,
+) -> ParticleICs:
+    """Resample (age, metallicity) from a fixed SFH+CEH population model."""
+    rng = np.random.default_rng(seed)
+    n = int(np.asarray(ics.mass).shape[0])
+
+    age_min = float(age_min_gyr)
+    age_max = float(age_max_gyr)
+    tau = max(float(sfh_tau_gyr), 1e-3)
+    z_old = float(ceh_z_old)
+    z_young = max(float(ceh_z_young), z_old + 1e-6)
+    gamma = max(float(ceh_gamma), 0.2)
+    sigma = max(float(ceh_sigma), 1e-8)
+    z_lo = float(metallicity_min)
+    z_hi = float(metallicity_max)
+
+    # Truncated exponential sampling for p(age) ~ exp(-age/tau) on [age_min, age_max].
+    u = rng.uniform(0.0, 1.0, size=n)
+    exp_a = np.exp(-age_min / tau)
+    exp_b = np.exp(-age_max / tau)
+    age = -tau * np.log(exp_a - u * (exp_a - exp_b))
+    age = np.clip(age, age_min, age_max)
+
+    age_frac = np.clip((age - age_min) / max(age_max - age_min, 1e-8), 0.0, 1.0)
+    z_pred = z_young - (z_young - z_old) * (age_frac**gamma)
+    metallicity = z_pred + rng.normal(0.0, sigma, size=n)
+    metallicity = np.clip(metallicity, z_lo, z_hi)
+
+    return ParticleICs(
+        coords_xy=ics.coords_xy,
+        velocity_xyz=ics.velocity_xyz,
+        mass=ics.mass,
+        age=jnp.asarray(age, dtype=jnp.float32),
+        metallicity=jnp.asarray(metallicity, dtype=jnp.float32),
+    )
+
+
 def _coords_to_spaxels(coords_xy: jnp.ndarray, nx: int, ny: int) -> jnp.ndarray:
     x = np.asarray(coords_xy[:, 0])
     y = np.asarray(coords_xy[:, 1])
@@ -591,6 +640,22 @@ def parse_args() -> argparse.Namespace:
         help="Scatter scale for CEH prior residuals.",
     )
     parser.add_argument(
+        "--synthetic-population-model",
+        type=str,
+        default="legacy",
+        choices=["legacy", "sfh_ceh"],
+        help="Population generator for true age-metallicity labels.",
+    )
+    parser.add_argument("--synthetic-age-min-gyr", type=float, default=0.5)
+    parser.add_argument("--synthetic-age-max-gyr", type=float, default=12.0)
+    parser.add_argument("--synthetic-sfh-tau-gyr", type=float, default=4.0)
+    parser.add_argument("--synthetic-ceh-z-old", type=float, default=8e-4)
+    parser.add_argument("--synthetic-ceh-z-young", type=float, default=8e-3)
+    parser.add_argument("--synthetic-ceh-gamma", type=float, default=1.2)
+    parser.add_argument("--synthetic-ceh-sigma", type=float, default=1.2e-3)
+    parser.add_argument("--synthetic-metallicity-min", type=float, default=5e-4)
+    parser.add_argument("--synthetic-metallicity-max", type=float, default=0.01)
+    parser.add_argument(
         "--agama-qjr",
         type=float,
         default=0.0,
@@ -644,9 +709,26 @@ def main() -> None:
         agama_qjr=args.agama_qjr,
         agama_qjphi=args.agama_qjphi,
     )
+    if args.synthetic_population_model == "sfh_ceh":
+        ics = _apply_sfh_ceh_population_model(
+            ics,
+            seed=args.seed + 17,
+            age_min_gyr=args.synthetic_age_min_gyr,
+            age_max_gyr=args.synthetic_age_max_gyr,
+            sfh_tau_gyr=args.synthetic_sfh_tau_gyr,
+            ceh_z_old=args.synthetic_ceh_z_old,
+            ceh_z_young=args.synthetic_ceh_z_young,
+            ceh_gamma=args.synthetic_ceh_gamma,
+            ceh_sigma=args.synthetic_ceh_sigma,
+            metallicity_min=args.synthetic_metallicity_min,
+            metallicity_max=args.synthetic_metallicity_max,
+        )
     stage_times["sample_particle_ics_s"] = time.perf_counter() - t_stage
     print(
-        f"[stage] sampled ICs via {sampler} (n_particles={args.n_particles})",
+        (
+            f"[stage] sampled ICs via {sampler} (n_particles={args.n_particles}, "
+            f"population_model={args.synthetic_population_model})"
+        ),
         flush=True,
     )
     t_stage = time.perf_counter()
@@ -884,6 +966,16 @@ def main() -> None:
             "prior_ceh_z_young": args.prior_ceh_z_young,
             "prior_ceh_gamma": args.prior_ceh_gamma,
             "prior_ceh_sigma": args.prior_ceh_sigma,
+            "synthetic_population_model": args.synthetic_population_model,
+            "synthetic_age_min_gyr": args.synthetic_age_min_gyr,
+            "synthetic_age_max_gyr": args.synthetic_age_max_gyr,
+            "synthetic_sfh_tau_gyr": args.synthetic_sfh_tau_gyr,
+            "synthetic_ceh_z_old": args.synthetic_ceh_z_old,
+            "synthetic_ceh_z_young": args.synthetic_ceh_z_young,
+            "synthetic_ceh_gamma": args.synthetic_ceh_gamma,
+            "synthetic_ceh_sigma": args.synthetic_ceh_sigma,
+            "synthetic_metallicity_min": args.synthetic_metallicity_min,
+            "synthetic_metallicity_max": args.synthetic_metallicity_max,
         },
         "provenance": {
             "wavelength_template_source": template_source,
