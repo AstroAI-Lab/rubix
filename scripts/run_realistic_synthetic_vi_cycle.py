@@ -9,6 +9,7 @@ and writes diagnostics useful for science verification and papers.
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import time
 from dataclasses import dataclass
@@ -16,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 import jax
+import jax.image
 import jax.numpy as jnp
 import numpy as np
 
@@ -27,6 +29,39 @@ class ParticleICs:
     mass: jnp.ndarray
     age: jnp.ndarray
     metallicity: jnp.ndarray
+
+
+class RubixNativeForwardPipeline:
+    """RUBIX-native forward adapter that returns a resized cube."""
+
+    def __init__(self, user_config: dict, out_shape: tuple[int, int, int]):
+        from rubix.core.ifu import get_calculate_datacube_particlewise
+        from rubix.core.lsf import get_convolve_lsf
+        from rubix.core.psf import get_convolve_psf
+        from rubix.core.rotation import get_galaxy_rotation
+        from rubix.core.telescope import get_spaxel_assignment
+        from rubix.pipeline.linear_pipeline import LinearTransformerPipeline
+        from rubix.utils import get_pipeline_config
+
+        pipeline_cfg = get_pipeline_config(user_config["pipeline"]["name"])
+        funcs = [
+            get_galaxy_rotation(user_config),
+            get_spaxel_assignment(user_config),
+            get_calculate_datacube_particlewise(user_config),
+            get_convolve_psf(user_config),
+            get_convolve_lsf(user_config),
+        ]
+        pipe = LinearTransformerPipeline(pipeline_cfg, funcs)
+        pipe.assemble()
+        self._compiled = pipe.compile_expression()
+        self.out_shape = out_shape
+
+    def run_sharded(self, rubixdata: Any) -> jnp.ndarray:
+        out = self._compiled(rubixdata)
+        cube = out.stars.datacube
+        if tuple(cube.shape) == tuple(self.out_shape):
+            return cube
+        return jax.image.resize(cube, self.out_shape, method="linear")
 
 
 class LocalSpaxelSpectralPipeline:
@@ -49,6 +84,7 @@ class LocalSpaxelSpectralPipeline:
         age_scale: float = 3.0,
         metallicity_pivot: float = 0.0025,
         metallicity_scale: float = 0.0015,
+        doppler_c_kms: float = 299792.458,
         noise_level: float = 0.02,
     ):
         self.particle_spaxels = particle_spaxels  # (P, 2) integer ix, iy
@@ -62,11 +98,25 @@ class LocalSpaxelSpectralPipeline:
         self.age_scale = float(age_scale)
         self.metallicity_pivot = float(metallicity_pivot)
         self.metallicity_scale = float(metallicity_scale)
+        self.doppler_c_kms = float(doppler_c_kms)
         self.noise_level = float(noise_level)
+
+    def _shift_spectrum_linear(
+        self, spectrum: jnp.ndarray, delta_pix: jnp.ndarray
+    ) -> jnp.ndarray:
+        """Shift spectrum by fractional pixels using linear interpolation."""
+        idx = jnp.arange(self.nw, dtype=spectrum.dtype)
+        src = idx - delta_pix
+        src = jnp.clip(src, 0.0, self.nw - 1.0001)
+        i0 = jnp.floor(src).astype(jnp.int32)
+        i1 = jnp.minimum(i0 + 1, self.nw - 1)
+        frac = src - i0.astype(spectrum.dtype)
+        return (1.0 - frac) * spectrum[i0] + frac * spectrum[i1]
 
     def run_sharded(self, rubixdata: Any) -> jnp.ndarray:
         age = rubixdata.stars.age
         metallicity = rubixdata.stars.metallicity
+        vz = rubixdata.stars.velocity[:, 2]
 
         # Distinct spectral directions for age and metallicity to improve
         # identifiability in inverse recovery.
@@ -85,7 +135,9 @@ class LocalSpaxelSpectralPipeline:
                 + age_coef[p] * self.spectral_age_basis
                 + met_coef[p] * self.spectral_met_basis
             )
-            spectrum = self.particle_mass[p] * spectrum_shape
+            delta_pix = (vz[p] / self.doppler_c_kms) * (self.nw - 1)
+            shifted = self._shift_spectrum_linear(spectrum_shape, delta_pix)
+            spectrum = self.particle_mass[p] * shifted
             return carry.at[ix, iy, :].add(spectrum), None
 
         cube, _ = jax.lax.scan(add_particle, cube, jnp.arange(age.shape[0]))
@@ -417,6 +469,37 @@ def _make_static_data(ics: ParticleICs) -> Any:
     )
 
 
+def _build_rubix_native_config(
+    *, pipeline_name: str, telescope_name: str, dist_z: float
+) -> dict[str, Any]:
+    from rubix import config as rubix_base_config
+
+    cfg = copy.deepcopy(rubix_base_config)
+    cfg.setdefault("pipeline", {})
+    cfg["pipeline"]["name"] = pipeline_name
+    cfg.setdefault("telescope", {})
+    cfg["telescope"]["name"] = telescope_name
+    # Ensure required convolution settings exist for calc_gradient.
+    cfg["telescope"].setdefault("psf", {"name": "gaussian", "size": 5, "sigma": 0.6})
+    cfg["telescope"].setdefault("lsf", {"sigma": 0.5})
+    cfg.setdefault("simulation", {})
+    cfg["simulation"]["name"] = "IllustrisTNG"
+    cfg.setdefault("cosmology", {})
+    cfg["cosmology"]["name"] = "PLANCK15"
+    cfg.setdefault("galaxy", {})
+    cfg["galaxy"]["dist_z"] = float(dist_z)
+    cfg["galaxy"]["rotation"] = {"type": "face-on"}
+    cfg.setdefault("data", {})
+    cfg["data"].setdefault("args", {})
+    cfg["data"]["args"]["particle_type"] = ["stars"]
+    cfg.setdefault("ssp", {})
+    cfg["ssp"].setdefault("template", {})
+    cfg["ssp"]["template"]["name"] = "BruzualCharlot2003"
+    cfg["ssp"]["method"] = "linear"
+    cfg["logger"] = None
+    return cfg
+
+
 def _build_parameter_penalty_fn(
     *,
     particle_spaxels: jnp.ndarray,
@@ -516,9 +599,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-dir", type=str, default="outputs/realistic_synthetic_vi_cycle"
     )
+    parser.add_argument(
+        "--forward-model",
+        type=str,
+        default="rubix_native",
+        choices=["rubix_native", "legacy_local"],
+    )
+    parser.add_argument("--pipeline-name", type=str, default="calc_gradient")
+    parser.add_argument("--telescope-name", type=str, default="MUSE")
+    parser.add_argument("--galaxy-dist-z", type=float, default=0.05)
     parser.add_argument("--n-particles", type=int, default=64)
-    parser.add_argument("--nx", type=int, default=24)
-    parser.add_argument("--ny", type=int, default=24)
+    parser.add_argument("--nx", type=int, default=16)
+    parser.add_argument("--ny", type=int, default=16)
     parser.add_argument("--nw", type=int, default=64)
     parser.add_argument("--noise-level", type=float, default=0.02)
     parser.add_argument("--vi-steps", type=int, default=300)
@@ -573,6 +665,8 @@ def parse_args() -> argparse.Namespace:
         default=0.0015,
         help="Denominator controlling metallicity response sensitivity.",
     )
+    parser.add_argument("--vz-lower-kms", type=float, default=-300.0)
+    parser.add_argument("--vz-upper-kms", type=float, default=300.0)
     parser.add_argument(
         "--prior-smoothness-weight",
         type=float,
@@ -682,9 +776,9 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
-    from rubix.core.data import RubixData, StarsData
     from rubix.inference import (
-        build_age_metallicity_transforms,
+        apply_params,
+        build_age_metallicity_velocity_transforms,
         build_sfh_ceh_prior_penalty,
         compare_gradients,
         compute_residual_products,
@@ -732,59 +826,84 @@ def main() -> None:
         flush=True,
     )
     t_stage = time.perf_counter()
-    spaxels = _coords_to_spaxels(ics.coords_xy, nx=args.nx, ny=args.ny)
-    (
-        spectral_base,
-        spectral_age_basis,
-        spectral_met_basis,
-        template_source,
-    ) = _build_spectral_components(
-        args.nw,
-        ssp_template_name=args.ssp_template_name,
-        ssp_age_gyr=args.ssp_age_gyr,
-        ssp_metallicity=args.ssp_metallicity,
-        age_basis_scale=args.age_basis_scale,
-        met_basis_scale=args.met_basis_scale,
-    )
+    template_source = "legacy_local"
+    if args.forward_model == "rubix_native":
+        user_cfg = _build_rubix_native_config(
+            pipeline_name=args.pipeline_name,
+            telescope_name=args.telescope_name,
+            dist_z=args.galaxy_dist_z,
+        )
+        pipe = RubixNativeForwardPipeline(
+            user_config=user_cfg,
+            out_shape=(args.nx, args.ny, args.nw),
+        )
+        static_data = _make_static_data(ics)
+        static_data.galaxy.redshift = jnp.asarray(args.galaxy_dist_z, dtype=jnp.float32)
+        static_data.galaxy.center = jnp.asarray([0.0, 0.0, 0.0], dtype=jnp.float32)
+        static_data.galaxy.halfmassrad_stars = jnp.asarray(5.0, dtype=jnp.float32)
+        spaxels = _coords_to_spaxels(ics.coords_xy, nx=args.nx, ny=args.ny)
+        template_source = "rubix_ssp_lookup_native"
+    else:
+        spaxels = _coords_to_spaxels(ics.coords_xy, nx=args.nx, ny=args.ny)
+        (
+            spectral_base,
+            spectral_age_basis,
+            spectral_met_basis,
+            template_source,
+        ) = _build_spectral_components(
+            args.nw,
+            ssp_template_name=args.ssp_template_name,
+            ssp_age_gyr=args.ssp_age_gyr,
+            ssp_metallicity=args.ssp_metallicity,
+            age_basis_scale=args.age_basis_scale,
+            met_basis_scale=args.met_basis_scale,
+        )
+        pipe = LocalSpaxelSpectralPipeline(
+            particle_spaxels=spaxels,
+            particle_mass=ics.mass,
+            spectral_base=spectral_base,
+            spectral_age_basis=spectral_age_basis,
+            spectral_met_basis=spectral_met_basis,
+            nx=args.nx,
+            ny=args.ny,
+            age_scale=args.age_response_scale,
+            metallicity_pivot=args.met_response_pivot,
+            metallicity_scale=args.met_response_scale,
+            noise_level=args.noise_level,
+        )
+        static_data = _make_static_data(ics)
     stage_times["build_spaxels_template_s"] = time.perf_counter() - t_stage
+    print(f"[stage] forward model: {args.forward_model}", flush=True)
     print(f"[stage] wavelength template source: {template_source}", flush=True)
 
-    pipe = LocalSpaxelSpectralPipeline(
-        particle_spaxels=spaxels,
-        particle_mass=ics.mass,
-        spectral_base=spectral_base,
-        spectral_age_basis=spectral_age_basis,
-        spectral_met_basis=spectral_met_basis,
-        nx=args.nx,
-        ny=args.ny,
-        age_scale=args.age_response_scale,
-        metallicity_pivot=args.met_response_pivot,
-        metallicity_scale=args.met_response_scale,
-        noise_level=args.noise_level,
-    )
-
-    static_data = _make_static_data(ics)
-
-    true_params = {"stars": {"age": ics.age, "metallicity": ics.metallicity}}
+    true_params = {
+        "stars": {
+            "age": ics.age,
+            "metallicity": ics.metallicity,
+            "velocity": ics.velocity_xyz,
+        }
+    }
+    velocity_init = np.asarray(ics.velocity_xyz).copy()
+    velocity_init[:, 2] = 0.0
     init_params = {
         "stars": {
             "age": jnp.full_like(ics.age, jnp.mean(ics.age)),
             "metallicity": jnp.full_like(ics.metallicity, jnp.mean(ics.metallicity)),
+            "velocity": jnp.asarray(velocity_init, dtype=jnp.float32),
         }
     }
 
     t_stage = time.perf_counter()
     target = pipe.run_sharded(
-        RubixData(
-            galaxy=static_data.galaxy,
-            stars=StarsData(
-                coords=static_data.stars.coords,
-                velocity=static_data.stars.velocity,
-                mass=static_data.stars.mass,
-                age=true_params["stars"]["age"],
-                metallicity=true_params["stars"]["metallicity"],
-            ),
-            gas=static_data.gas,
+        apply_params(
+            static_data,
+            {
+                "stars": {
+                    "age": true_params["stars"]["age"],
+                    "metallicity": true_params["stars"]["metallicity"],
+                    "velocity": true_params["stars"]["velocity"],
+                }
+            },
         )
     )
     stage_times["build_target_cube_s"] = time.perf_counter() - t_stage
@@ -794,19 +913,7 @@ def main() -> None:
 
     # Gradient consistency check on the full cube objective.
     def objective(params: dict[str, Any]) -> jnp.ndarray:
-        pred = pipe.run_sharded(
-            RubixData(
-                galaxy=static_data.galaxy,
-                stars=StarsData(
-                    coords=static_data.stars.coords,
-                    velocity=static_data.stars.velocity,
-                    mass=static_data.stars.mass,
-                    age=params["stars"]["age"],
-                    metallicity=params["stars"]["metallicity"],
-                ),
-                gas=static_data.gas,
-            )
-        )
+        pred = pipe.run_sharded(apply_params(static_data, params))
         return jnp.mean((pred - target) ** 2)
 
     objective_jit = jax.jit(objective)
@@ -834,11 +941,14 @@ def main() -> None:
 
     print("[stage] running variational inference", flush=True)
     t_stage = time.perf_counter()
-    transforms = build_age_metallicity_transforms(
+    transforms = build_age_metallicity_velocity_transforms(
+        fixed_velocity_xy=static_data.stars.velocity[:, :2],
         age_lower=0.5,
         age_upper=12.0,
         metallicity_lower=5e-4,
         metallicity_upper=0.01,
+        vz_lower=args.vz_lower_kms,
+        vz_upper=args.vz_upper_kms,
     )
     sfh_ceh_penalty_fn = build_sfh_ceh_prior_penalty(
         age_min_gyr=0.5,
@@ -901,9 +1011,13 @@ def main() -> None:
 
     truth_age = np.asarray(true_params["stars"]["age"])
     truth_met = np.asarray(true_params["stars"]["metallicity"])
+    truth_vz = np.asarray(true_params["stars"]["velocity"][:, 2])
     fit_age = np.asarray(vi_result.posterior_mean_constrained_params["stars"]["age"])
     fit_met = np.asarray(
         vi_result.posterior_mean_constrained_params["stars"]["metallicity"]
+    )
+    fit_vz = np.asarray(
+        vi_result.posterior_mean_constrained_params["stars"]["velocity"][:, 2]
     )
 
     recovery = {
@@ -911,18 +1025,23 @@ def main() -> None:
         "age_rmse": float(np.sqrt(np.mean((fit_age - truth_age) ** 2))),
         "metallicity_mae": float(np.mean(np.abs(fit_met - truth_met))),
         "metallicity_rmse": float(np.sqrt(np.mean((fit_met - truth_met) ** 2))),
+        "vz_mae_kms": float(np.mean(np.abs(fit_vz - truth_vz))),
+        "vz_rmse_kms": float(np.sqrt(np.mean((fit_vz - truth_vz) ** 2))),
     }
 
     t_stage = time.perf_counter()
     np.savez(
         out / "science_cycle_outputs.npz",
         coords_xy=np.asarray(ics.coords_xy),
+        velocity_xyz=np.asarray(ics.velocity_xyz),
         spaxels=np.asarray(spaxels),
         mass=np.asarray(ics.mass),
         true_age=truth_age,
         true_metallicity=truth_met,
+        true_vz=truth_vz,
         fit_age=fit_age,
         fit_metallicity=fit_met,
+        fit_vz=fit_vz,
         target_cube=np.asarray(target),
         pred_mean_cube=np.asarray(pred_summary["mean"]),
         residual_cube=np.asarray(residuals["residual"]),
@@ -950,11 +1069,17 @@ def main() -> None:
             "agama_qjr": args.agama_qjr,
             "agama_qjphi": args.agama_qjphi,
             "seed": args.seed,
+            "forward_model": args.forward_model,
+            "pipeline_name": args.pipeline_name,
+            "telescope_name": args.telescope_name,
+            "galaxy_dist_z": args.galaxy_dist_z,
             "age_basis_scale": args.age_basis_scale,
             "met_basis_scale": args.met_basis_scale,
             "age_response_scale": args.age_response_scale,
             "met_response_pivot": args.met_response_pivot,
             "met_response_scale": args.met_response_scale,
+            "vz_lower_kms": args.vz_lower_kms,
+            "vz_upper_kms": args.vz_upper_kms,
             "prior_smoothness_weight": args.prior_smoothness_weight,
             "prior_amr_weight": args.prior_amr_weight,
             "prior_mean_age_weight": args.prior_mean_age_weight,
