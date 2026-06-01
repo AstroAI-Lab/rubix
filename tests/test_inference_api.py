@@ -58,6 +58,18 @@ def test_apply_params_returns_new_rubix_data():
     assert jnp.allclose(static_data.stars.metallicity, jnp.array([0.1, 0.1]))
 
 
+def test_apply_params_updates_velocity_shape_preserving_tree_contract():
+    static_data = _make_rubix_data()
+    velocity = jnp.array([[3.0, -2.0, 10.0], [4.0, 1.0, -5.0]])
+    params = {"stars": {"velocity": velocity}}
+
+    updated = apply_params(static_data, params)
+
+    assert updated.stars.velocity.shape == (2, 3)
+    assert jnp.allclose(updated.stars.velocity, velocity)
+    assert not jnp.array_equal(static_data.stars.velocity, updated.stars.velocity)
+
+
 def test_apply_params_raises_for_unknown_field():
     static_data = _make_rubix_data()
     params = {"stars": {"not_a_field": jnp.array([1.0, 2.0])}}

@@ -41,8 +41,10 @@ from .parameterization import (
     ParameterTransform,
     SigmoidBounds,
     SoftplusLowerBound,
+    VelocityZBoundsTransform,
     apply_transforms,
     build_age_metallicity_transforms,
+    build_age_metallicity_velocity_transforms,
     inverse_transforms,
 )
 from .performance_guardrails import (
@@ -83,6 +85,7 @@ __all__ = [
     "ParameterTransform",
     "SigmoidBounds",
     "SoftplusLowerBound",
+    "VelocityZBoundsTransform",
     "GradientComparison",
     "IFUCubeBenchmarkResult",
     "OptimizationResult",
@@ -102,6 +105,7 @@ __all__ = [
     "generate_ifu_experiment_report",
     "normalize_experiment_config",
     "build_age_metallicity_transforms",
+    "build_age_metallicity_velocity_transforms",
     "build_ifu_cube_loss",
     "build_loss_from_config",
     "build_loss_from_user_config",

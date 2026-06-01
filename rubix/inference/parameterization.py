@@ -75,6 +75,41 @@ class SigmoidBounds(ParameterTransform):
         return jnp.log(x) - jnp.log1p(-x)
 
 
+@dataclass(frozen=True)
+class VelocityZBoundsTransform(ParameterTransform):
+    """Transform that bounds only the line-of-sight velocity component.
+
+    ``x`` and ``y`` velocity components are held fixed to ``fixed_xy`` in the
+    forward pass. The unconstrained ``z`` channel is mapped to
+    ``(lower_z, upper_z)`` via sigmoid.
+    """
+
+    lower_z: float
+    upper_z: float
+    fixed_xy: Any
+    eps: float = 1e-8
+
+    def __post_init__(self):
+        if self.upper_z <= self.lower_z:
+            raise ValueError("upper_z must be strictly larger than lower_z")
+
+    def forward(self, unconstrained: Any) -> Any:
+        unconstrained = jnp.asarray(unconstrained)
+        fixed_xy = jnp.asarray(self.fixed_xy, dtype=unconstrained.dtype)
+        width = self.upper_z - self.lower_z
+        z = self.lower_z + width * jax.nn.sigmoid(unconstrained[:, 2])
+        return jnp.stack([fixed_xy[:, 0], fixed_xy[:, 1], z], axis=1)
+
+    def inverse(self, constrained: Any) -> Any:
+        constrained = jnp.asarray(constrained)
+        width = self.upper_z - self.lower_z
+        z_scaled = (constrained[:, 2] - self.lower_z) / width
+        z_scaled = jnp.clip(z_scaled, self.eps, 1.0 - self.eps)
+        z_unconstrained = jnp.log(z_scaled) - jnp.log1p(-z_scaled)
+        zeros_xy = jnp.zeros_like(constrained[:, :2])
+        return jnp.concatenate([zeros_xy, z_unconstrained[:, None]], axis=1)
+
+
 def apply_transforms(
     params: ParamsTree,
     transforms: TransformTree,
@@ -150,3 +185,28 @@ def build_age_metallicity_transforms(
             ),
         }
     }
+
+
+def build_age_metallicity_velocity_transforms(
+    *,
+    fixed_velocity_xy: Any,
+    age_lower: float = 0.0,
+    age_upper: float = 20.0,
+    metallicity_lower: float = 0.0,
+    metallicity_upper: float = 0.05,
+    vz_lower: float = -400.0,
+    vz_upper: float = 400.0,
+) -> dict[str, dict[str, ParameterTransform]]:
+    """Build transforms for age, metallicity, and velocity with bounded ``v_z``."""
+    transforms = build_age_metallicity_transforms(
+        age_lower=age_lower,
+        age_upper=age_upper,
+        metallicity_lower=metallicity_lower,
+        metallicity_upper=metallicity_upper,
+    )
+    transforms["stars"]["velocity"] = VelocityZBoundsTransform(
+        lower_z=vz_lower,
+        upper_z=vz_upper,
+        fixed_xy=fixed_velocity_xy,
+    )
+    return transforms
