@@ -103,7 +103,7 @@ def get_galaxy_rotation(config: dict):
                 ), f"Velocities not found for {particle_type}. "
                 assert masses is not None, f"Masses not found for {particle_type}. "
 
-                if config["galaxy"]["rotation"]["type"] == "matrix":
+                if config["galaxy"]["rotation"].get("type") == "matrix":
                     logger.debug(
                         "Rotation type is matrix, loading rotation matrix from file."
                     )
