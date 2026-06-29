@@ -1,6 +1,6 @@
 # This is a test config file
 GENERAL :
-  RUN_ID : 'g8.26e11_PseudoBulge_ThickDisc_ThinDisc_Halo'
+  RUN_ID : 'g8.26e11_ThinDisc'
   INPUT : 'NIHAO_idg8.26e11_snap1024_subsetFalse.fits'
   OUTPUT : . # Output directory. The output of this run will be collected in a subdirectory named RUN_ID. The specified path is relative to the output path given in defaultDir.
   REDSHIFT : 0.01 # Initial guess on the redshift of the system [in z]. Spectra are shifted to rest-frame, according to this redshift.
