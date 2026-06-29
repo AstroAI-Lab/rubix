@@ -87,6 +87,24 @@ calc_ifu_no_rot_no_psf:
       args: []
       kwargs: {}
 
+calc_ifu_no_rot_no_psf_no_noise:
+  Transformers:
+    spaxel_assignment:
+      name: spaxel_assignment
+      depends_on: null
+      args: []
+      kwargs: {}
+    calculate_datacube_particlewise:
+      name: calculate_datacube_particlewise
+      depends_on: spaxel_assignment
+      args: []
+      kwargs: {}
+    convolve_lsf:
+      name: convolve_lsf
+      depends_on: calculate_datacube_particlewise
+      args: []
+      kwargs: {}
+
 calc_ifu_no_noise:
   Transformers:
     rotate_galaxy:
