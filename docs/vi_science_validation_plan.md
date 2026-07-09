@@ -450,8 +450,21 @@ Completed/active findings:
   likelihood and well-posed cross-seed coverage. Note the flux-scaled sigma floor
   is `max(noise_level, sigma_floor)`, so calibrated runs must lower
   `--noise-level` (the default 0.02 floor otherwise dominates and re-creates the
-  prior-collapsed regime). Coverage at a data-constraining noise level
-  (`sigma~1e-4`) is the current evaluation.
+  prior-collapsed regime).
+- **Coverage result (native 2x2, 5 noise-injected seeds, `sigma=1e-4`,
+  `beta_kl=1`, `prior_std=1.814`, 20 pooled trials).** Moving from the
+  prior-collapsed `sigma=0.02` regime to a data-constraining `sigma=1e-4`
+  improved age coverage markedly: `cov@0.9` rose from `0.35` to `0.60`,
+  `cov@0.95` to `0.80`, and the SBC reduced chi-square fell from `10.8` to `4.4`.
+  Coverage is still below nominal with `rms_z~1.9` (age) and `~1.7`
+  (metallicity), i.e. the posteriors remain ~2x too narrow. This is the expected
+  mean-field VI variance underestimation, not a bug: the diagonal Gaussian cannot
+  capture the coupled age-metallicity width. Line-of-sight velocity over-covers
+  (`cov@0.9~1.0`, `rms_z~1.0`) because it is weakly identified (broad posterior).
+  Conclusion: with a well-scaled likelihood the calibration pipeline is now
+  well-posed and the prior is unbiased; closing the remaining gap needs a
+  richer posterior (wire the block-covariance family into the optimizer) and/or
+  importance-weighted width correction, not further prior tuning.
 
 Next work package:
 
