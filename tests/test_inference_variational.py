@@ -1,4 +1,8 @@
+import warnings
+
+import jax
 import jax.numpy as jnp
+import optax
 import pytest
 
 from rubix.core.data import Galaxy, GasData, RubixData, StarsData
@@ -9,6 +13,7 @@ from rubix.inference import (
     optimize_variational_ifu_cube,
     optimize_variational_posterior,
     sample_diag_gaussian,
+    sample_low_rank_gaussian,
 )
 
 
@@ -108,12 +113,46 @@ def test_optimize_variational_posterior_improves_objective():
     assert len(result.update_norm_history) == len(result.objective_history)
     assert result.best_step >= 0
     assert result.best_step < len(result.objective_history)
-    assert result.best_objective == min(result.objective_history)
+    # best_objective is the minimum EMA-smoothed objective, so it lies between
+    # the raw minimum and the first (unsmoothed) objective.
+    assert result.best_objective >= min(result.objective_history) - 1e-6
+    assert result.best_objective <= result.objective_history[0] + 1e-6
     assert jnp.isfinite(result.final_objective)
     assert jnp.isfinite(result.final_reconstruction)
     assert jnp.isfinite(result.final_kl)
-    assert result.final_objective >= result.best_objective
     assert result.steps_run <= 200
+
+
+def test_optimize_variational_posterior_supports_lbfgs_extra_args():
+    pipeline = DummyPipeline()
+    static_data = _make_rubix_data()
+    params_init = {
+        "stars": {
+            "age": jnp.array([0.5]),
+            "metallicity": jnp.array([0.001]),
+        }
+    }
+    target = jnp.array([[[5.0]]])
+
+    result = optimize_variational_posterior(
+        pipeline=pipeline,
+        params_init=params_init,
+        static_data=static_data,
+        target=target,
+        max_steps=5,
+        tol=1e-12,
+        num_samples=1,
+        beta_kl=0.0,
+        init_log_std=-12.0,
+        optimizer=optax.lbfgs(),
+        seed=11,
+        # L-BFGS here is effectively deterministic; disable EMA smoothing so the
+        # best objective tracks the rapidly converging raw value.
+        best_selection_ema_decay=0.0,
+    )
+
+    assert result.objective_history[-1] < result.objective_history[0]
+    assert result.best_objective < 1e-6
 
 
 def test_optimize_variational_with_transforms_respects_bounds():
@@ -184,6 +223,40 @@ def test_optimize_variational_ifu_cube_rejects_non_3d_target():
             static_data=_make_rubix_data(),
             target=jnp.ones((2, 2)),
         )
+
+
+def test_optimize_variational_ifu_cube_warns_on_uncalibrated_units():
+    params_init = {
+        "stars": {"age": jnp.array([0.5]), "metallicity": jnp.array([0.001])}
+    }
+    with pytest.warns(UserWarning, match="posterior widths are NOT"):
+        optimize_variational_ifu_cube(
+            pipeline=DummyPipeline(),
+            params_init=params_init,
+            static_data=_make_rubix_data(),
+            target=jnp.ones((1, 1, 1)),
+            sigma=jnp.ones((1, 1, 1)),
+            normalize_loss=True,
+            beta_kl=1e-3,
+            max_steps=1,
+        )
+
+
+def test_optimize_variational_ifu_cube_calibrated_default_is_quiet():
+    params_init = {
+        "stars": {"age": jnp.array([0.5]), "metallicity": jnp.array([0.001])}
+    }
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        optimize_variational_ifu_cube(
+            pipeline=DummyPipeline(),
+            params_init=params_init,
+            static_data=_make_rubix_data(),
+            target=jnp.ones((1, 1, 1)),
+            sigma=jnp.ones((1, 1, 1)),
+            max_steps=1,
+        )
+    assert not any("posterior widths are NOT" in str(w.message) for w in caught)
 
 
 def test_optimize_variational_ifu_cube_rejects_both_sigma_and_inv_variance():
@@ -317,5 +390,188 @@ def test_optimize_variational_ifu_cube_improves_objective():
     )
 
     assert result.objective_history[0] > result.objective_history[-1]
-    assert result.best_objective <= result.objective_history[-1]
+    # best_objective is the smoothed (EMA) minimum, bounded by the raw minimum
+    # and the first objective rather than the last raw value.
+    assert result.best_objective >= min(result.objective_history) - 1e-6
+    assert result.best_objective <= result.objective_history[0] + 1e-6
     assert result.final_objective <= result.objective_history[0]
+
+
+def test_low_rank_posterior_returns_factor_and_marginal_widths():
+    pipeline = DummyPipeline()
+    static_data = _make_rubix_data()
+    params_init = {
+        "stars": {"age": jnp.array([0.5]), "metallicity": jnp.array([0.001])}
+    }
+    target = jnp.array([[[5.0]]])
+
+    result = optimize_variational_posterior(
+        pipeline=pipeline,
+        params_init=params_init,
+        static_data=static_data,
+        target=target,
+        learning_rate=5e-2,
+        max_steps=80,
+        tol=1e-9,
+        num_samples=8,
+        beta_kl=1.0,
+        seed=5,
+        posterior_rank=1,
+    )
+
+    # Latent dimension is 2 (age + metallicity), rank 1.
+    assert result.posterior_factor_params is not None
+    assert result.posterior_factor_params.shape == (2, 1)
+    # Reported (marginal) log-std is at least the diagonal init log-std.
+    assert bool(jnp.all(result.posterior_log_std_params["stars"]["age"] >= -2.5))
+    assert jnp.isfinite(result.final_kl)
+
+
+def test_low_rank_posterior_captures_ridge_correlation():
+    # DummyPipeline output = age + 2 * metallicity, so the likelihood only
+    # constrains that linear combination -> an anti-correlated posterior ridge.
+    pipeline = DummyPipeline()
+    static_data = _make_rubix_data()
+    params_init = {"stars": {"age": jnp.array([0.5]), "metallicity": jnp.array([0.5])}}
+    target = jnp.array([[[3.0]]])
+
+    _, state = optimize_variational_posterior(
+        pipeline=pipeline,
+        params_init=params_init,
+        static_data=static_data,
+        target=target,
+        learning_rate=5e-2,
+        max_steps=600,
+        tol=1e-12,
+        num_samples=16,
+        beta_kl=1.0,
+        seed=7,
+        posterior_rank=1,
+        return_state=True,
+    )
+
+    mean = state.variational_params["mean"]
+    diag_log_std = state.variational_params["log_std"]
+    factor = state.variational_params["factor"]
+
+    keys = jax.random.split(jax.random.PRNGKey(0), 20000)
+    samples = jax.vmap(
+        lambda k: sample_low_rank_gaussian(mean, diag_log_std, factor, k)
+    )(keys)
+    age = samples["stars"]["age"][:, 0]
+    met = samples["stars"]["metallicity"][:, 0]
+    corr = float(jnp.corrcoef(age, met)[0, 1])
+    # The ridge forces a clear negative age-metallicity correlation, which a
+    # diagonal mean-field posterior cannot represent.
+    assert corr < -0.2
+
+
+def test_low_rank_posterior_resume_round_trips():
+    pipeline = DummyPipeline()
+    static_data = _make_rubix_data()
+    params_init = {
+        "stars": {"age": jnp.array([0.5]), "metallicity": jnp.array([0.001])}
+    }
+    target = jnp.array([[[4.0]]])
+
+    _, state = optimize_variational_posterior(
+        pipeline=pipeline,
+        params_init=params_init,
+        static_data=static_data,
+        target=target,
+        max_steps=30,
+        num_samples=4,
+        beta_kl=1.0,
+        seed=3,
+        posterior_rank=2,
+        return_state=True,
+    )
+    assert "factor" in state.variational_params
+
+    # Resume ignores posterior_rank and continues the persisted low-rank family.
+    result2 = optimize_variational_posterior(
+        pipeline=pipeline,
+        params_init=params_init,
+        static_data=static_data,
+        target=target,
+        max_steps=30,
+        num_samples=4,
+        beta_kl=1.0,
+        state_init=state,
+    )
+    assert result2.posterior_factor_params is not None
+    assert result2.posterior_factor_params.shape == (2, 2)
+    assert result2.steps_run == 60
+
+
+def test_optimize_variational_posterior_rejects_negative_rank():
+    with pytest.raises(ValueError, match="posterior_rank must be non-negative"):
+        optimize_variational_posterior(
+            pipeline=DummyPipeline(),
+            params_init={"stars": {"age": jnp.array([0.5])}},
+            static_data=_make_rubix_data(),
+            target=jnp.array([[[1.0]]]),
+            max_steps=1,
+            posterior_rank=-1,
+        )
+
+
+def test_best_selection_decay_zero_matches_raw_minimum():
+    pipeline = DummyPipeline()
+    static_data = _make_rubix_data()
+    params_init = {
+        "stars": {"age": jnp.array([0.5]), "metallicity": jnp.array([0.001])}
+    }
+    target = jnp.array([[[5.0]]])
+
+    result = optimize_variational_posterior(
+        pipeline=pipeline,
+        params_init=params_init,
+        static_data=static_data,
+        target=target,
+        learning_rate=5e-2,
+        max_steps=50,
+        num_samples=2,
+        beta_kl=1.0,
+        seed=1,
+        best_selection_ema_decay=0.0,
+    )
+    # With smoothing disabled, best equals the raw objective minimum.
+    assert result.best_objective == pytest.approx(min(result.objective_history))
+
+
+def test_best_selection_smoothing_is_between_min_and_first():
+    pipeline = DummyPipeline()
+    static_data = _make_rubix_data()
+    params_init = {
+        "stars": {"age": jnp.array([0.5]), "metallicity": jnp.array([0.001])}
+    }
+    target = jnp.array([[[5.0]]])
+
+    smoothed = optimize_variational_posterior(
+        pipeline=pipeline,
+        params_init=params_init,
+        static_data=static_data,
+        target=target,
+        learning_rate=5e-2,
+        max_steps=60,
+        num_samples=2,
+        beta_kl=1.0,
+        seed=1,
+        best_selection_ema_decay=0.9,
+    )
+    raw_min = min(smoothed.objective_history)
+    # A smoothed best cannot dip below the raw minimum.
+    assert smoothed.best_objective >= raw_min - 1e-6
+
+
+def test_optimize_variational_posterior_rejects_bad_ema_decay():
+    with pytest.raises(ValueError, match="best_selection_ema_decay"):
+        optimize_variational_posterior(
+            pipeline=DummyPipeline(),
+            params_init={"stars": {"age": jnp.array([0.5])}},
+            static_data=_make_rubix_data(),
+            target=jnp.array([[[1.0]]]),
+            max_steps=1,
+            best_selection_ema_decay=1.0,
+        )

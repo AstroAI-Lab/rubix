@@ -56,13 +56,19 @@ from .performance_guardrails import (
     check_vi_guardrails,
     load_guardrail_threshold_profile,
 )
+from .posterior_family import (
+    init_low_rank_factor,
+    kl_low_rank_to_standard_normal,
+    low_rank_marginal_log_std,
+    sample_low_rank_gaussian,
+)
 from .posterior_predictive import (
     compute_residual_products,
     sample_posterior_predictive_cubes,
     summarize_masked_metrics,
     summarize_predictive_cube_samples,
 )
-from .priors import build_sfh_ceh_prior_penalty
+from .priors import build_ceh_relation_prior_penalty, build_sfh_ceh_prior_penalty
 from .validation import GradientComparison, compare_gradients, finite_difference_grad
 from .variational import (
     VariationalResult,
@@ -99,6 +105,10 @@ __all__ = [
     "VIBenchmarkResult",
     "apply_params",
     "apply_transforms",
+    "init_low_rank_factor",
+    "kl_low_rank_to_standard_normal",
+    "low_rank_marginal_log_std",
+    "sample_low_rank_gaussian",
     "load_checkpoint",
     "make_optimization_checkpoint",
     "make_variational_checkpoint",
@@ -117,6 +127,7 @@ __all__ = [
     "compare_gradients",
     "compute_residual_products",
     "build_sfh_ceh_prior_penalty",
+    "build_ceh_relation_prior_penalty",
     "check_ifu_optimization_guardrails",
     "check_vi_guardrails",
     "load_guardrail_threshold_profile",

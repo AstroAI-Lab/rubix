@@ -1,3 +1,4 @@
+import warnings
 from dataclasses import dataclass
 from typing import Callable, Mapping, Optional
 
@@ -11,6 +12,12 @@ from rubix.core.data import RubixData
 from .api import LossFn, loss
 from .losses import combine_loss_fns, huber_data_loss, masked_gaussian_nll
 from .parameterization import TransformTree, apply_transforms
+from .posterior_family import (
+    init_low_rank_factor,
+    kl_low_rank_to_standard_normal,
+    low_rank_marginal_log_std,
+    sample_low_rank_gaussian,
+)
 
 ParamsTree = Mapping[str, Mapping[str, Any]]
 
@@ -36,6 +43,7 @@ class VariationalResult:
     final_kl: float = float("nan")
     steps_run: int = -1
     converged: bool = False
+    posterior_factor_params: Optional[jnp.ndarray] = None
 
 
 @dataclass
@@ -54,6 +62,7 @@ class VariationalState:
     grad_norm_history: list[float]
     update_norm_history: list[float]
     steps_run: int
+    best_selection_ema: float = float("inf")
 
 
 def _tree_to_dict(tree: ParamsTree) -> dict[str, dict[str, Any]]:
@@ -131,7 +140,7 @@ def optimize_variational_posterior(
     max_steps: int = 500,
     tol: float = 1e-6,
     num_samples: int = 4,
-    beta_kl: float = 1e-3,
+    beta_kl: float = 1.0,
     init_log_std: float = -2.0,
     loss_fn: Optional[LossFn] = None,
     noise_key: Optional[jnp.ndarray] = None,
@@ -143,8 +152,22 @@ def optimize_variational_posterior(
     param_penalty_fn: Optional[Callable[[ParamsTree], jnp.ndarray]] = None,
     param_penalty_weight: float = 0.0,
     param_penalty_ramp_steps: int = 0,
+    posterior_rank: int = 0,
+    posterior_factor_init_scale: float = 1e-2,
+    best_selection_ema_decay: float = 0.9,
 ) -> Any:
     """Optimize a mean-field variational posterior with reparameterization.
+
+    Units contract (important for calibrated posteriors): the minimized
+    objective is ``E_q[reconstruction] + beta_kl * KL(q || N(0, I))``. For the
+    posterior *widths* to be calibrated this must equal the negative ELBO, which
+    requires ``reconstruction`` to be the **summed** (not per-voxel-mean)
+    negative log-likelihood and ``beta_kl = 1.0``. A per-voxel-mean data term
+    (see ``normalize_loss`` in :func:`optimize_variational_ifu_cube`) shrinks the
+    likelihood by the voxel count, so any ``beta_kl > 0`` then over-regularizes
+    and the reported ``posterior_log_std_params`` are not trustworthy. Set
+    ``beta_kl = 0`` to obtain an explicit MAP point estimate (the posterior mean
+    is still meaningful, but its width is not).
 
     Args:
         pipeline (Any): Pipeline-like object consumed by :func:`rubix.inference.loss`.
@@ -156,10 +179,17 @@ def optimize_variational_posterior(
         learning_rate (float, optional): Step size for default Adam optimizer.
             Defaults to 5e-3.
         max_steps (int, optional): Maximum optimization steps. Defaults to 500.
-        tol (float, optional): Convergence threshold on update norm.
-            Defaults to 1e-6.
+        tol (float, optional): Convergence threshold on the update norm.
+            Defaults to 1e-6. **Caveat:** with a stochastic (Monte Carlo)
+            objective the per-step update norm rarely falls below a tight
+            ``tol``, so the returned ``converged`` flag is usually ``False``
+            even for well-optimized runs; treat it as a best-effort signal and
+            rely on the objective/gradient traces to judge convergence.
         num_samples (int, optional): Monte Carlo samples per step. Defaults to 4.
-        beta_kl (float, optional): KL weight. Defaults to 1e-3.
+        beta_kl (float, optional): KL weight. Defaults to 1.0, the only value
+            that yields a calibrated ELBO (with a summed-NLL reconstruction).
+            Use 0.0 for an explicit MAP point estimate. See the units contract
+            in the summary above.
         init_log_std (float, optional): Initial posterior log-std.  **Ignored
             when** ``state_init`` **is provided**; the posterior is resumed
             from the persisted variational parameters.  Defaults to -2.0.
@@ -190,15 +220,39 @@ def optimize_variational_posterior(
         param_penalty_ramp_steps (int, optional): Number of initial steps over
             which to linearly ramp ``param_penalty_weight`` from 0 to full.
             Defaults to 0 (no ramp).
+        posterior_rank (int, optional): If ``> 0``, use a low-rank-plus-diagonal
+            Gaussian posterior with this factor rank instead of the diagonal
+            mean-field posterior, allowing correlated parameter geometry (e.g.
+            the age--metallicity ridge). ``posterior_log_std_params`` is then
+            reported as the marginal log-std and ``posterior_factor_params``
+            holds the low-rank factor. Defaults to 0 (mean-field).
+        posterior_factor_init_scale (float, optional): Initialization scale for
+            the low-rank factor. Small values start near the diagonal posterior.
+            Defaults to 1e-2.
+        best_selection_ema_decay (float, optional): Decay in ``[0, 1)`` for the
+            exponential moving average of the (stochastic) objective used to
+            select the ``best`` step/mean. Smoothing prevents a single
+            lucky-noise Monte Carlo evaluation from being recorded as the best
+            step. ``0`` disables smoothing and selects on the raw per-step value
+            (``best_objective`` then equals ``min(objective_history)``). Defaults
+            to 0.9.
 
     Raises:
-        ValueError: If ``num_samples`` is not strictly positive.
+        ValueError: If ``num_samples`` is not strictly positive, if
+            ``posterior_rank`` is negative, or if ``best_selection_ema_decay``
+            is not in ``[0, 1)``.
 
     Returns:
         VariationalResult: Posterior statistics and optimization traces.
     """
     if num_samples <= 0:
         raise ValueError("num_samples must be strictly positive")
+    if posterior_rank < 0:
+        raise ValueError("posterior_rank must be non-negative")
+    if not 0.0 <= best_selection_ema_decay < 1.0:
+        raise ValueError("best_selection_ema_decay must be in [0, 1)")
+
+    use_low_rank = posterior_rank > 0
 
     if optimizer is None:
         optimizer = optax.adam(learning_rate)
@@ -218,6 +272,14 @@ def optimize_variational_posterior(
             init_log_std=init_log_std,
         )
         variational_params = {"mean": mean, "log_std": log_std}
+        if use_low_rank:
+            factor_key = jax.random.PRNGKey(seed + 1)
+            variational_params["factor"] = init_low_rank_factor(
+                mean=mean,
+                rank=posterior_rank,
+                key=factor_key,
+                init_scale=posterior_factor_init_scale,
+            )
         opt_state = optimizer.init(variational_params)
 
         objective_history: list[float] = []
@@ -229,6 +291,7 @@ def optimize_variational_posterior(
         best_objective = jnp.inf
         best_mean = mean
         best_step = -1
+        best_ema = jnp.inf
         steps_run = 0
         key = jax.random.PRNGKey(seed)
     else:
@@ -244,6 +307,12 @@ def optimize_variational_posterior(
         grad_norm_history = list(state_init.grad_norm_history)
         update_norm_history = list(state_init.update_norm_history)
         steps_run = int(state_init.steps_run)
+        best_ema = jnp.asarray(
+            getattr(state_init, "best_selection_ema", state_init.best_objective)
+        )
+        # Resume honors the persisted posterior family regardless of the
+        # ``posterior_rank`` argument, which is ignored (like ``params_init``).
+        use_low_rank = "factor" in variational_params
 
     converged = False
     initial_steps_run = steps_run
@@ -256,12 +325,18 @@ def optimize_variational_posterior(
     def objective_fn(current_params, step_key, step_index):
         current_mean = current_params["mean"]
         current_log_std = current_params["log_std"]
+        current_factor = current_params.get("factor") if use_low_rank else None
         sample_keys = jax.random.split(step_key, num_samples)
 
         def sample_reconstruction(sample_key):
-            sampled_unconstrained = sample_diag_gaussian(
-                current_mean, current_log_std, sample_key
-            )
+            if use_low_rank:
+                sampled_unconstrained = sample_low_rank_gaussian(
+                    current_mean, current_log_std, current_factor, sample_key
+                )
+            else:
+                sampled_unconstrained = sample_diag_gaussian(
+                    current_mean, current_log_std, sample_key
+                )
             if transforms is None:
                 sampled_constrained = sampled_unconstrained
             else:
@@ -281,7 +356,12 @@ def optimize_variational_posterior(
 
         reconstructions = jax.vmap(sample_reconstruction)(sample_keys)
         reconstruction = jnp.mean(reconstructions)
-        kl = kl_diag_gaussian_to_standard_normal(current_mean, current_log_std)
+        if use_low_rank:
+            kl = kl_low_rank_to_standard_normal(
+                current_mean, current_log_std, current_factor
+            )
+        else:
+            kl = kl_diag_gaussian_to_standard_normal(current_mean, current_log_std)
         prior_penalty = jnp.asarray(0.0, dtype=reconstruction.dtype)
         if param_penalty_fn is not None and param_penalty_weight > 0.0:
             if transforms is None:
@@ -314,12 +394,33 @@ def optimize_variational_posterior(
         )(variational_params, step_key, step_index)
 
         current_mean = variational_params["mean"]
-        if value < best_objective:
-            best_objective = value
+        # Smooth the stochastic objective before selecting the best step so a
+        # single low-variance Monte Carlo draw cannot masquerade as the best.
+        if jnp.isinf(best_ema):
+            step_ema = value
+        else:
+            step_ema = (
+                best_selection_ema_decay * best_ema
+                + (1.0 - best_selection_ema_decay) * value
+            )
+        best_ema = step_ema
+        if step_ema < best_objective:
+            best_objective = step_ema
             best_mean = current_mean
             best_step = initial_steps_run + step
 
-        updates, opt_state = optimizer.update(grads, opt_state, variational_params)
+        if isinstance(optimizer, optax.GradientTransformationExtraArgs):
+            step_value_fn = lambda params: objective_fn(params, step_key, step_index)[0]
+            updates, opt_state = optimizer.update(
+                grads,
+                opt_state,
+                variational_params,
+                value=value,
+                grad=grads,
+                value_fn=step_value_fn,
+            )
+        else:
+            updates, opt_state = optimizer.update(grads, opt_state, variational_params)
         variational_params = optax.apply_updates(variational_params, updates)
 
         grad_norm = float(optax.global_norm(grads))
@@ -337,7 +438,16 @@ def optimize_variational_posterior(
             break
 
     final_mean = variational_params["mean"]
-    final_log_std = variational_params["log_std"]
+    final_diag_log_std = variational_params["log_std"]
+    if use_low_rank:
+        final_factor = variational_params["factor"]
+        # Report marginal widths so diagonal downstream samplers reproduce the
+        # correct per-parameter posterior spread; the factor is returned for
+        # joint (correlated) sampling.
+        final_log_std = low_rank_marginal_log_std(final_diag_log_std, final_factor)
+    else:
+        final_factor = None
+        final_log_std = final_diag_log_std
 
     if transforms is None:
         posterior_mean_constrained = final_mean
@@ -394,10 +504,18 @@ def optimize_variational_posterior(
         final_kl=final_kl,
         steps_run=steps_run,
         converged=converged,
+        posterior_factor_params=final_factor,
     )
 
+    serialized_variational_params = {
+        "mean": _tree_to_dict(variational_params["mean"]),
+        "log_std": _tree_to_dict(variational_params["log_std"]),
+    }
+    if "factor" in variational_params:
+        serialized_variational_params["factor"] = variational_params["factor"]
+
     state = VariationalState(
-        variational_params=_tree_to_dict(variational_params),
+        variational_params=serialized_variational_params,
         opt_state=opt_state,
         best_mean=_tree_to_dict(best_mean),
         best_objective=float(best_objective),
@@ -409,6 +527,7 @@ def optimize_variational_posterior(
         grad_norm_history=grad_norm_history,
         update_norm_history=update_norm_history,
         steps_run=steps_run,
+        best_selection_ema=float(best_ema),
     )
 
     if return_state:
@@ -424,14 +543,14 @@ def optimize_variational_ifu_cube(
     sigma: Optional[jnp.ndarray] = None,
     inv_variance: Optional[jnp.ndarray] = None,
     mask: Optional[jnp.ndarray] = None,
-    normalize_loss: bool = True,
+    normalize_loss: bool = False,
     huber_delta: Optional[float] = None,
     huber_weight: float = 0.0,
     learning_rate: float = 5e-3,
     max_steps: int = 500,
     tol: float = 1e-6,
     num_samples: int = 4,
-    beta_kl: float = 1e-3,
+    beta_kl: float = 1.0,
     init_log_std: float = -2.0,
     noise_key: Optional[jnp.ndarray] = None,
     transforms: Optional[TransformTree] = None,
@@ -442,6 +561,9 @@ def optimize_variational_ifu_cube(
     param_penalty_fn: Optional[Callable[[ParamsTree], jnp.ndarray]] = None,
     param_penalty_weight: float = 0.0,
     param_penalty_ramp_steps: int = 0,
+    posterior_rank: int = 0,
+    posterior_factor_init_scale: float = 1e-2,
+    best_selection_ema_decay: float = 0.9,
 ) -> Any:
     """Optimize a VI posterior against full IFU cubes with science losses.
 
@@ -456,17 +578,25 @@ def optimize_variational_ifu_cube(
             variance cube. Defaults to ``None``.
         mask (Optional[jnp.ndarray], optional): Optional binary voxel mask.
             Defaults to ``None``.
-        normalize_loss (bool, optional): Whether to normalize data term.
-            Defaults to ``True``.
+        normalize_loss (bool, optional): If ``True`` the Gaussian data term is
+            divided by the number of active voxels (per-voxel mean NLL). This
+            breaks the ELBO units, so it should only be combined with
+            ``beta_kl = 0`` (MAP). Defaults to ``False`` (summed NLL), which is
+            the calibrated choice paired with ``beta_kl = 1.0``.
         huber_delta (Optional[float], optional): Optional Huber transition.
             Defaults to ``None`` (disabled unless ``huber_weight > 0``).
         huber_weight (float, optional): Weight of robust Huber data term.
-            Defaults to 0.0.
+            Defaults to 0.0. **Caveat:** a nonzero Huber term adds a
+            non-Gaussian, non-log-likelihood component to the objective, so the
+            ELBO is no longer a valid negative log-evidence and posterior widths
+            are not calibrated while ``huber_weight > 0``. Keep it at 0 for
+            calibration runs; use it only as a robustness aid for point fits.
         learning_rate (float, optional): Adam learning rate. Defaults to 5e-3.
         max_steps (int, optional): Maximum optimization steps. Defaults to 500.
         tol (float, optional): Convergence threshold. Defaults to 1e-6.
         num_samples (int, optional): Monte Carlo samples per step. Defaults to 4.
-        beta_kl (float, optional): KL weight. Defaults to 1e-3.
+        beta_kl (float, optional): KL weight. Defaults to 1.0 (calibrated ELBO
+            with the summed-NLL default). Use 0.0 for an explicit MAP estimate.
         init_log_std (float, optional): Initial posterior log-std.
             Defaults to -2.0.
         noise_key (Optional[jnp.ndarray], optional): Optional stochastic key.
@@ -486,6 +616,15 @@ def optimize_variational_ifu_cube(
             ``param_penalty_fn``. Defaults to 0.0.
         param_penalty_ramp_steps (int, optional): Number of steps to ramp
             penalty weight. Defaults to 0.
+        posterior_rank (int, optional): If ``> 0``, use a low-rank-plus-diagonal
+            Gaussian posterior of this factor rank instead of mean-field, to
+            capture correlated geometry such as the age--metallicity ridge.
+            Defaults to 0 (mean-field).
+        posterior_factor_init_scale (float, optional): Initialization scale for
+            the low-rank factor. Defaults to 1e-2.
+        best_selection_ema_decay (float, optional): EMA decay in ``[0, 1)`` for
+            smoothing the stochastic objective when selecting the best step.
+            Defaults to 0.9; use 0 to select on the raw per-step value.
 
     Raises:
         ValueError: If ``target`` is not 3D, if Huber settings are invalid, if
@@ -497,6 +636,18 @@ def optimize_variational_ifu_cube(
     """
     if target.ndim != 3:
         raise ValueError("target must be a 3D IFU datacube")
+
+    if normalize_loss and beta_kl > 0.0:
+        warnings.warn(
+            "optimize_variational_ifu_cube called with normalize_loss=True and "
+            "beta_kl > 0: the per-voxel-mean data term and the KL term are on "
+            "inconsistent scales, so the resulting posterior widths are NOT "
+            "calibrated (the KL over-regularizes by roughly the active-voxel "
+            "count). For a calibrated ELBO use normalize_loss=False (summed "
+            "Gaussian NLL) with beta_kl=1.0; use beta_kl=0.0 for an explicit "
+            "MAP point estimate.",
+            stacklevel=2,
+        )
 
     if sigma is not None and inv_variance is not None:
         raise ValueError("only one of sigma or inv_variance may be provided, not both")
@@ -575,4 +726,7 @@ def optimize_variational_ifu_cube(
         param_penalty_fn=param_penalty_fn,
         param_penalty_weight=param_penalty_weight,
         param_penalty_ramp_steps=param_penalty_ramp_steps,
+        posterior_rank=posterior_rank,
+        posterior_factor_init_scale=posterior_factor_init_scale,
+        best_selection_ema_decay=best_selection_ema_decay,
     )

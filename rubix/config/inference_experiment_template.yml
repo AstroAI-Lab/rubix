@@ -51,9 +51,11 @@ variational:
   max_steps: 500
   tol: 1.0e-6
   num_samples: 4
-  beta_kl: 0.001
+  # Calibrated ELBO units: summed NLL (normalize_loss: false) with beta_kl: 1.0.
+  # Use beta_kl: 0.0 for an explicit MAP estimate (posterior width not calibrated).
+  beta_kl: 1.0
   init_log_std: -2.0
-  normalize_loss: true
+  normalize_loss: false
   huber_delta: 0.2
   huber_weight: 0.0
   checkpoint_interval_steps:  # null → uses policy-derived default; set a positive integer to override
