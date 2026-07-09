@@ -1,3 +1,4 @@
+import jax
 import jax.numpy as jnp
 import pytest
 
@@ -11,6 +12,22 @@ from rubix.inference import (
     build_age_metallicity_velocity_transforms,
     inverse_transforms,
 )
+
+
+def test_softplus_lower_bound_inverse_has_finite_gradient_for_large_values():
+    transform = SoftplusLowerBound(lower=0.0)
+
+    def scalar_inverse(x):
+        return transform.inverse(jnp.reshape(x, (1,)))[0]
+
+    # A large constrained value drives the log-expm1 branch toward overflow;
+    # the hardened implementation must keep both value and gradient finite.
+    for constrained in [1.0, 100.0, 1e3, 1e5]:
+        value, grad = jax.value_and_grad(scalar_inverse)(
+            jnp.asarray(constrained, dtype=jnp.float32)
+        )
+        assert jnp.isfinite(value)
+        assert jnp.isfinite(grad)
 
 
 def test_identity_transform_roundtrip():
@@ -34,6 +51,19 @@ def test_sigmoid_bounds_forward_and_inverse():
     assert jnp.all(constrained > 0.0)
     assert jnp.all(constrained < 20.0)
     assert jnp.allclose(recovered, unconstrained, atol=1e-5, rtol=1e-5)
+
+
+def test_sigmoid_bounds_inverse_is_finite_at_float32_bounds():
+    transform = SigmoidBounds(lower=5e-4, upper=0.04)
+    constrained = jnp.array([5e-4, 0.04], dtype=jnp.float32)
+
+    unconstrained = transform.inverse(constrained)
+    recovered = transform.forward(unconstrained)
+
+    assert jnp.all(jnp.isfinite(unconstrained))
+    assert jnp.all(jnp.isfinite(recovered))
+    assert jnp.all(recovered >= 5e-4)
+    assert jnp.all(recovered <= 0.04)
 
 
 def test_softplus_lower_bound_forward_and_inverse():
@@ -105,16 +135,18 @@ def test_velocity_z_bounds_transform_keeps_xy_fixed_and_roundtrips_z():
     transform = VelocityZBoundsTransform(
         lower_z=-300.0, upper_z=300.0, fixed_xy=fixed_xy
     )
-    unconstrained = jnp.array([[4.0, -2.0, -1.0], [9.0, 9.0, 2.0]])
+    # The unconstrained latent has a single z channel of shape (N, 1).
+    unconstrained = jnp.array([[-1.0], [2.0]])
 
     constrained = transform.forward(unconstrained)
     recovered = transform.inverse(constrained)
 
+    assert constrained.shape == (2, 3)
+    assert recovered.shape == (2, 1)
     assert jnp.allclose(constrained[:, :2], fixed_xy)
     assert jnp.all(constrained[:, 2] > -300.0)
     assert jnp.all(constrained[:, 2] < 300.0)
-    assert jnp.allclose(recovered[:, :2], jnp.zeros_like(recovered[:, :2]))
-    assert jnp.allclose(recovered[:, 2], unconstrained[:, 2], atol=1e-5, rtol=1e-5)
+    assert jnp.allclose(recovered[:, 0], unconstrained[:, 0], atol=1e-5, rtol=1e-5)
 
 
 def test_build_age_metallicity_velocity_transforms_adds_velocity_transform():
@@ -133,11 +165,13 @@ def test_build_age_metallicity_velocity_transforms_adds_velocity_transform():
         "stars": {
             "age": jnp.array([0.0, 1.0]),
             "metallicity": jnp.array([-1.0, 2.0]),
-            "velocity": jnp.array([[5.0, 6.0, -2.0], [7.0, 8.0, 1.5]]),
+            # Velocity latent carries a single z channel of shape (N, 1).
+            "velocity": jnp.array([[-2.0], [1.5]]),
         }
     }
 
     constrained = apply_transforms(params, transforms, direction="forward")
+    assert constrained["stars"]["velocity"].shape == (2, 3)
     assert jnp.allclose(constrained["stars"]["velocity"][:, :2], fixed_xy)
     assert jnp.all(constrained["stars"]["velocity"][:, 2] > -200.0)
     assert jnp.all(constrained["stars"]["velocity"][:, 2] < 200.0)

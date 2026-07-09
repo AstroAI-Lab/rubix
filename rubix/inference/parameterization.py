@@ -46,10 +46,12 @@ class SoftplusLowerBound(ParameterTransform):
     def inverse(self, constrained: Any) -> Any:
         shifted = constrained - self.lower - self.eps
         safe = jnp.maximum(shifted, jnp.asarray(self.eps, dtype=shifted.dtype))
-        overflow_threshold = jnp.log(
-            jnp.asarray(jnp.finfo(safe.dtype).max, dtype=safe.dtype)
-        )
-        return jnp.where(safe > overflow_threshold, safe, jnp.log(jnp.expm1(safe)))
+        # Numerically stable inverse softplus. The naive ``log(expm1(safe))``
+        # overflows for large ``safe`` (expm1 -> +inf) and its gradient becomes
+        # nan. The identity ``log(expm1(x)) = x + log1p(-exp(-x))`` avoids the
+        # overflow entirely: ``exp(-safe)`` underflows to 0 gracefully and the
+        # value/gradient stay finite.
+        return safe + jnp.log1p(-jnp.exp(-safe))
 
 
 @dataclass(frozen=True)
@@ -58,7 +60,7 @@ class SigmoidBounds(ParameterTransform):
 
     lower: float
     upper: float
-    eps: float = 1e-8
+    eps: float = 1e-6
 
     def __post_init__(self):
         if self.upper <= self.lower:
@@ -79,15 +81,19 @@ class SigmoidBounds(ParameterTransform):
 class VelocityZBoundsTransform(ParameterTransform):
     """Transform that bounds only the line-of-sight velocity component.
 
-    ``x`` and ``y`` velocity components are held fixed to ``fixed_xy`` in the
-    forward pass. The unconstrained ``z`` channel is mapped to
-    ``(lower_z, upper_z)`` via sigmoid.
+    The unconstrained representation carries a **single** ``z`` channel of shape
+    ``(N, 1)``; the ``x`` and ``y`` velocity components are held fixed to
+    ``fixed_xy`` in the forward pass and are not free latent variables. This
+    avoids optimizing (and paying KL for) phantom ``x``/``y`` latents that do not
+    affect the forward model. The unconstrained ``z`` channel is mapped to
+    ``(lower_z, upper_z)`` via sigmoid, and ``forward`` returns the full
+    ``(N, 3)`` constrained velocity.
     """
 
     lower_z: float
     upper_z: float
     fixed_xy: Any
-    eps: float = 1e-8
+    eps: float = 1e-6
 
     def __post_init__(self):
         if self.upper_z <= self.lower_z:
@@ -97,7 +103,7 @@ class VelocityZBoundsTransform(ParameterTransform):
         unconstrained = jnp.asarray(unconstrained)
         fixed_xy = jnp.asarray(self.fixed_xy, dtype=unconstrained.dtype)
         width = self.upper_z - self.lower_z
-        z = self.lower_z + width * jax.nn.sigmoid(unconstrained[:, 2])
+        z = self.lower_z + width * jax.nn.sigmoid(unconstrained[:, 0])
         return jnp.stack([fixed_xy[:, 0], fixed_xy[:, 1], z], axis=1)
 
     def inverse(self, constrained: Any) -> Any:
@@ -106,8 +112,7 @@ class VelocityZBoundsTransform(ParameterTransform):
         z_scaled = (constrained[:, 2] - self.lower_z) / width
         z_scaled = jnp.clip(z_scaled, self.eps, 1.0 - self.eps)
         z_unconstrained = jnp.log(z_scaled) - jnp.log1p(-z_scaled)
-        zeros_xy = jnp.zeros_like(constrained[:, :2])
-        return jnp.concatenate([zeros_xy, z_unconstrained[:, None]], axis=1)
+        return z_unconstrained[:, None]
 
 
 def apply_transforms(
