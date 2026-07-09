@@ -1108,6 +1108,16 @@ def parse_args() -> argparse.Namespace:
             "age-metallicity geometry."
         ),
     )
+    parser.add_argument(
+        "--posterior-block",
+        action="store_true",
+        help=(
+            "Use a per-particle block-diagonal Gaussian posterior coupling "
+            "age, metallicity, and v_z into a dense 3x3 block each. Addresses "
+            "the mean-field variance underestimation on calibrated (--beta-kl "
+            ">0) runs. Mutually exclusive with --posterior-rank."
+        ),
+    )
     parser.add_argument("--num-posterior-samples", type=int, default=16)
     parser.add_argument(
         "--beta-kl",
@@ -1803,6 +1813,12 @@ def main() -> None:
     else:
         stage_times["map_warmup_s"] = 0.0
 
+    posterior_block_couplings = (
+        [("stars", "age"), ("stars", "metallicity"), ("stars", "velocity")]
+        if args.posterior_block
+        else None
+    )
+
     print("[stage] running main variational inference", flush=True)
     t_stage = time.perf_counter()
     optimizer = _build_vi_optimizer(args)
@@ -1825,6 +1841,7 @@ def main() -> None:
         param_penalty_ramp_steps=args.prior_ramp_steps,
         normalize_loss=args.normalize_loss,
         posterior_rank=args.posterior_rank,
+        posterior_block_couplings=posterior_block_couplings,
         prior_std=args.prior_std,
         seed=args.seed,
     )
@@ -1971,6 +1988,7 @@ def main() -> None:
             "num_vi_samples": args.num_vi_samples,
             "init_log_std": args.init_log_std,
             "posterior_rank": args.posterior_rank,
+            "posterior_block": args.posterior_block,
             "num_posterior_samples": args.num_posterior_samples,
             "beta_kl": args.beta_kl,
             "prior_std": args.prior_std,

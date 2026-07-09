@@ -8,10 +8,12 @@ import pytest
 from rubix.core.data import Galaxy, GasData, RubixData, StarsData
 from rubix.inference import (
     build_age_metallicity_transforms,
+    build_particle_block_index_map,
     initialize_mean_field_params,
     kl_diag_gaussian_to_standard_normal,
     optimize_variational_ifu_cube,
     optimize_variational_posterior,
+    sample_block_gaussian,
     sample_diag_gaussian,
     sample_low_rank_gaussian,
 )
@@ -592,4 +594,108 @@ def test_optimize_variational_posterior_rejects_bad_ema_decay():
             target=jnp.array([[[1.0]]]),
             max_steps=1,
             best_selection_ema_decay=1.0,
+        )
+
+
+def test_block_posterior_captures_ridge_correlation():
+    # DummyPipeline output = age + 2*metallicity -> an anti-correlated ridge.
+    pipeline = DummyPipeline()
+    static_data = _make_rubix_data()
+    params_init = {"stars": {"age": jnp.array([0.5]), "metallicity": jnp.array([0.5])}}
+    target = jnp.array([[[3.0]]])
+    couplings = [("stars", "age"), ("stars", "metallicity")]
+
+    result, state = optimize_variational_posterior(
+        pipeline=pipeline,
+        params_init=params_init,
+        static_data=static_data,
+        target=target,
+        learning_rate=5e-2,
+        max_steps=600,
+        tol=1e-12,
+        num_samples=16,
+        beta_kl=1.0,
+        seed=7,
+        posterior_block_couplings=couplings,
+        return_state=True,
+    )
+    # Latent dim 2 (age + metallicity), single particle -> one 2x2 block.
+    assert result.posterior_block_params is not None
+    assert result.posterior_block_params.shape == (1, 2, 2)
+    assert result.posterior_block_index_map.tolist() == [[0, 1]]
+
+    mean = state.variational_params["mean"]
+    diag_log_std = state.variational_params["log_std"]
+    block_raw = state.variational_params["block_raw"]
+    idx = build_particle_block_index_map(mean, couplings)
+
+    keys = jax.random.split(jax.random.PRNGKey(0), 20000)
+    samples = jax.vmap(
+        lambda k: sample_block_gaussian(mean, diag_log_std, block_raw, idx, k)
+    )(keys)
+    age = samples["stars"]["age"][:, 0]
+    met = samples["stars"]["metallicity"][:, 0]
+    corr = float(jnp.corrcoef(age, met)[0, 1])
+    assert corr < -0.2
+
+
+def test_block_posterior_rejects_combination_with_rank():
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        optimize_variational_posterior(
+            pipeline=DummyPipeline(),
+            params_init={
+                "stars": {"age": jnp.array([0.5]), "metallicity": jnp.array([0.1])}
+            },
+            static_data=_make_rubix_data(),
+            target=jnp.array([[[1.0]]]),
+            max_steps=1,
+            posterior_rank=1,
+            posterior_block_couplings=[("stars", "age"), ("stars", "metallicity")],
+        )
+
+
+def test_block_posterior_resume_round_trips():
+    pipeline = DummyPipeline()
+    static_data = _make_rubix_data()
+    params_init = {"stars": {"age": jnp.array([0.5]), "metallicity": jnp.array([0.1])}}
+    target = jnp.array([[[3.0]]])
+    couplings = [("stars", "age"), ("stars", "metallicity")]
+
+    _, state = optimize_variational_posterior(
+        pipeline=pipeline,
+        params_init=params_init,
+        static_data=static_data,
+        target=target,
+        max_steps=20,
+        num_samples=4,
+        beta_kl=1.0,
+        seed=3,
+        posterior_block_couplings=couplings,
+        return_state=True,
+    )
+    assert "block_raw" in state.variational_params
+
+    result2 = optimize_variational_posterior(
+        pipeline=pipeline,
+        params_init=params_init,
+        static_data=static_data,
+        target=target,
+        max_steps=20,
+        num_samples=4,
+        beta_kl=1.0,
+        state_init=state,
+        posterior_block_couplings=couplings,
+    )
+    assert result2.posterior_block_params is not None
+    assert result2.steps_run == 40
+
+    # Resuming a block run without the couplings is an error.
+    with pytest.raises(ValueError, match="requires posterior_block_couplings"):
+        optimize_variational_posterior(
+            pipeline=pipeline,
+            params_init=params_init,
+            static_data=static_data,
+            target=target,
+            max_steps=5,
+            state_init=state,
         )

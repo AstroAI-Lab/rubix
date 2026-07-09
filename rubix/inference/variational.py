@@ -13,9 +13,14 @@ from .api import LossFn, loss
 from .losses import combine_loss_fns, huber_data_loss, masked_gaussian_nll
 from .parameterization import TransformTree, apply_transforms
 from .posterior_family import (
+    block_marginal_log_std,
+    build_particle_block_index_map,
+    init_block_cholesky,
     init_low_rank_factor,
+    kl_block_to_standard_normal,
     kl_low_rank_to_standard_normal,
     low_rank_marginal_log_std,
+    sample_block_gaussian,
     sample_low_rank_gaussian,
 )
 
@@ -44,6 +49,8 @@ class VariationalResult:
     steps_run: int = -1
     converged: bool = False
     posterior_factor_params: Optional[jnp.ndarray] = None
+    posterior_block_params: Optional[jnp.ndarray] = None
+    posterior_block_index_map: Optional[jnp.ndarray] = None
 
 
 @dataclass
@@ -175,6 +182,7 @@ def optimize_variational_posterior(
     posterior_factor_init_scale: float = 1e-2,
     best_selection_ema_decay: float = 0.9,
     prior_std: float = 1.0,
+    posterior_block_couplings: Optional[list] = None,
 ) -> Any:
     """Optimize a mean-field variational posterior with reparameterization.
 
@@ -262,11 +270,19 @@ def optimize_variational_posterior(
             parameters ``prior_std ~= 1.814`` approximates a uniform physical
             prior, removing most of the midpoint bias a standard normal imposes
             on calibrated (``beta_kl > 0``) runs.
+        posterior_block_couplings (Optional[list], optional): List of
+            ``(component, field)`` leaves to couple per particle into a dense
+            block-diagonal Gaussian posterior (e.g.
+            ``[("stars", "age"), ("stars", "metallicity")]``), addressing the
+            per-particle age--metallicity width that mean-field underestimates.
+            Mutually exclusive with ``posterior_rank``. When resuming a block run
+            the same couplings must be supplied. Defaults to ``None`` (no block).
 
     Raises:
         ValueError: If ``num_samples`` is not strictly positive, if
-            ``posterior_rank`` is negative, or if ``best_selection_ema_decay``
-            is not in ``[0, 1)``.
+            ``posterior_rank`` is negative, if ``best_selection_ema_decay`` is
+            not in ``[0, 1)``, or if both ``posterior_rank`` and
+            ``posterior_block_couplings`` are requested.
 
     Returns:
         VariationalResult: Posterior statistics and optimization traces.
@@ -277,8 +293,14 @@ def optimize_variational_posterior(
         raise ValueError("posterior_rank must be non-negative")
     if not 0.0 <= best_selection_ema_decay < 1.0:
         raise ValueError("best_selection_ema_decay must be in [0, 1)")
+    if posterior_rank > 0 and posterior_block_couplings is not None:
+        raise ValueError(
+            "posterior_rank and posterior_block_couplings are mutually exclusive"
+        )
 
     use_low_rank = posterior_rank > 0
+    use_block = posterior_block_couplings is not None
+    block_index_map = None
 
     if optimizer is None:
         optimizer = optax.adam(learning_rate)
@@ -305,6 +327,17 @@ def optimize_variational_posterior(
                 rank=posterior_rank,
                 key=factor_key,
                 init_scale=posterior_factor_init_scale,
+            )
+        if use_block:
+            block_index_map = build_particle_block_index_map(
+                mean, posterior_block_couplings
+            )
+            variational_params["block_raw"] = init_block_cholesky(
+                num_groups=int(block_index_map.shape[0]),
+                block_size=int(block_index_map.shape[1]),
+                key=jax.random.PRNGKey(seed + 2),
+                init_log_std=init_log_std,
+                offdiag_scale=posterior_factor_init_scale,
             )
         opt_state = optimizer.init(variational_params)
 
@@ -339,6 +372,15 @@ def optimize_variational_posterior(
         # Resume honors the persisted posterior family regardless of the
         # ``posterior_rank`` argument, which is ignored (like ``params_init``).
         use_low_rank = "factor" in variational_params
+        use_block = "block_raw" in variational_params
+        if use_block:
+            if posterior_block_couplings is None:
+                raise ValueError(
+                    "resuming a block posterior requires posterior_block_couplings"
+                )
+            block_index_map = build_particle_block_index_map(
+                variational_params["mean"], posterior_block_couplings
+            )
 
     converged = False
     initial_steps_run = steps_run
@@ -352,12 +394,21 @@ def optimize_variational_posterior(
         current_mean = current_params["mean"]
         current_log_std = current_params["log_std"]
         current_factor = current_params.get("factor") if use_low_rank else None
+        current_block = current_params.get("block_raw") if use_block else None
         sample_keys = jax.random.split(step_key, num_samples)
 
         def sample_reconstruction(sample_key):
             if use_low_rank:
                 sampled_unconstrained = sample_low_rank_gaussian(
                     current_mean, current_log_std, current_factor, sample_key
+                )
+            elif use_block:
+                sampled_unconstrained = sample_block_gaussian(
+                    current_mean,
+                    current_log_std,
+                    current_block,
+                    block_index_map,
+                    sample_key,
                 )
             else:
                 sampled_unconstrained = sample_diag_gaussian(
@@ -385,6 +436,14 @@ def optimize_variational_posterior(
         if use_low_rank:
             kl = kl_low_rank_to_standard_normal(
                 current_mean, current_log_std, current_factor, prior_std=prior_std
+            )
+        elif use_block:
+            kl = kl_block_to_standard_normal(
+                current_mean,
+                current_log_std,
+                current_block,
+                block_index_map,
+                prior_std=prior_std,
             )
         else:
             kl = kl_diag_gaussian_to_standard_normal(
@@ -467,14 +526,22 @@ def optimize_variational_posterior(
 
     final_mean = variational_params["mean"]
     final_diag_log_std = variational_params["log_std"]
+    final_factor = None
+    final_block_raw = None
     if use_low_rank:
         final_factor = variational_params["factor"]
         # Report marginal widths so diagonal downstream samplers reproduce the
         # correct per-parameter posterior spread; the factor is returned for
         # joint (correlated) sampling.
         final_log_std = low_rank_marginal_log_std(final_diag_log_std, final_factor)
+    elif use_block:
+        final_block_raw = variational_params["block_raw"]
+        # Report per-latent marginal widths (block diagonal + diagonal remainder)
+        # so downstream diagonal samplers reproduce the correct spread.
+        final_log_std = block_marginal_log_std(
+            final_diag_log_std, final_block_raw, block_index_map
+        )
     else:
-        final_factor = None
         final_log_std = final_diag_log_std
 
     if transforms is None:
@@ -533,6 +600,8 @@ def optimize_variational_posterior(
         steps_run=steps_run,
         converged=converged,
         posterior_factor_params=final_factor,
+        posterior_block_params=final_block_raw,
+        posterior_block_index_map=block_index_map if use_block else None,
     )
 
     serialized_variational_params = {
@@ -541,6 +610,8 @@ def optimize_variational_posterior(
     }
     if "factor" in variational_params:
         serialized_variational_params["factor"] = variational_params["factor"]
+    if "block_raw" in variational_params:
+        serialized_variational_params["block_raw"] = variational_params["block_raw"]
 
     state = VariationalState(
         variational_params=serialized_variational_params,
@@ -593,6 +664,7 @@ def optimize_variational_ifu_cube(
     posterior_factor_init_scale: float = 1e-2,
     best_selection_ema_decay: float = 0.9,
     prior_std: float = 1.0,
+    posterior_block_couplings: Optional[list] = None,
 ) -> Any:
     """Optimize a VI posterior against full IFU cubes with science losses.
 
@@ -658,6 +730,10 @@ def optimize_variational_ifu_cube(
             prior on unconstrained latents in the KL term. Defaults to 1.0; use
             ``~1.814`` to approximate a uniform physical prior for sigmoid-bounded
             parameters on calibrated runs.
+        posterior_block_couplings (Optional[list], optional): ``(component,
+            field)`` leaves to couple per particle into a block-diagonal Gaussian
+            posterior (mutually exclusive with ``posterior_rank``). Defaults to
+            ``None``.
 
     Raises:
         ValueError: If ``target`` is not 3D, if Huber settings are invalid, if
@@ -763,4 +839,5 @@ def optimize_variational_ifu_cube(
         posterior_factor_init_scale=posterior_factor_init_scale,
         best_selection_ema_decay=best_selection_ema_decay,
         prior_std=prior_std,
+        posterior_block_couplings=posterior_block_couplings,
     )
