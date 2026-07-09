@@ -393,6 +393,40 @@ Completed/active findings:
   nan-gradients for large values. The SFH age prior replaces its hard age clip
   with a soft quadratic barrier so out-of-range ages keep a restoring gradient.
 
+- **Empirical follow-up: calibrated defaults vs recovery, and posterior-family
+  effect on the native 2x2 SFH+CEH rung.** Running diagonal (`--posterior-rank
+  0`) vs low-rank (`--posterior-rank 1`) at matched seeds gave *identical* mean
+  recovery (`age_mae~3.13`, `metallicity_mae~0.00174`, `vz_mae~80`): the point
+  estimate is set by the deterministic L-BFGS/MAP warmup, so the posterior family
+  does not move it. The low-rank and block-covariance families are therefore
+  *calibration* tools (correct correlated uncertainty), not recovery tools.
+- **The calibrated default (`beta_kl=1.0`) badly hurts recovery here.** Rerunning
+  with `--beta-kl 0` (MAP) recovered `age_mae~0.36` (vs `~3.13` at `beta_kl=1.0`),
+  an ~8x improvement, and improved `vz_mae` (80 -> 59). Cause: the standard-normal
+  prior in *unconstrained* space is informative for sigmoid-bounded parameters
+  (it concentrates ages near the bound midpoint). Consequence:
+  `run_realistic_synthetic_vi_cycle.py` now defaults to `--beta-kl 0` (MAP) for
+  its recovery mission; calibrated posteriors are an explicit opt-in. The generic
+  library default stays `beta_kl=1.0` (correct ELBO weight) since the prior is the
+  user's to choose.
+- **The calibration harness catches the miscalibration.** On the `beta_kl=1.0`
+  low-rank runs, `run_vi_calibration.py` reported severe age under-coverage
+  (`cov@0.9~0.375`, `rms_z~2.23`) and over-coverage for weakly-identified `vz`
+  (`cov@0.9~1.0`), exactly the biased+over-confident signature expected from the
+  informative unconstrained prior. This validates the Phase 4 tooling and makes a
+  weakly-informative / physics-based prior over the unconstrained latents the next
+  thing to fix before `beta_kl=1.0` posteriors can be treated as calibrated.
+- **Per-particle block-covariance posterior added (math + tests).**
+  `posterior_family.py` now provides `build_particle_block_index_map`,
+  `init_block_cholesky`, `sample_block_gaussian`, `kl_block_to_standard_normal`,
+  and `block_marginal_log_std`: a block-diagonal Gaussian giving each coupled
+  group (e.g. per-particle age/metallicity/vz) its own dense covariance while the
+  rest stay diagonal. It is the natural family for P independent per-particle
+  ridges that a single global low-rank factor cannot represent. KL is verified
+  against a dense reference and sampling against the empirical block covariance.
+  Optimizer wiring is deferred until the unconstrained-prior issue is resolved so
+  calibrated coverage can be evaluated meaningfully.
+
 Next work package:
 
 1. Apply summed likelihood and L-BFGS/MAP warmup to the native 2x2 SFH+CEH rung

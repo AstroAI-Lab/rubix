@@ -68,9 +68,15 @@ from .performance_guardrails import (
     load_guardrail_threshold_profile,
 )
 from .posterior_family import (
+    block_marginal_log_std,
+    build_block_cholesky,
+    build_particle_block_index_map,
+    init_block_cholesky,
     init_low_rank_factor,
+    kl_block_to_standard_normal,
     kl_low_rank_to_standard_normal,
     low_rank_marginal_log_std,
+    sample_block_gaussian,
     sample_low_rank_gaussian,
 )
 from .posterior_predictive import (
@@ -128,6 +134,12 @@ __all__ = [
     "kl_low_rank_to_standard_normal",
     "low_rank_marginal_log_std",
     "sample_low_rank_gaussian",
+    "block_marginal_log_std",
+    "build_block_cholesky",
+    "build_particle_block_index_map",
+    "init_block_cholesky",
+    "kl_block_to_standard_normal",
+    "sample_block_gaussian",
     "load_checkpoint",
     "make_optimization_checkpoint",
     "make_variational_checkpoint",

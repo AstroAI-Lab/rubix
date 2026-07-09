@@ -1102,10 +1102,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--beta-kl",
         type=float,
-        default=1.0,
+        default=0.0,
         help=(
-            "KL weight. Default 1.0 gives a calibrated ELBO with the default "
-            "summed likelihood; use 0.0 for a pure MAP point estimate."
+            "KL weight. Default 0.0 (MAP) is best for parameter *recovery*: with "
+            "the summed likelihood, beta_kl=1.0 gives a calibrated ELBO but the "
+            "standard-normal unconstrained prior is informative for sigmoid- "
+            "bounded parameters and biases the mean (measured age recovery on "
+            "the native 2x2 rung degrades ~8x). Use beta_kl=1.0 only for "
+            "calibrated-posterior studies, and check coverage with "
+            "run_vi_calibration.py."
         ),
     )
     parser.add_argument(
