@@ -54,6 +54,24 @@ def test_kl_diag_gaussian_is_zero_for_standard_normal():
     assert jnp.allclose(kl, 0.0)
 
 
+def test_kl_diag_gaussian_prior_std_matches_analytic():
+    # q = N(0, I) over 2 latents; prior = N(0, tau^2 I). Per-dim KL is
+    # 0.5 * (1/tau^2 - 1 + 2 log tau).
+    mean = {"stars": {"age": jnp.array([0.0, 0.0])}}
+    log_std = {"stars": {"age": jnp.array([0.0, 0.0])}}
+    tau = 2.0
+    kl = kl_diag_gaussian_to_standard_normal(mean, log_std, prior_std=tau)
+    per_dim = 0.5 * (1.0 / tau**2 - 1.0 + 2.0 * jnp.log(tau))
+    assert float(kl) == pytest.approx(float(2 * per_dim), rel=1e-6)
+
+    # A wider prior penalizes an off-center mean less (the point of the fix):
+    # this is what reduces the midpoint bias on calibrated runs.
+    off_center = {"stars": {"age": jnp.array([2.0, -2.0])}}
+    wide = kl_diag_gaussian_to_standard_normal(off_center, log_std, prior_std=tau)
+    standard = kl_diag_gaussian_to_standard_normal(off_center, log_std)
+    assert float(wide) < float(standard)
+
+
 def test_initialize_and_sample_mean_field_params():
     params_init = {
         "stars": {

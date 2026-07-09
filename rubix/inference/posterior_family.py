@@ -98,8 +98,9 @@ def kl_low_rank_to_standard_normal(
     mean: ParamsTree,
     log_std: ParamsTree,
     factor: jnp.ndarray,
+    prior_std: float = 1.0,
 ) -> jnp.ndarray:
-    """Compute ``KL(q || N(0, I))`` for a low-rank-plus-diagonal Gaussian ``q``.
+    """Compute ``KL(q || N(0, prior_std^2 I))`` for a low-rank-plus-diagonal ``q``.
 
     Uses the matrix determinant lemma so the log-determinant costs ``O(D r + r^3)``
     instead of ``O(D^3)``. Reduces exactly to the diagonal KL when ``W = 0``.
@@ -108,6 +109,9 @@ def kl_low_rank_to_standard_normal(
         mean (ParamsTree): Posterior mean pytree.
         log_std (ParamsTree): Posterior diagonal log-std pytree.
         factor (jnp.ndarray): Low-rank factor ``W`` of shape ``(D, r)``.
+        prior_std (float, optional): Std of the isotropic zero-mean Gaussian
+            prior. Defaults to 1.0. See
+            :func:`rubix.inference.kl_diag_gaussian_to_standard_normal`.
 
     Returns:
         jnp.ndarray: Scalar KL divergence.
@@ -116,6 +120,8 @@ def kl_low_rank_to_standard_normal(
     flat_log_std, _ = ravel_pytree(log_std)
     n_dim = flat_mean.shape[0]
     rank = factor.shape[1]
+    tau2 = prior_std**2
+    log_tau = jnp.log(prior_std)
 
     diag_var = jnp.exp(2.0 * flat_log_std)  # d_i
     trace = jnp.sum(diag_var) + jnp.sum(factor**2)
@@ -128,7 +134,7 @@ def kl_low_rank_to_standard_normal(
     logdet_capacitance = jnp.linalg.slogdet(capacitance)[1]
     logdet_sigma = logdet_diag + logdet_capacitance
 
-    return 0.5 * (trace + quad - n_dim - logdet_sigma)
+    return 0.5 * ((trace + quad) / tau2 - n_dim + 2.0 * n_dim * log_tau - logdet_sigma)
 
 
 def low_rank_marginal_log_std(
@@ -300,17 +306,21 @@ def kl_block_to_standard_normal(
     log_std: ParamsTree,
     block_raw: jnp.ndarray,
     block_index_map: jnp.ndarray,
+    prior_std: float = 1.0,
 ) -> jnp.ndarray:
-    """Compute ``KL(q || N(0, I))`` for a block-diagonal Gaussian ``q``.
+    """Compute ``KL(q || N(0, prior_std^2 I))`` for a block-diagonal ``q``.
 
-    The ungrouped latents contribute the usual diagonal KL; each block
-    contributes the exact multivariate-Gaussian KL against ``N(0, I_k)``.
+    The ungrouped latents contribute the diagonal KL; each block contributes the
+    exact multivariate-Gaussian KL against ``N(0, prior_std^2 I_k)``.
 
     Args:
         mean (ParamsTree): Posterior mean pytree.
         log_std (ParamsTree): Diagonal log-std pytree.
         block_raw (jnp.ndarray): Raw block parameters ``(G, k, k)``.
         block_index_map (jnp.ndarray): Index map ``(G, k)`` into the raveled latent.
+        prior_std (float, optional): Std of the isotropic zero-mean Gaussian
+            prior. Defaults to 1.0. See
+            :func:`rubix.inference.kl_diag_gaussian_to_standard_normal`.
 
     Returns:
         jnp.ndarray: Scalar KL divergence.
@@ -320,10 +330,14 @@ def kl_block_to_standard_normal(
     n_dim = flat_mean.shape[0]
     _, block_size = block_index_map.shape
     grouped = block_index_map.reshape(-1)
+    tau2 = prior_std**2
+    log_tau = jnp.log(prior_std)
 
     is_grouped = jnp.zeros((n_dim,), dtype=bool).at[grouped].set(True)
     diag_var = jnp.exp(2.0 * flat_log_std)
-    diag_terms = diag_var + flat_mean**2 - 1.0 - 2.0 * flat_log_std
+    diag_terms = (
+        (diag_var + flat_mean**2) / tau2 - 1.0 + 2.0 * log_tau - 2.0 * flat_log_std
+    )
     diag_kl = 0.5 * jnp.sum(jnp.where(is_grouped, 0.0, diag_terms))
 
     chol = build_block_cholesky(block_raw)  # (G, k, k)
@@ -331,7 +345,9 @@ def kl_block_to_standard_normal(
     trace = jnp.sum(chol**2, axis=(1, 2))  # tr(L L^T) per block
     quad = jnp.sum(mu_block**2, axis=1)
     logdet = 2.0 * jnp.sum(jnp.log(jnp.diagonal(chol, axis1=1, axis2=2)), axis=1)
-    block_kl = 0.5 * jnp.sum(trace + quad - block_size - logdet)
+    block_kl = 0.5 * jnp.sum(
+        (trace + quad) / tau2 - block_size + 2.0 * block_size * log_tau - logdet
+    )
     return diag_kl + block_kl
 
 

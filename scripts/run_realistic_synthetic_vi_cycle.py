@@ -1084,6 +1084,16 @@ def parse_args() -> argparse.Namespace:
         default=0.0,
         help="Shot-noise variance per unit flux for the assumed sigma cube.",
     )
+    parser.add_argument(
+        "--add-observational-noise",
+        action="store_true",
+        help=(
+            "Add Gaussian noise to the target at the assumed per-voxel sigma "
+            "(seeded by --seed). Required for well-posed calibration/coverage: "
+            "without it the target is noise-free, so the assumed sigma is "
+            "arbitrary and coverage is ill-defined."
+        ),
+    )
     parser.add_argument("--vi-steps", type=int, default=300)
     parser.add_argument("--vi-lr", type=float, default=8e-3)
     parser.add_argument("--num-vi-samples", type=int, default=4)
@@ -1111,6 +1121,18 @@ def parse_args() -> argparse.Namespace:
             "the native 2x2 rung degrades ~8x). Use beta_kl=1.0 only for "
             "calibrated-posterior studies, and check coverage with "
             "run_vi_calibration.py."
+        ),
+    )
+    parser.add_argument(
+        "--prior-std",
+        type=float,
+        default=1.814,
+        help=(
+            "Std of the zero-mean Gaussian prior on unconstrained latents in the "
+            "KL term (only active when --beta-kl > 0). Default 1.814 (pi/sqrt(3)) "
+            "variance-matches the logistic prior that induces a uniform physical "
+            "prior for sigmoid-bounded parameters, avoiding the midpoint bias of "
+            "a standard-normal (std=1.0) prior."
         ),
     )
     parser.add_argument(
@@ -1545,6 +1567,15 @@ def main() -> None:
     else:
         sigma_level = max(float(args.noise_level), float(args.sigma_floor))
         sigma = jnp.ones_like(target) * sigma_level
+
+    if args.add_observational_noise:
+        # Inject a noise realization at the assumed per-voxel sigma so the
+        # likelihood is correctly scaled and coverage/SBC over seeds is
+        # well-posed. Keyed off the seed but distinct from the VI sampling key.
+        noise_key = jax.random.fold_in(jax.random.PRNGKey(args.seed), 8191)
+        target = target + sigma * jax.random.normal(
+            noise_key, shape=target.shape, dtype=target.dtype
+        )
     target_norm = float(jnp.linalg.norm(target))
 
     def _cube_sensitivity(
@@ -1794,6 +1825,7 @@ def main() -> None:
         param_penalty_ramp_steps=args.prior_ramp_steps,
         normalize_loss=args.normalize_loss,
         posterior_rank=args.posterior_rank,
+        prior_std=args.prior_std,
         seed=args.seed,
     )
     stage_times["variational_inference_s"] = time.perf_counter() - t_stage
@@ -1927,6 +1959,7 @@ def main() -> None:
             "sigma_floor": args.sigma_floor,
             "noise_relative": args.noise_relative,
             "noise_poisson_scale": args.noise_poisson_scale,
+            "add_observational_noise": args.add_observational_noise,
             "effective_sigma_level": sigma_level,
             "ic_preset": args.ic_preset,
             "init_mode": args.init_mode,
@@ -1940,6 +1973,7 @@ def main() -> None:
             "posterior_rank": args.posterior_rank,
             "num_posterior_samples": args.num_posterior_samples,
             "beta_kl": args.beta_kl,
+            "prior_std": args.prior_std,
             "normalize_loss": args.normalize_loss,
             "optimizer": args.optimizer,
             "adam_b1": args.adam_b1,

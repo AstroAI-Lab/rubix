@@ -196,3 +196,33 @@ def test_block_sampling_recovers_block_covariance():
     assert jnp.allclose(got0, expected0, atol=0.05)
     # Cross-block correlation (index 0 vs index 1) must stay ~0.
     assert abs(float(emp_cov[0, 1])) < 0.03
+
+
+def test_low_rank_and_block_kl_reduce_to_diagonal_prior_std():
+    # With zero factor / zero off-diagonals, low-rank and block KL must equal the
+    # diagonal KL for the SAME prior_std (not just prior_std=1).
+    mean = {
+        "stars": {"age": jnp.array([0.4, -0.2]), "metallicity": jnp.array([0.7, 0.1])}
+    }
+    log_std = {
+        "stars": {"age": jnp.array([-0.3, 0.2]), "metallicity": jnp.array([0.0, -0.5])}
+    }
+    tau = 1.814
+    flat_mean, _ = ravel_pytree(mean)
+
+    lr = kl_low_rank_to_standard_normal(
+        mean, log_std, jnp.zeros((flat_mean.shape[0], 2)), prior_std=tau
+    )
+    diag = kl_diag_gaussian_to_standard_normal(mean, log_std, prior_std=tau)
+    assert float(lr) == pytest.approx(float(diag), rel=1e-5, abs=1e-6)
+
+    idx = build_particle_block_index_map(
+        mean, [("stars", "age"), ("stars", "metallicity")]
+    )
+    flat_log_std, _ = ravel_pytree(log_std)
+    block_raw = jnp.zeros((2, 2, 2))
+    for g in range(2):
+        block_raw = block_raw.at[g, 0, 0].set(flat_log_std[idx[g, 0]])
+        block_raw = block_raw.at[g, 1, 1].set(flat_log_std[idx[g, 1]])
+    block = kl_block_to_standard_normal(mean, log_std, block_raw, idx, prior_std=tau)
+    assert float(block) == pytest.approx(float(diag), rel=1e-5, abs=1e-6)

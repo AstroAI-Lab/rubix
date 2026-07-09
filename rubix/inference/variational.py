@@ -122,12 +122,31 @@ def sample_diag_gaussian(
 def kl_diag_gaussian_to_standard_normal(
     mean: ParamsTree,
     log_std: ParamsTree,
+    prior_std: float = 1.0,
 ) -> jnp.ndarray:
-    """Compute KL[q||p] for diagonal q vs standard normal prior p."""
+    """Compute KL[q||p] for diagonal q vs a zero-mean Gaussian prior p.
+
+    Args:
+        mean (ParamsTree): Posterior mean pytree.
+        log_std (ParamsTree): Posterior log-std pytree.
+        prior_std (float, optional): Standard deviation of the isotropic
+            zero-mean Gaussian prior ``N(0, prior_std^2 I)`` in unconstrained
+            space. Defaults to 1.0 (standard normal). For sigmoid-bounded
+            parameters ``prior_std ~= 1.814`` (``pi/sqrt(3)``) variance-matches
+            the logistic prior that induces a uniform physical prior, which
+            removes most of the midpoint bias of the standard normal.
+
+    Returns:
+        jnp.ndarray: Scalar KL divergence.
+    """
     mean_flat, _ = jax.flatten_util.ravel_pytree(mean)
     log_std_flat, _ = jax.flatten_util.ravel_pytree(log_std)
     var_flat = jnp.exp(2.0 * log_std_flat)
-    kl = 0.5 * jnp.sum(var_flat + mean_flat**2 - 1.0 - 2.0 * log_std_flat)
+    tau2 = prior_std**2
+    log_tau = jnp.log(prior_std)
+    kl = 0.5 * jnp.sum(
+        (var_flat + mean_flat**2) / tau2 - 1.0 + 2.0 * log_tau - 2.0 * log_std_flat
+    )
     return kl
 
 
@@ -155,6 +174,7 @@ def optimize_variational_posterior(
     posterior_rank: int = 0,
     posterior_factor_init_scale: float = 1e-2,
     best_selection_ema_decay: float = 0.9,
+    prior_std: float = 1.0,
 ) -> Any:
     """Optimize a mean-field variational posterior with reparameterization.
 
@@ -236,6 +256,12 @@ def optimize_variational_posterior(
             step. ``0`` disables smoothing and selects on the raw per-step value
             (``best_objective`` then equals ``min(objective_history)``). Defaults
             to 0.9.
+        prior_std (float, optional): Std of the isotropic zero-mean Gaussian
+            prior ``N(0, prior_std^2 I)`` on the unconstrained latents used in
+            the KL term. Defaults to 1.0 (standard normal). For sigmoid-bounded
+            parameters ``prior_std ~= 1.814`` approximates a uniform physical
+            prior, removing most of the midpoint bias a standard normal imposes
+            on calibrated (``beta_kl > 0``) runs.
 
     Raises:
         ValueError: If ``num_samples`` is not strictly positive, if
@@ -358,10 +384,12 @@ def optimize_variational_posterior(
         reconstruction = jnp.mean(reconstructions)
         if use_low_rank:
             kl = kl_low_rank_to_standard_normal(
-                current_mean, current_log_std, current_factor
+                current_mean, current_log_std, current_factor, prior_std=prior_std
             )
         else:
-            kl = kl_diag_gaussian_to_standard_normal(current_mean, current_log_std)
+            kl = kl_diag_gaussian_to_standard_normal(
+                current_mean, current_log_std, prior_std=prior_std
+            )
         prior_penalty = jnp.asarray(0.0, dtype=reconstruction.dtype)
         if param_penalty_fn is not None and param_penalty_weight > 0.0:
             if transforms is None:
@@ -564,6 +592,7 @@ def optimize_variational_ifu_cube(
     posterior_rank: int = 0,
     posterior_factor_init_scale: float = 1e-2,
     best_selection_ema_decay: float = 0.9,
+    prior_std: float = 1.0,
 ) -> Any:
     """Optimize a VI posterior against full IFU cubes with science losses.
 
@@ -625,6 +654,10 @@ def optimize_variational_ifu_cube(
         best_selection_ema_decay (float, optional): EMA decay in ``[0, 1)`` for
             smoothing the stochastic objective when selecting the best step.
             Defaults to 0.9; use 0 to select on the raw per-step value.
+        prior_std (float, optional): Std of the isotropic zero-mean Gaussian
+            prior on unconstrained latents in the KL term. Defaults to 1.0; use
+            ``~1.814`` to approximate a uniform physical prior for sigmoid-bounded
+            parameters on calibrated runs.
 
     Raises:
         ValueError: If ``target`` is not 3D, if Huber settings are invalid, if
@@ -729,4 +762,5 @@ def optimize_variational_ifu_cube(
         posterior_rank=posterior_rank,
         posterior_factor_init_scale=posterior_factor_init_scale,
         best_selection_ema_decay=best_selection_ema_decay,
+        prior_std=prior_std,
     )

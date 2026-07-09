@@ -427,6 +427,32 @@ Completed/active findings:
   Optimizer wiring is deferred until the unconstrained-prior issue is resolved so
   calibrated coverage can be evaluated meaningfully.
 
+- **Prior width made configurable; the deeper issue is likelihood strength.** The
+  KL now supports a configurable isotropic prior std (`prior_std`, default 1.0)
+  in `kl_diag`/`kl_low_rank`/`kl_block` and both optimizer entry points, with the
+  recipe defaulting calibrated runs to `prior_std = 1.814 = pi/sqrt(3)`. That is
+  the variance of the logistic prior which induces an exactly uniform physical
+  prior for any sigmoid-bounded parameter (bounds only rescale the physical
+  value, not the latent), so a single value de-biases age, metallicity, and vz at
+  once. Empirically, however, `prior_std` alone did *not* change recovery or
+  coverage on the native 2x2 rung: with a near-noise-free target and an
+  over-large assumed `sigma=0.02`, the summed reconstruction NLL at the fit is
+  ~1e-4 while the KL is ~O(10), so `beta_kl=1` collapses the posterior onto the
+  prior regardless of its width (`age_mae~3.13`). Sharpening the likelihood
+  (`sigma=1e-5`) restored `beta_kl=1` recovery to `age_mae~0.376` (~MAP). So the
+  dominant lever is likelihood strength / the assumed noise level, not prior
+  width.
+- **Calibration needs observational noise in the target.** A deterministic
+  noise-free target makes the assumed `sigma` arbitrary *and* makes coverage/SBC
+  ill-posed (no noise realizations to cover). `run_realistic_synthetic_vi_cycle.py`
+  now has `--add-observational-noise`, which injects a seed-keyed noise
+  realization at the assumed per-voxel `sigma`, giving a correctly-scaled
+  likelihood and well-posed cross-seed coverage. Note the flux-scaled sigma floor
+  is `max(noise_level, sigma_floor)`, so calibrated runs must lower
+  `--noise-level` (the default 0.02 floor otherwise dominates and re-creates the
+  prior-collapsed regime). Coverage at a data-constraining noise level
+  (`sigma~1e-4`) is the current evaluation.
+
 Next work package:
 
 1. Apply summed likelihood and L-BFGS/MAP warmup to the native 2x2 SFH+CEH rung
