@@ -8,6 +8,16 @@ from .benchmark import (
     benchmark_result_to_dict,
     estimate_array_nbytes,
 )
+from .calibration import (
+    CalibrationSummary,
+    interval_covers,
+    normalized_error,
+    sample_posterior_parameters,
+    sbc_rank,
+    sbc_rank_histogram,
+    summarize_calibration,
+    summarize_parameter_calibration,
+)
 from .checkpoint import (
     load_checkpoint,
     make_optimization_checkpoint,
@@ -103,8 +113,16 @@ __all__ = [
     "VariationalResult",
     "VariationalState",
     "VIBenchmarkResult",
+    "CalibrationSummary",
     "apply_params",
     "apply_transforms",
+    "interval_covers",
+    "normalized_error",
+    "sample_posterior_parameters",
+    "sbc_rank",
+    "sbc_rank_histogram",
+    "summarize_calibration",
+    "summarize_parameter_calibration",
     "init_low_rank_factor",
     "kl_low_rank_to_standard_normal",
     "low_rank_marginal_log_std",
