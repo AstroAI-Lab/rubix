@@ -38,6 +38,7 @@ from .experiment import (
 )
 from .losses import combine_loss_fns, huber_data_loss, masked_gaussian_nll
 from .modes import get_pipeline_name_for_mode, make_inference_pipeline
+from .noise_model import flux_scaled_sigma
 from .objective_config import build_loss_from_config, build_loss_from_user_config
 from .objectives import build_ifu_cube_loss, masked_weighted_mse
 from .optimize import (
@@ -151,6 +152,7 @@ __all__ = [
     "load_guardrail_threshold_profile",
     "estimate_array_nbytes",
     "finite_difference_grad",
+    "flux_scaled_sigma",
     "forward",
     "get_pipeline_name_for_mode",
     "huber_data_loss",
