@@ -465,6 +465,26 @@ Completed/active findings:
   well-posed and the prior is unbiased; closing the remaining gap needs a
   richer posterior (wire the block-covariance family into the optimizer) and/or
   importance-weighted width correction, not further prior tuning.
+- **Block-covariance posterior wired in, but it does NOT close the marginal
+  coverage gap (informative negative result).** `optimize_variational_*` now take
+  `posterior_block_couplings` and the recipe exposes `--posterior-block`
+  (age/metallicity/vz coupled per particle). Repeating the native 2x2 coverage
+  test (`sigma=1e-4`, `beta_kl=1`, `prior_std=1.814`, 5 seeds, 20 trials) with the
+  block posterior vs the diagonal baseline gave essentially unchanged marginal
+  coverage: age `cov@0.9` `0.50` (block) vs `0.60` (diag), age `rms_z` `2.22` vs
+  `1.93`; metallicity was marginally better (`rms_z` `1.59` vs `1.70`, SBC reduced
+  chi-square `7.2` vs `8.9`) and age SBC uniformity improved (`3.3` vs `4.4`).
+  The reason is structural: per-parameter *marginal* coverage depends only on the
+  marginal *width*, not on the age-metallicity *correlation* the block adds, so a
+  richer covariance cannot fix it. The residual under-coverage (`rms_z~2`, ~2x
+  too narrow) is mean-field/Gaussian VI variance underestimation plus likely mean
+  bias from the always-on SFH/CEH physics penalty (`param_penalty_weight=1.0`).
+  The block family remains the right tool for *joint* credible regions (not
+  measured by the current marginal harness). The correct next levers for marginal
+  calibration are therefore: (1) importance-weighted / multi-sample VI to inflate
+  the marginal width, (2) reduce or anneal the physics-penalty mean bias, and
+  (3) add a joint (2D age-metallicity) coverage diagnostic to actually exercise
+  the block posterior's strength.
 
 Next work package:
 
