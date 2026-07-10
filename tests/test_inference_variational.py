@@ -699,3 +699,78 @@ def test_block_posterior_resume_round_trips():
             max_steps=5,
             state_init=state,
         )
+
+
+def test_importance_weighted_runs_and_improves_objective():
+    pipeline = DummyPipeline()
+    static_data = _make_rubix_data()
+    params_init = {
+        "stars": {"age": jnp.array([0.5]), "metallicity": jnp.array([0.001])}
+    }
+    target = jnp.array([[[5.0]]])
+
+    result = optimize_variational_posterior(
+        pipeline=pipeline,
+        params_init=params_init,
+        static_data=static_data,
+        target=target,
+        learning_rate=5e-2,
+        max_steps=80,
+        num_samples=8,
+        beta_kl=1.0,
+        seed=5,
+        importance_weighted=True,
+    )
+    assert result.objective_history[0] > result.objective_history[-1]
+    assert jnp.isfinite(result.final_objective)
+    assert jnp.isfinite(result.final_kl)
+
+
+def test_importance_weighted_rejects_structured_posterior():
+    common = dict(
+        pipeline=DummyPipeline(),
+        params_init={
+            "stars": {"age": jnp.array([0.5]), "metallicity": jnp.array([0.1])}
+        },
+        static_data=_make_rubix_data(),
+        target=jnp.array([[[1.0]]]),
+        max_steps=1,
+        importance_weighted=True,
+    )
+    with pytest.raises(ValueError, match="importance_weighted requires the diagonal"):
+        optimize_variational_posterior(posterior_rank=1, **common)
+    with pytest.raises(ValueError, match="importance_weighted requires the diagonal"):
+        optimize_variational_posterior(
+            posterior_block_couplings=[("stars", "age"), ("stars", "metallicity")],
+            **common,
+        )
+
+
+def test_importance_weighted_bound_tightens_with_more_samples():
+    # The IWAE bound is monotonically tighter (higher) with more importance
+    # samples, so the returned objective (-bound) is lower on average with K=16
+    # than K=2. Average over seeds to suppress Monte Carlo noise.
+    pipeline = DummyPipeline()
+    static_data = _make_rubix_data()
+    params_init = {"stars": {"age": jnp.array([1.2]), "metallicity": jnp.array([0.02])}}
+    target = jnp.array([[[4.0]]])
+
+    def mean_objective(num_samples, seeds):
+        vals = []
+        for s in seeds:
+            r = optimize_variational_posterior(
+                pipeline=pipeline,
+                params_init=params_init,
+                static_data=static_data,
+                target=target,
+                max_steps=1,
+                num_samples=num_samples,
+                beta_kl=1.0,
+                seed=s,
+                importance_weighted=True,
+            )
+            vals.append(r.objective_history[0])
+        return sum(vals) / len(vals)
+
+    seeds = list(range(8))
+    assert mean_objective(16, seeds) < mean_objective(2, seeds)

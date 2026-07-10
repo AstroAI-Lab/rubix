@@ -183,6 +183,7 @@ def optimize_variational_posterior(
     best_selection_ema_decay: float = 0.9,
     prior_std: float = 1.0,
     posterior_block_couplings: Optional[list] = None,
+    importance_weighted: bool = False,
 ) -> Any:
     """Optimize a mean-field variational posterior with reparameterization.
 
@@ -277,12 +278,20 @@ def optimize_variational_posterior(
             per-particle age--metallicity width that mean-field underestimates.
             Mutually exclusive with ``posterior_rank``. When resuming a block run
             the same couplings must be supplied. Defaults to ``None`` (no block).
+        importance_weighted (bool, optional): If ``True``, optimize the
+            importance-weighted (IWAE) bound rather than the ELBO, using
+            ``num_samples`` importance samples. This tightens the bound and
+            corrects the mean-field posterior-variance underestimation that
+            leaves credible intervals too narrow. Requires the diagonal posterior
+            (no ``posterior_rank``/``posterior_block_couplings``) and benefits
+            from a larger ``num_samples``. Defaults to ``False``.
 
     Raises:
         ValueError: If ``num_samples`` is not strictly positive, if
             ``posterior_rank`` is negative, if ``best_selection_ema_decay`` is
-            not in ``[0, 1)``, or if both ``posterior_rank`` and
-            ``posterior_block_couplings`` are requested.
+            not in ``[0, 1)``, if both ``posterior_rank`` and
+            ``posterior_block_couplings`` are requested, or if
+            ``importance_weighted`` is combined with a structured posterior.
 
     Returns:
         VariationalResult: Posterior statistics and optimization traces.
@@ -296,6 +305,13 @@ def optimize_variational_posterior(
     if posterior_rank > 0 and posterior_block_couplings is not None:
         raise ValueError(
             "posterior_rank and posterior_block_couplings are mutually exclusive"
+        )
+    if importance_weighted and (
+        posterior_rank > 0 or posterior_block_couplings is not None
+    ):
+        raise ValueError(
+            "importance_weighted requires the diagonal posterior "
+            "(no posterior_rank / posterior_block_couplings)"
         )
 
     use_low_rank = posterior_rank > 0
@@ -431,6 +447,66 @@ def optimize_variational_posterior(
                 noise_key=noise_key,
             )
 
+        penalty_ramp = jnp.asarray(1.0, dtype=jnp.float32)
+        if param_penalty_ramp_steps > 0:
+            penalty_ramp = jnp.minimum(
+                (step_index + 1.0) / float(param_penalty_ramp_steps), 1.0
+            )
+
+        if importance_weighted:
+            # Importance-weighted (IWAE) bound: log-average per-sample weights
+            # instead of averaging log-weights. Tighter than the ELBO, it
+            # corrects the mean-field posterior-variance underestimation. Only
+            # the diagonal posterior is supported (guarded at call time).
+            mean_flat, _ = jax.flatten_util.ravel_pytree(current_mean)
+            log_std_flat, _ = jax.flatten_util.ravel_pytree(current_log_std)
+
+            def sample_log_weight(sample_key):
+                z_tree = sample_diag_gaussian(current_mean, current_log_std, sample_key)
+                z_flat, _ = jax.flatten_util.ravel_pytree(z_tree)
+                std_flat = jnp.exp(log_std_flat)
+                log_q = jnp.sum(
+                    -log_std_flat - 0.5 * ((z_flat - mean_flat) / std_flat) ** 2
+                )
+                log_prior = jnp.sum(
+                    -jnp.log(prior_std) - 0.5 * (z_flat / prior_std) ** 2
+                )
+                if transforms is None:
+                    z_constrained = z_tree
+                else:
+                    z_constrained = apply_transforms(
+                        params=z_tree, transforms=transforms, direction="forward"
+                    )
+                nll = loss(
+                    pipeline=pipeline,
+                    params=z_constrained,
+                    static_data=static_data,
+                    target=target,
+                    loss_fn=loss_fn,
+                    noise_key=noise_key,
+                )
+                penalty = jnp.asarray(0.0, dtype=nll.dtype)
+                if param_penalty_fn is not None and param_penalty_weight > 0.0:
+                    penalty = (
+                        jnp.asarray(param_penalty_weight, dtype=nll.dtype)
+                        * penalty_ramp
+                        * param_penalty_fn(z_constrained)
+                    )
+                # log w = log p(y|theta) + log p(z) - log q(z) - penalty.
+                log_w = -nll + beta_kl * (log_prior - log_q) - penalty
+                return log_w, nll
+
+            log_weights, nlls = jax.vmap(sample_log_weight)(sample_keys)
+            iwae_bound = jax.nn.logsumexp(log_weights) - jnp.log(
+                jnp.asarray(num_samples, dtype=log_weights.dtype)
+            )
+            reconstruction = jnp.mean(nlls)
+            kl = kl_diag_gaussian_to_standard_normal(
+                current_mean, current_log_std, prior_std=prior_std
+            )
+            prior_penalty = jnp.asarray(0.0, dtype=reconstruction.dtype)
+            return -iwae_bound, (reconstruction, kl, prior_penalty)
+
         reconstructions = jax.vmap(sample_reconstruction)(sample_keys)
         reconstruction = jnp.mean(reconstructions)
         if use_low_rank:
@@ -459,15 +535,9 @@ def optimize_variational_posterior(
                     transforms=transforms,
                     direction="forward",
                 )
-            ramp = jnp.asarray(1.0, dtype=reconstruction.dtype)
-            if param_penalty_ramp_steps > 0:
-                ramp = jnp.minimum(
-                    (step_index + 1.0) / float(param_penalty_ramp_steps),
-                    1.0,
-                )
             prior_penalty = (
                 jnp.asarray(param_penalty_weight, dtype=reconstruction.dtype)
-                * ramp
+                * penalty_ramp
                 * param_penalty_fn(constrained_mean)
             )
         objective = reconstruction + beta_kl * kl + prior_penalty
@@ -665,6 +735,7 @@ def optimize_variational_ifu_cube(
     best_selection_ema_decay: float = 0.9,
     prior_std: float = 1.0,
     posterior_block_couplings: Optional[list] = None,
+    importance_weighted: bool = False,
 ) -> Any:
     """Optimize a VI posterior against full IFU cubes with science losses.
 
@@ -734,6 +805,9 @@ def optimize_variational_ifu_cube(
             field)`` leaves to couple per particle into a block-diagonal Gaussian
             posterior (mutually exclusive with ``posterior_rank``). Defaults to
             ``None``.
+        importance_weighted (bool, optional): Optimize the IWAE bound instead of
+            the ELBO to correct mean-field variance underestimation (diagonal
+            posterior only). Defaults to ``False``.
 
     Raises:
         ValueError: If ``target`` is not 3D, if Huber settings are invalid, if
@@ -840,4 +914,5 @@ def optimize_variational_ifu_cube(
         best_selection_ema_decay=best_selection_ema_decay,
         prior_std=prior_std,
         posterior_block_couplings=posterior_block_couplings,
+        importance_weighted=importance_weighted,
     )

@@ -1118,6 +1118,16 @@ def parse_args() -> argparse.Namespace:
             ">0) runs. Mutually exclusive with --posterior-rank."
         ),
     )
+    parser.add_argument(
+        "--importance-weighted",
+        action="store_true",
+        help=(
+            "Optimize the importance-weighted (IWAE) bound instead of the ELBO "
+            "to correct mean-field posterior-variance underestimation (too-narrow "
+            "credible intervals). Diagonal posterior only; benefits from a larger "
+            "--num-vi-samples."
+        ),
+    )
     parser.add_argument("--num-posterior-samples", type=int, default=16)
     parser.add_argument(
         "--beta-kl",
@@ -1842,6 +1852,7 @@ def main() -> None:
         normalize_loss=args.normalize_loss,
         posterior_rank=args.posterior_rank,
         posterior_block_couplings=posterior_block_couplings,
+        importance_weighted=args.importance_weighted,
         prior_std=args.prior_std,
         seed=args.seed,
     )
@@ -1989,6 +2000,7 @@ def main() -> None:
             "init_log_std": args.init_log_std,
             "posterior_rank": args.posterior_rank,
             "posterior_block": args.posterior_block,
+            "importance_weighted": args.importance_weighted,
             "num_posterior_samples": args.num_posterior_samples,
             "beta_kl": args.beta_kl,
             "prior_std": args.prior_std,
