@@ -485,6 +485,41 @@ Completed/active findings:
   the marginal width, (2) reduce or anneal the physics-penalty mean bias, and
   (3) add a joint (2D age-metallicity) coverage diagnostic to actually exercise
   the block posterior's strength.
+- **Bias-vs-width decomposition: the gap is under-dispersion, not bias.**
+  Decomposing the native 2x2 age z-scores (5 seeds, sigma=1e-4) gave a small
+  systematic bias (`mean_z ~ +0.4`) but a large dispersion (`std_z ~ 1.9`), i.e.
+  the posteriors are ~1.9x too narrow. The physics penalty was already off in
+  these runs, so it is not the source. Widening the KL prior to `prior_std=5`
+  made it *worse* (`std_z 1.9 -> 2.4`, recovery worse) by letting the fit overfit
+  the injected noise, confirming the residual is not KL-prior pull. `prior_std=
+  1.814` is retained.
+- **Importance-weighted VI (IWAE) did not help here (negative result).** Added
+  `importance_weighted` (IWAE bound) to the optimizer and `--importance-weighted`
+  to the recipe. On the native rung (`K=16`) it slightly *narrowed* age
+  (`post_std 1.01 -> 0.92`, `rms_z 1.93 -> 2.50`); metallicity/vz SBC improved
+  marginally. This matches the known IWAE failure mode (Rainforth et al. 2018):
+  the inference-network gradient signal-to-noise falls as `1/sqrt(K)`, so a large
+  `K` with a stochastic forward model does not widen (can shrink) the proposal.
+- **Joint 2D coverage diagnostic added; block correlation now sampled.**
+  `joint_credible_coverage` (Mahalanobis highest-density regions) and a joint
+  age-metallicity row in `run_vi_calibration.py`; the recipe now draws saved
+  posterior samples from the FULL correlated posterior when a structured family
+  is used. Joint age-Z coverage is (as expected) below the marginals
+  (`cov@0.9 ~ 0.40`) because it compounds the under-dispersed marginals.
+- **Root cause found: it was ``log_std`` under-convergence, not the posterior
+  family.** The ~1.9x under-dispersion was robust across diagonal, block, and
+  IWAE posteriors and across prior widths -- because none of those addressed the
+  real issue. Re-running the native rung with more steps and a wider posterior
+  init (``--vi-steps 800 --init-log-std -0.5`` vs the previous ``200`` steps from
+  ``init_log_std=-2``) roughly *doubled* the recovered age posterior width
+  (`post_std 1.0 -> 2.07`) and dropped `rms_z` from ~1.9 to ~1.44 on the same
+  seed. Starting from ``exp(-2)~0.14`` the log-std simply had not grown to the
+  data-supported width in 200 steps. Practical guidance for calibrated runs:
+  use a wider ``init_log_std`` (~ -0.5) and enough VI steps for the width to
+  converge; verify with the coverage/SBC harness. (A 5-seed confirmation at 800
+  steps is the aggregate check.) This reframes the earlier block/IWAE results:
+  both are sound, generally-useful tools, but the native 2x2 calibration gap was
+  an optimization-convergence artifact, not a posterior-expressiveness limit.
 
 Next work package:
 
