@@ -529,10 +529,23 @@ Completed/active findings:
   ``rms_z=1.24`` is now a small systematic bias (``mean_z=+0.65``, ages slightly
   old), not under-dispersion. Metallicity moved from under- to slightly
   over-covering (``cov@0.9 0.55 -> 1.0``) and the weakly-identified velocity
-  over-covers, so a modest step-count/width tuning per parameter is the only
-  remaining refinement. Recommended calibrated defaults for this rung:
-  summed likelihood, ``beta_kl=1``, ``prior_std~1.814``, ``init_log_std~-0.5``,
-  and enough steps (``>=800`` here) for the posterior width to converge.
+  over-covers. These are now folded into a single ``--calibrated`` recipe preset
+  (``beta_kl=1``, ``init_log_std=-0.5``, ``vi_steps=800`` on top of the summed
+  likelihood and ``prior_std=1.814`` defaults; explicit flags still win). The
+  recipe otherwise defaults to MAP recovery -- note ``init_log_std=-0.5`` mildly
+  degrades MAP point recovery (``age_mae 0.36 -> 0.49``), which is why the wider
+  init is applied only under ``--calibrated``.
+- **Residual age mean-shift is legitimate prior influence, not a bug.** After
+  convergence the only residual is a ~+0.6 sigma age mean-shift. It is *not* a
+  reporting artifact (the posterior median gives the same shift; the mild +0.44
+  posterior skew does not explain it) -- it is the correct Bayesian pull of the
+  ``beta_kl=1`` prior on a finite-information likelihood, and coverage being
+  near-nominal confirms the posterior (including that shift) is calibrated.
+  Removing it would make the posterior *less* Bayesian-correct, so no de-biasing
+  is applied. The metallicity/velocity over-coverage is within 20-trial sampling
+  noise and is the conservative (safe) failure direction; genuine per-parameter
+  *width* control would need per-parameter ``log_std`` learning rates, deferred
+  as a non-minor feature.
 
 Next work package:
 

@@ -1094,10 +1094,21 @@ def parse_args() -> argparse.Namespace:
             "arbitrary and coverage is ill-defined."
         ),
     )
-    parser.add_argument("--vi-steps", type=int, default=300)
+    parser.add_argument(
+        "--calibrated",
+        action="store_true",
+        help=(
+            "Preset for calibrated posteriors: sets beta_kl=1.0, init_log_std="
+            "-0.5, and vi_steps=800 (unless each is given explicitly) on top of "
+            "the summed likelihood and prior_std=1.814 defaults. These are the "
+            "converged settings that bring native-2x2 coverage near nominal; "
+            "without it the recipe defaults to MAP recovery (beta_kl=0)."
+        ),
+    )
+    parser.add_argument("--vi-steps", type=int, default=None)
     parser.add_argument("--vi-lr", type=float, default=8e-3)
     parser.add_argument("--num-vi-samples", type=int, default=4)
-    parser.add_argument("--init-log-std", type=float, default=-2.0)
+    parser.add_argument("--init-log-std", type=float, default=None)
     parser.add_argument(
         "--posterior-rank",
         type=int,
@@ -1132,15 +1143,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--beta-kl",
         type=float,
-        default=0.0,
+        default=None,
         help=(
-            "KL weight. Default 0.0 (MAP) is best for parameter *recovery*: with "
-            "the summed likelihood, beta_kl=1.0 gives a calibrated ELBO but the "
-            "standard-normal unconstrained prior is informative for sigmoid- "
-            "bounded parameters and biases the mean (measured age recovery on "
-            "the native 2x2 rung degrades ~8x). Use beta_kl=1.0 only for "
-            "calibrated-posterior studies, and check coverage with "
-            "run_vi_calibration.py."
+            "KL weight. Defaults to 0.0 (MAP, best for parameter *recovery*) or "
+            "1.0 under --calibrated. With the summed likelihood, beta_kl=1.0 "
+            "gives a calibrated ELBO; beta_kl=0.0 is a MAP point estimate. Only "
+            "meaningful posterior widths come from beta_kl=1.0 (check coverage "
+            "with run_vi_calibration.py)."
         ),
     )
     parser.add_argument(
@@ -1400,7 +1409,21 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sensitivity-vz-delta-kms", type=float, default=100.0)
     parser.add_argument("--weak-rms-over-sigma-threshold", type=float, default=0.1)
     parser.add_argument("--weak-relative-l2-threshold", type=float, default=1e-3)
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    # Resolve preset-dependent defaults. --calibrated selects the converged
+    # calibrated-posterior settings; otherwise the recipe defaults to MAP
+    # recovery. Explicit flags always win.
+    beta_kl_default = 1.0 if args.calibrated else 0.0
+    init_log_std_default = -0.5 if args.calibrated else -2.0
+    vi_steps_default = 800 if args.calibrated else 300
+    if args.beta_kl is None:
+        args.beta_kl = beta_kl_default
+    if args.init_log_std is None:
+        args.init_log_std = init_log_std_default
+    if args.vi_steps is None:
+        args.vi_steps = vi_steps_default
+    return args
 
 
 def main() -> None:
@@ -2038,6 +2061,7 @@ def main() -> None:
             "posterior_block": args.posterior_block,
             "importance_weighted": args.importance_weighted,
             "num_posterior_samples": args.num_posterior_samples,
+            "calibrated": args.calibrated,
             "beta_kl": args.beta_kl,
             "prior_std": args.prior_std,
             "normalize_loss": args.normalize_loss,
