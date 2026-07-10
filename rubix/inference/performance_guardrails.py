@@ -44,10 +44,17 @@ class PerformanceCheckResult:
 def _as_optional_float(value: Any) -> Optional[float]:
     """Convert supported scalar value to optional float.
 
+    Args:
+        value (Any): Scalar value to convert, or ``None``.
+
     Raises:
         ValueError: If *value* is a ``bool`` (which is a numeric subtype but
             almost always indicates a YAML/config mistake) or any other
             non-numeric type.
+
+    Returns:
+        Optional[float]: The value as a float, or ``None`` if ``value`` is
+        ``None``.
     """
     if value is None:
         return None

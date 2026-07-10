@@ -50,13 +50,14 @@ def write_experiment_config(
     """Write a minimal experiment YAML config for tests.
 
     Args:
-        tmp_path: Temporary directory for config and auxiliary files.
-        target_path: Path to the target data ``.npy`` file.
-        checkpoint_dir: Directory where checkpoints will be written.
-        max_steps: Number of steps for both optimization and variational phases.
-        checkpoint_interval_steps: Steps between checkpoint saves (applies to
-            both optimization and variational phases).
-        num_draws: Number of posterior-predictive draws.
+        tmp_path (Path): Temporary directory for config and auxiliary files.
+        target_path (str): Path to the target data ``.npy`` file.
+        checkpoint_dir (str): Directory where checkpoints will be written.
+        max_steps (int): Number of steps for both optimization and variational
+            phases.
+        checkpoint_interval_steps (int): Steps between checkpoint saves (applies
+            to both optimization and variational phases).
+        num_draws (int): Number of posterior-predictive draws.
 
     Returns:
         Path to the written experiment YAML file.

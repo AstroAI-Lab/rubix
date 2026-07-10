@@ -77,10 +77,18 @@ def _resolve_int_with_profile(
 ) -> Optional[int]:
     """Resolve an integer value from CLI override or profile mapping.
 
+    Args:
+        override (Optional[int]): Explicit CLI override; used if not ``None``.
+        profile_mapping (Mapping[str, Any]): Profile values keyed by name.
+        key (str): Key to look up in ``profile_mapping``.
+
     Raises:
         SystemExit: If the profile value is not a plain ``int`` (e.g. a float
             or bool), so invalid profile entries fail fast instead of silently
             truncating.
+
+    Returns:
+        Optional[int]: The resolved integer, or ``None`` if unset.
     """
     if override is not None:
         return override
@@ -102,9 +110,17 @@ def _resolve_float_with_profile(
 ) -> Optional[float]:
     """Resolve a float value from CLI override or profile mapping.
 
+    Args:
+        override (Optional[float]): Explicit CLI override; used if not ``None``.
+        profile_mapping (Mapping[str, Any]): Profile values keyed by name.
+        key (str): Key to look up in ``profile_mapping``.
+
     Raises:
         SystemExit: If the profile value is a bool or non-numeric type so
             config mistakes fail fast.
+
+    Returns:
+        Optional[float]: The resolved float, or ``None`` if unset.
     """
     if override is not None:
         return override
