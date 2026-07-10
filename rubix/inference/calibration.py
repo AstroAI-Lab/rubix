@@ -164,6 +164,72 @@ def sbc_rank(samples: jnp.ndarray, truth: jnp.ndarray) -> jnp.ndarray:
     return jnp.sum(samples < truth[..., None], axis=-1)
 
 
+def joint_credible_coverage(
+    samples: jnp.ndarray,
+    truths: jnp.ndarray,
+    levels: Sequence[float] = DEFAULT_LEVELS,
+    jitter: float = 1e-12,
+) -> dict[str, Any]:
+    """Empirical coverage of *joint* highest-density credible regions.
+
+    For each replication the joint credible region is the Mahalanobis ellipsoid
+    of the posterior samples: the truth is covered at ``level`` if its squared
+    Mahalanobis distance to the posterior mean is below the ``level`` empirical
+    quantile of the samples' own squared Mahalanobis distances. This exercises
+    the *correlation* structure of the posterior (e.g. an age--metallicity
+    covariance), which per-parameter marginal coverage ignores.
+
+    Args:
+        samples (jnp.ndarray): Posterior samples shaped ``(n_trials, n_samples,
+            n_dim)`` (the joint block of coupled parameters).
+        truths (jnp.ndarray): Ground-truth values shaped ``(n_trials, n_dim)``.
+        levels (Sequence[float], optional): Nominal joint-region levels. Defaults
+            to :data:`DEFAULT_LEVELS`.
+        jitter (float, optional): Diagonal regularization added to each posterior
+            covariance for numerical stability. Defaults to 1e-12.
+
+    Raises:
+        ValueError: If array shapes are inconsistent or no levels are given.
+
+    Returns:
+        dict[str, Any]: ``{"n_trials", "n_dim", "levels", "nominal_coverage",
+        "empirical_coverage"}``.
+    """
+    samples = jnp.asarray(samples)
+    truths = jnp.asarray(truths)
+    if samples.ndim != 3:
+        raise ValueError("samples must have shape (n_trials, n_samples, n_dim)")
+    if truths.shape != (samples.shape[0], samples.shape[2]):
+        raise ValueError("truths must have shape (n_trials, n_dim)")
+    if len(levels) == 0:
+        raise ValueError("levels must contain at least one entry")
+
+    n_dim = int(samples.shape[2])
+    level_arr = jnp.asarray([float(x) for x in levels])
+
+    def trial_coverage(trial_samples, trial_truth):
+        mean = jnp.mean(trial_samples, axis=0)
+        cov = jnp.cov(trial_samples, rowvar=False)
+        cov = jnp.atleast_2d(cov) + jitter * jnp.eye(n_dim, dtype=cov.dtype)
+        cov_inv = jnp.linalg.inv(cov)
+        centered = trial_samples - mean
+        d2_samples = jnp.einsum("si,ij,sj->s", centered, cov_inv, centered)
+        truth_centered = trial_truth - mean
+        d2_truth = truth_centered @ cov_inv @ truth_centered
+        thresholds = jnp.percentile(d2_samples, level_arr * 100.0)
+        return (d2_truth <= thresholds).astype(jnp.float32)
+
+    covered = jax.vmap(trial_coverage)(samples, truths)  # (n_trials, n_levels)
+    empirical = [float(x) for x in jnp.mean(covered, axis=0)]
+    return {
+        "n_trials": int(samples.shape[0]),
+        "n_dim": n_dim,
+        "levels": [float(x) for x in levels],
+        "nominal_coverage": [float(x) for x in levels],
+        "empirical_coverage": empirical,
+    }
+
+
 @dataclass
 class CalibrationSummary:
     """Aggregated calibration diagnostics over repeated experiments."""

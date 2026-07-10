@@ -34,7 +34,7 @@ from pathlib import Path
 import jax.numpy as jnp
 import numpy as np
 
-from rubix.inference import summarize_calibration
+from rubix.inference import joint_credible_coverage, summarize_calibration
 
 _PARAMS = (
     ("age", "true_age", "post_samples_age"),
@@ -113,8 +113,10 @@ def compute_calibration_report(
     files = [np.load(p) for p in resolved]
     try:
         parameters: dict[str, dict] = {}
+        pooled: dict[str, tuple] = {}
         for name, truth_key, sample_key in _PARAMS:
             samples, truths = _pool_parameter(files, truth_key, sample_key)
+            pooled[name] = (samples, truths)
             summary = summarize_calibration(
                 jnp.asarray(samples),
                 jnp.asarray(truths),
@@ -122,6 +124,16 @@ def compute_calibration_report(
                 sbc_num_bins=sbc_bins,
             )
             parameters[name] = summary.to_dict()
+
+        # Joint age-metallicity credible-region coverage (exercises the posterior
+        # correlation, which per-parameter marginal coverage ignores).
+        age_s, age_t = pooled["age"]
+        met_s, met_t = pooled["metallicity"]
+        joint_samples = np.stack([age_s, met_s], axis=-1)  # (T, S, 2)
+        joint_truths = np.stack([age_t, met_t], axis=-1)  # (T, 2)
+        joint = joint_credible_coverage(
+            jnp.asarray(joint_samples), jnp.asarray(joint_truths), levels=levels
+        )
     finally:
         for f in files:
             f.close()
@@ -131,6 +143,7 @@ def compute_calibration_report(
         "n_files": len(resolved),
         "levels": list(levels),
         "parameters": parameters,
+        "joint_age_metallicity": joint,
     }
 
 
@@ -145,6 +158,13 @@ def _print_summary(report: dict) -> None:
         print(
             f"  {name:<11} {s['n_trials']:>6}  {cov}   "
             f"{s['rms_z']:5.2f}   {s['sbc_reduced_chi2']:7.2f}"
+        )
+    joint = report.get("joint_age_metallicity")
+    if joint is not None:
+        cov = "  ".join(f"{c:6.3f}" for c in joint["empirical_coverage"])
+        print(
+            f"  {'age+Z(2D)':<11} {joint['n_trials']:>6}  {cov}   "
+            "(joint credible-region coverage)"
         )
 
 

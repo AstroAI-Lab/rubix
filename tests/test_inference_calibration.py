@@ -150,3 +150,32 @@ def test_summarize_parameter_calibration_rejects_missing_truth():
             sample_sets={"stars": {"age": jnp.ones((2, 4))}},
             truths={"stars": {}},
         )
+
+
+def test_joint_credible_coverage_calibrated_and_underdispersed():
+    from rubix.inference import joint_credible_coverage
+
+    rng = np.random.default_rng(0)
+    n_trials, n_samples = 400, 500
+    # Correlated 2D Gaussian; truth exchangeable with samples -> calibrated.
+    cov = np.array([[1.0, 0.7], [0.7, 1.0]])
+    chol = np.linalg.cholesky(cov)
+    truths = (chol @ rng.normal(size=(2, n_trials))).T  # (T, 2)
+    samples = np.einsum("ij,tsj->tsi", chol, rng.normal(size=(n_trials, n_samples, 2)))
+    rep = joint_credible_coverage(jnp.asarray(samples), jnp.asarray(truths))
+    idx90 = rep["levels"].index(0.9)
+    assert abs(rep["empirical_coverage"][idx90] - 0.9) < 0.06
+
+    # Under-dispersed joint posterior (half width) -> joint under-coverage.
+    narrow = 0.5 * samples
+    rep2 = joint_credible_coverage(jnp.asarray(narrow), jnp.asarray(truths))
+    assert rep2["empirical_coverage"][idx90] < 0.7
+
+
+def test_joint_credible_coverage_rejects_bad_shapes():
+    from rubix.inference import joint_credible_coverage
+
+    with pytest.raises(ValueError, match="n_trials, n_samples, n_dim"):
+        joint_credible_coverage(jnp.ones((3, 4)), jnp.ones((3, 2)))
+    with pytest.raises(ValueError, match="truths must have shape"):
+        joint_credible_coverage(jnp.ones((3, 4, 2)), jnp.ones((3, 3)))

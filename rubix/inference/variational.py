@@ -51,6 +51,7 @@ class VariationalResult:
     posterior_factor_params: Optional[jnp.ndarray] = None
     posterior_block_params: Optional[jnp.ndarray] = None
     posterior_block_index_map: Optional[jnp.ndarray] = None
+    posterior_diag_log_std_params: Optional[dict[str, dict[str, Any]]] = None
 
 
 @dataclass
@@ -672,6 +673,7 @@ def optimize_variational_posterior(
         posterior_factor_params=final_factor,
         posterior_block_params=final_block_raw,
         posterior_block_index_map=block_index_map if use_block else None,
+        posterior_diag_log_std_params=_tree_to_dict(final_diag_log_std),
     )
 
     serialized_variational_params = {

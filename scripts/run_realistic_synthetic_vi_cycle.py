@@ -1406,6 +1406,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     from rubix.inference import (
         apply_params,
+        apply_transforms,
         build_age_metallicity_velocity_transforms,
         build_ceh_relation_prior_penalty,
         build_sfh_ceh_prior_penalty,
@@ -1414,6 +1415,8 @@ def main() -> None:
         finite_difference_grad,
         flux_scaled_sigma,
         optimize_variational_ifu_cube,
+        sample_block_gaussian,
+        sample_low_rank_gaussian,
         sample_posterior_parameters,
         sample_posterior_predictive_cubes,
         summarize_masked_metrics,
@@ -1875,14 +1878,47 @@ def main() -> None:
     # Posterior parameter samples in constrained (physical) space. These are the
     # inputs to cross-seed calibration/coverage diagnostics (see
     # scripts/run_vi_calibration.py); persisting them keeps posterior *widths*,
-    # not just the point estimate, available downstream.
-    posterior_param_samples = sample_posterior_parameters(
-        posterior_mean_params=vi_result.posterior_mean_params,
-        posterior_log_std_params=vi_result.posterior_log_std_params,
-        num_samples=args.num_posterior_samples,
-        transforms=transforms,
-        seed=args.seed + 2,
-    )
+    # not just the point estimate, available downstream. For a structured
+    # posterior, draw from the FULL (correlated) posterior so joint-coverage
+    # diagnostics can exercise the captured correlations.
+    if args.posterior_block or args.posterior_rank > 0:
+        _mean = vi_result.posterior_mean_params
+        _diag_log_std = vi_result.posterior_diag_log_std_params
+        _keys = jax.random.split(
+            jax.random.PRNGKey(args.seed + 2), args.num_posterior_samples
+        )
+        if args.posterior_block:
+            _block_raw = vi_result.posterior_block_params
+            _idx = vi_result.posterior_block_index_map
+
+            def _draw(k):
+                return apply_transforms(
+                    params=sample_block_gaussian(
+                        _mean, _diag_log_std, _block_raw, _idx, k
+                    ),
+                    transforms=transforms,
+                    direction="forward",
+                )
+
+        else:
+            _factor = vi_result.posterior_factor_params
+
+            def _draw(k):
+                return apply_transforms(
+                    params=sample_low_rank_gaussian(_mean, _diag_log_std, _factor, k),
+                    transforms=transforms,
+                    direction="forward",
+                )
+
+        posterior_param_samples = jax.lax.map(_draw, _keys)
+    else:
+        posterior_param_samples = sample_posterior_parameters(
+            posterior_mean_params=vi_result.posterior_mean_params,
+            posterior_log_std_params=vi_result.posterior_log_std_params,
+            num_samples=args.num_posterior_samples,
+            transforms=transforms,
+            seed=args.seed + 2,
+        )
     post_samples_age = np.asarray(posterior_param_samples["stars"]["age"])
     post_samples_met = np.asarray(posterior_param_samples["stars"]["metallicity"])
     post_samples_vz = np.asarray(posterior_param_samples["stars"]["velocity"][:, :, 2])

@@ -11,6 +11,7 @@ from .benchmark import (
 from .calibration import (
     CalibrationSummary,
     interval_covers,
+    joint_credible_coverage,
     normalized_error,
     sample_posterior_parameters,
     sbc_rank,
@@ -124,6 +125,7 @@ __all__ = [
     "apply_params",
     "apply_transforms",
     "interval_covers",
+    "joint_credible_coverage",
     "normalized_error",
     "sample_posterior_parameters",
     "sbc_rank",
