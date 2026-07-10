@@ -516,10 +516,23 @@ Completed/active findings:
   seed. Starting from ``exp(-2)~0.14`` the log-std simply had not grown to the
   data-supported width in 200 steps. Practical guidance for calibrated runs:
   use a wider ``init_log_std`` (~ -0.5) and enough VI steps for the width to
-  converge; verify with the coverage/SBC harness. (A 5-seed confirmation at 800
-  steps is the aggregate check.) This reframes the earlier block/IWAE results:
-  both are sound, generally-useful tools, but the native 2x2 calibration gap was
-  an optimization-convergence artifact, not a posterior-expressiveness limit.
+  converge; verify with the coverage/SBC harness. This reframes the earlier
+  block/IWAE results: both are sound, generally-useful tools, but the native 2x2
+  calibration gap was an optimization-convergence artifact, not a
+  posterior-expressiveness limit.
+- **5-seed aggregate confirms the fix (Phase 4 gate essentially closed for this
+  rung).** At ``--vi-steps 800 --init-log-std -0.5`` (5 noise-injected seeds,
+  ``sigma=1e-4``, ``beta_kl=1``, ``prior_std=1.814``, 20 pooled trials) the age
+  dispersion becomes calibrated: ``std_z`` fell ``1.89 -> 1.06`` (nominal 1.0),
+  age ``cov@0.9`` rose ``0.60 -> 0.85`` and ``cov@0.95`` ``0.80 -> 0.90``, and
+  the joint age-metallicity ``cov@0.9`` rose ``0.45 -> 0.85``. The residual age
+  ``rms_z=1.24`` is now a small systematic bias (``mean_z=+0.65``, ages slightly
+  old), not under-dispersion. Metallicity moved from under- to slightly
+  over-covering (``cov@0.9 0.55 -> 1.0``) and the weakly-identified velocity
+  over-covers, so a modest step-count/width tuning per parameter is the only
+  remaining refinement. Recommended calibrated defaults for this rung:
+  summed likelihood, ``beta_kl=1``, ``prior_std~1.814``, ``init_log_std~-0.5``,
+  and enough steps (``>=800`` here) for the posterior width to converge.
 
 Next work package:
 
