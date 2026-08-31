@@ -18,12 +18,12 @@ repos:
     hooks:
     - id: black
   - repo: https://github.com/pycqa/isort
-    rev: 9.0.0a3
+    rev: 9.0.1
     hooks:
       - id: isort
         name: isort (python)
   - repo: https://github.com/jsh9/pydoclint
-    rev: 0.8.4
+    rev: 0.9.1
     hooks:
     - id: pydoclint
       args: [--style=google, --check-return-types=False]
