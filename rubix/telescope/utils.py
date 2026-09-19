@@ -28,6 +28,11 @@ def calculate_spatial_bin_edges(
 
     Returns:
         Tuple[jnp.array, float]: The spatial bin edges and the spatial bin size.
+
+    Note:
+        This function uses ``jnp.arange`` with bounds derived from runtime inputs.
+        Since JAX must know the output shape while tracing, call it outside ``jax.jit``
+        and other transformations that trace those inputs.
     """
     ang_size = cosmology.angular_scale(dist_z)  # kpc/arcsec
     # fov in arcsec
@@ -51,6 +56,10 @@ def calculate_wave_seq(wave_range: List[float], wave_res: float) -> Float[Array,
 
     Returns:
         Float[Array, "..."]: The wavelength sequence as a jnp.array.
+
+    Note:
+        The output length depends on ``wave_range`` and ``wave_res``. Compute this
+        sequence outside ``jax.jit`` or other transformations that trace these values.
     """
     return jnp.arange(wave_range[0], wave_range[1], wave_res)
 
@@ -68,6 +77,11 @@ def calculate_wave_edges(
 
     Returns:
         Float[Array, "..."]: The wavelength bin edges as a jnp.array.
+
+    Note:
+        The output length depends on the first and last bin edges and ``wave_res``.
+        Compute these edges outside ``jax.jit`` or other transformations that trace
+        these values.
     """
 
     wave_start = wave_bin_edges[0] - (wave_res / 2)
