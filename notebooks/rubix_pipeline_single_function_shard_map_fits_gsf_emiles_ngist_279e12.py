@@ -83,7 +83,7 @@ config_NIHAO = {
         
     "galaxy":
         {"dist_z": 0.01,
-         "rotation": {"alpha": 0.0, "beta": 0.0, "gamma":float(angle)}, #{"type": "matrix"}, #{"alpha": 0.0, "beta": 0.0, "gamma":0.0},
+         "rotation": {"alpha": 90.0, "beta": 0.0, "gamma":float(angle)}, #{"type": "matrix"}, #{"alpha": 0.0, "beta": 0.0, "gamma":0.0},
          "component": None,#None, #["ThinDisk", "ThickDisk", "Halo", "PseudoBulge"], #None,
          "component_file": split_file, 
         },

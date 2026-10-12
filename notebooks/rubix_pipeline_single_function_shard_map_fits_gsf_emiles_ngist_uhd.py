@@ -61,7 +61,7 @@ config_NIHAO = {
             "snapshot": "1024",
         },
         "load_galaxy_args": {"reuse": True, "id": galaxy_id},
-        "subset": {"use_subset": True, "subset_size": 20000},
+        "subset": {"use_subset": False, "subset_size": 200000},
     },
     "simulation": {
         "name": "NIHAO",
@@ -82,7 +82,7 @@ config_NIHAO = {
         {"name": "PLANCK15"},
         
     "galaxy":
-        {"dist_z": 0.01,
+        {"dist_z": 0.02,
          "rotation": {"alpha": float(angle), "beta": 0.0, "gamma": 0.0}, #{"type": "matrix"}, #{"alpha": 0.0, "beta": 0.0, "gamma":0.0},
          "component": None,#None, #["ThinDisk", "ThickDisk", "Halo", "PseudoBulge"], #None,
          "component_file": split_file, 
