@@ -4,7 +4,7 @@ from typing import Any, Callable, Optional, Sequence
 from jax import jit
 
 try:
-    from jax._src.core import ClosedJaxpr
+    from jax.extend.core import ClosedJaxpr
 except ImportError:  # pragma: no cover - fallback for older JAX
     from jax.core import ClosedJaxpr
 
