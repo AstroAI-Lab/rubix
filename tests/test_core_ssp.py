@@ -112,18 +112,23 @@ def test_get_lookup_interpolation_with_valid_config():
     assert not jnp.isnan(spectrum).all()
     assert jnp.allclose(spectrum, flux)
 
-    # Check what happens out of bounds
+    # Check what happens out of bounds: clipped to the grid edges
     metallicity_oob = ssp.metallicity[-1] + 10
-    spectrum_zero = lookup(metallicity_oob, age)  # this should return zero
-    print("out of bounds spectrum:", spectrum_zero)
-    assert not jnp.isnan(spectrum_zero).all()
-    assert (spectrum_zero == 0).all()
+    spectrum_edge = lookup(metallicity_oob, age)  # this should return the edge template
+    print("out of bounds spectrum:", spectrum_edge)
+    assert not jnp.isnan(spectrum_edge).all()
+    assert jnp.allclose(spectrum_edge, ssp.flux[-1, 0], rtol=RTOL, atol=ATOL)
 
     age_oob = ssp.age[-1] + 10
-    spectrum_zero_age = lookup(metallicity, age_oob)  # this should return zero
-    print("out of bounds age spectrum:", spectrum_zero_age)
-    assert not jnp.isnan(spectrum_zero_age).all()
-    assert (spectrum_zero_age == 0).all()
+    spectrum_edge_age = lookup(metallicity, age_oob)  # this should return the edge template
+    print("out of bounds age spectrum:", spectrum_edge_age)
+    assert not jnp.isnan(spectrum_edge_age).all()
+    assert jnp.allclose(spectrum_edge_age, ssp.flux[0, -1], rtol=RTOL, atol=ATOL)
+
+    metallicity_low = ssp.metallicity[0] - 1
+    age_low = ssp.age[0] - 1
+    spectrum_edge_low = lookup(metallicity_low, age_low)
+    assert jnp.allclose(spectrum_edge_low, flux, rtol=RTOL, atol=ATOL)
 
 
 def test_get_lookup_interpolation_with_missing_ssp_field():
@@ -172,13 +177,14 @@ def test_get_lookup_interpolation_vmap():
     print("Spectrum example", spectrum[0, 0])
     assert jnp.allclose(spectrum, ssp_spectra, rtol=RTOL, atol=ATOL)
 
-    # check out of bounds
+    # check out of bounds: clipped to the grid edges
     inputs["metallicity"] = inputs["metallicity"] + 1e7
     inputs["age"] = inputs["age"] + 1e7
     spectrum = lookup_vmap(inputs["metallicity"], inputs["age"])
 
     assert not jnp.isnan(spectrum).all()
-    assert (spectrum == 0).all()
+    edge_spectrum = get_ssp(config).flux[-1, -1]
+    assert jnp.allclose(spectrum, edge_spectrum, rtol=RTOL, atol=ATOL)
 
 
 def test_get_lookup_interpolation_pmap():
@@ -198,10 +204,11 @@ def test_get_lookup_interpolation_pmap():
     print("Spectrum example", spectrum[0, 0])
     assert jnp.allclose(spectrum, ssp_spectra, rtol=RTOL, atol=ATOL)
 
-    # check out of bounds
+    # check out of bounds: clipped to the grid edges
     inputs["metallicity"] = inputs["metallicity"] + 1e7
     inputs["age"] = inputs["age"] + 1e7
     spectrum = lookup_pmap(inputs["metallicity"], inputs["age"])
 
     assert not jnp.isnan(spectrum).all()
-    assert (spectrum == 0).all()
+    edge_spectrum = get_ssp(config).flux[-1, -1]
+    assert jnp.allclose(spectrum, edge_spectrum, rtol=RTOL, atol=ATOL)

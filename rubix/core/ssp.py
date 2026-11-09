@@ -1,4 +1,5 @@
 import jax
+import jax.numpy as jnp
 from beartype import beartype as typechecker
 from beartype.typing import Callable
 from jaxtyping import jaxtyped
@@ -43,6 +44,8 @@ def get_lookup_interpolation(config: dict) -> Callable:
 
     The lookup function is a function that takes in the metallicity and age of a star and returns the spectrum of the star.
     This is later used to vmap over the stars metallicities and ages, and pmap over multiple GPUs.
+    Metallicities and ages outside the SSP grid are clipped to the grid edges, since the
+    interpolation returns zero flux outside the grid.
 
     Args:
         config (dict): Configuration dictionary.
@@ -64,7 +67,17 @@ def get_lookup_interpolation(config: dict) -> Callable:
         method = config["ssp"]["method"]
 
     lookup = ssp.get_lookup_interpolation(method=method)
-    return lookup
+
+    # Clip to the grid edges, otherwise stars outside the grid get zero flux
+    metallicity_min, metallicity_max = ssp.metallicity.min(), ssp.metallicity.max()
+    age_min, age_max = ssp.age.min(), ssp.age.max()
+
+    def lookup_clipped(metallicity, age):
+        metallicity = jnp.clip(metallicity, metallicity_min, metallicity_max)
+        age = jnp.clip(age, age_min, age_max)
+        return lookup(metallicity, age)
+
+    return lookup_clipped
 
 
 @jaxtyped(typechecker=typechecker)
