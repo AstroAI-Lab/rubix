@@ -80,8 +80,8 @@ class PynbodyHandler(BaseHandler):
         self.logger.info(f"Simulation snapshot loaded from halo {self.halo_id}")
         halo = self.get_halo_data(halo_id=self.halo_id)
         if halo is not None:
-            #pynbody.analysis.angmom.faceon(halo.s)
-            pynbody.analysis.angmom.sideon(halo.s)
+            pynbody.analysis.angmom.faceon(halo.s)
+            #pynbody.analysis.angmom.sideon(halo.s)
             ang_mom_vec = pynbody.analysis.angmom.ang_mom_vec(halo.s)
             #rotation_matrix = pynbody.analysis.angmom.calc_sideon_matrix(ang_mom_vec)
             rotation_matrix = pynbody.analysis.angmom.calc_sideon_matrix(ang_mom_vec)
